@@ -28,7 +28,7 @@ func collectAdd(dp dataproviders.DataProvider, wc *dataproviders.Workers, pipe c
 			return
 		}
 		worker := wc.AddWorker(query.From, query.To, pipe)
-		if worker.IsAlive() {
+		if worker.IsAlive {
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Pair [" + query.From + "]-[" + query.To + "] already collecting",
 			})
@@ -62,7 +62,7 @@ func collectRemove(wc *dataproviders.Workers) gin.HandlerFunc {
 			return
 		}
 		worker := wc.GetWorker(query.From, query.To)
-		if worker == nil || !worker.IsAlive() {
+		if worker == nil || !worker.IsAlive {
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Pair [" + query.From + "]-[" + query.To + "] not collecting now",
 			})
@@ -72,5 +72,11 @@ func collectRemove(wc *dataproviders.Workers) gin.HandlerFunc {
 				"message": "Worker [" + query.From + "]-[" + query.To + "] stopped successfully",
 			})
 		}
+	}
+}
+
+func collectStatus(wc *dataproviders.Workers) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(http.StatusOK, wc)
 	}
 }

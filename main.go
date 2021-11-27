@@ -13,10 +13,10 @@ import (
 )
 
 func main() {
-	var	ccData   *cryptocompare.CryptoCompare
-	var	showHelp bool
-	var	port     int
-	var d 		 dbconnectors.Db
+	var ccData *cryptocompare.CryptoCompare
+	var showHelp bool
+	var port int
+	var d dbconnectors.Db
 	ccData.SetApiKey(utility.GetEnv("CCDC_APIKEY"))
 	ccData.SetApiURL(utility.GetEnv("CCDC_APIURL"))
 	if ccData.GetApiURL() == "" || ccData.GetApiKey() == "" {
@@ -57,6 +57,8 @@ func main() {
 	r.GET("/ping", ping)
 	r.POST("/collect/add", collectAdd(ccData, wc, pipe))
 	r.POST("/collect/remove", collectRemove(wc))
+	r.GET("/collect/status", collectStatus(wc))
+
 	if err := r.Run(":" + strconv.Itoa(port)); err != nil {
 		return
 	}

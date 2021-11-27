@@ -25,10 +25,10 @@ func (w *Workers) GetWorker(from, to string) *Worker {
 
 func (w *Workers) AddWorker(from string, to string, pipe chan *DataPipe) *Worker {
 	w.mutex.Lock()
-	if w.List[from] == nil {
+	if w.List[from] == nil || w.List[from][to] == nil {
 		w.List[from] = make(map[string]*Worker)
 		w.List[from][to] = CreateWorker(pipe)
-	} else if w.List[from][to] == nil {
+	} else if !w.List[from][to].IsAlive {
 		w.List[from][to] = CreateWorker(pipe)
 	}
 	w.mutex.Unlock()

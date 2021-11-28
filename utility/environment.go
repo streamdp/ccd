@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func GetEnv(name string) (result string)  {
+func GetEnv(name string) (result string) {
 	for _, e := range os.Environ() {
 		pair := strings.SplitN(e, "=", 2)
 		if pair[0] == name {

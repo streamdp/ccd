@@ -29,7 +29,7 @@ func AddWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 		}
 		worker := wc.AddWorker(query.From, query.To, wc.Pipe)
 		if worker.IsAlive {
-			res.UpdateAllFields(http.StatusOK, "Data for this pair is already being collected", nil)
+			res.UpdateAllFields(http.StatusOK, "Data for this pair is already being collected", worker)
 		} else {
 			go pulling(wc, &query)
 			res.UpdateAllFields(http.StatusCreated, "Data collection started", nil)
@@ -46,7 +46,7 @@ func RemoveWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 		}
 		worker := wc.GetWorker(query.From, query.To)
 		if worker == nil || !worker.IsAlive {
-			res.UpdateAllFields(http.StatusOK, "No data is collected for this pair", nil)
+			res.UpdateAllFields(http.StatusOK, "No data is collected for this pair", worker)
 		} else {
 			worker.Shutdown()
 			res.UpdateAllFields(http.StatusOK, "Worker stopped successfully", nil)
@@ -70,7 +70,7 @@ func UpdateWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 		}
 		worker := wc.GetWorker(query.From, query.To)
 		if worker == nil || !worker.IsAlive {
-			res.UpdateAllFields(http.StatusOK, "No data is collected for this pair", nil)
+			res.UpdateAllFields(http.StatusOK, "No data is collected for this pair", worker)
 		} else {
 			worker.Interval = query.Interval
 			res.UpdateAllFields(http.StatusOK, "Worker updated successfully", worker)

@@ -2,12 +2,11 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/streamdp/ccdatacollector/entity"
 	"log"
 	"net/http"
 )
 
-type HandlerFuncResError func(*gin.Context) (entity.Result, error)
+type HandlerFuncResError func(*gin.Context) (Result, error)
 
 func GinHandler(myHandler HandlerFuncResError) gin.HandlerFunc {
 	return func(c *gin.Context) {

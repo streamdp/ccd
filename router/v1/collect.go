@@ -3,7 +3,6 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/streamdp/ccdatacollector/dataproviders"
-	"github.com/streamdp/ccdatacollector/entity"
 	"github.com/streamdp/ccdatacollector/handlers"
 	"net/http"
 )
@@ -22,7 +21,7 @@ func pulling(wc *dataproviders.Workers, query *CollectQuery) {
 }
 
 func AddWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (res entity.Result, err error) {
+	return func(c *gin.Context) (res handlers.Result, err error) {
 		query := CollectQuery{}
 		if err = c.Bind(&query); err != nil {
 			return
@@ -39,7 +38,7 @@ func AddWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 }
 
 func RemoveWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (res entity.Result, err error) {
+	return func(c *gin.Context) (res handlers.Result, err error) {
 		query := CollectQuery{}
 		if err = c.Bind(&query); err != nil {
 			return
@@ -56,14 +55,14 @@ func RemoveWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 }
 
 func WorkersStatus(wc *dataproviders.Workers) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (res entity.Result, err error) {
+	return func(c *gin.Context) (res handlers.Result, err error) {
 		res.UpdateAllFields(http.StatusOK, "Information about running workers", wc)
 		return
 	}
 }
 
 func UpdateWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (res entity.Result, err error) {
+	return func(c *gin.Context) (res handlers.Result, err error) {
 		query := CollectQuery{}
 		if err = c.Bind(&query); err != nil {
 			return

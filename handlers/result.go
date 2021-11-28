@@ -1,4 +1,4 @@
-package entity
+package handlers
 
 type Result struct {
 	Code    int         `json:"code"`

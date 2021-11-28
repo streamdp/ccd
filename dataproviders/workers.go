@@ -5,13 +5,16 @@ import (
 )
 
 type Worker struct {
-	pipe    chan *DataPipe
-	done    chan interface{}
-	IsAlive bool `json:"is_alive"`
+	pipe     chan *DataPipe
+	done     chan interface{}
+	Interval uint `json:"interval"`
+	IsAlive  bool `json:"is_alive"`
 }
 
 type Workers struct {
 	List  map[string]map[string]*Worker `json:"workers"`
+	Pipe  chan *DataPipe                `json:"-"`
+	Dp    DataProvider                  `json:"-"`
 	mutex *sync.Mutex
 }
 
@@ -37,9 +40,11 @@ func (w *Workers) AddWorker(from string, to string, pipe chan *DataPipe) *Worker
 	return w.List[from][to]
 }
 
-func CreateWorkersControl() *Workers {
+func CreateWorkersControl(dp DataProvider) *Workers {
 	return &Workers{
 		List:  make(map[string]map[string]*Worker),
+		Pipe:  make(chan *DataPipe, 20),
+		Dp:    dp,
 		mutex: new(sync.Mutex),
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/streamdp/ccdatacollector/config"
 	"github.com/streamdp/ccdatacollector/dataproviders"
-	"github.com/streamdp/ccdatacollector/utility"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -25,8 +24,8 @@ func (cc *Data) GetSerializable() (dpStruct *dataproviders.Data) {
 }
 
 func Init() (cc *Data, err error) {
-	cc.SetApiKey(utility.GetEnv("CCDC_APIKEY"))
-	cc.SetApiURL(utility.GetEnv("CCDC_APIURL"))
+	cc.SetApiKey(config.GetEnv("CCDC_APIKEY"))
+	cc.SetApiURL(config.GetEnv("CCDC_APIURL"))
 	if cc.GetApiURL() == "" || cc.GetApiKey() == "" {
 		return nil, errors.New("you should specify \"CCDC_APIKEY\" and \"CCDC_APIURL\" in you OS environment")
 	}

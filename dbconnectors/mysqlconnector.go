@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/streamdp/ccdatacollector/config"
 	"github.com/streamdp/ccdatacollector/dataproviders"
 	"github.com/streamdp/ccdatacollector/handlers"
-	"github.com/streamdp/ccdatacollector/utility"
 	"time"
 )
 
@@ -55,7 +55,7 @@ func (db *Db) Close() (err error) {
 
 func Connect() (db *Db, err error) {
 	db = &Db{}
-	dataSource := utility.GetEnv("CCDC_DATASOURCE")
+	dataSource := config.GetEnv("CCDC_DATASOURCE")
 	if dataSource == "" {
 		return nil, errors.New("please set OS environment \"CCDC_DATASOURCE\" with database connection string")
 	}

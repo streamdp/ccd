@@ -1,49 +1,26 @@
 package main
 
 import (
-	"flag"
-	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
-	"github.com/streamdp/ccdatacollector/dataproviders"
-	"github.com/streamdp/ccdatacollector/dataproviders/cryptocompare"
-	"github.com/streamdp/ccdatacollector/dbconnectors"
-	"github.com/streamdp/ccdatacollector/utility"
-	"strconv"
+	"github.com/streamdp/ccdatacollector/config"
+	"github.com/streamdp/ccdatacollector/handlers"
+	"github.com/streamdp/ccdatacollector/router"
 )
 
 func main() {
-	var ccData *cryptocompare.CryptoCompare
-	var showHelp bool
-	var port int
-	ccData.SetApiKey(utility.GetEnv("CCDC_APIKEY"))
-	ccData.SetApiURL(utility.GetEnv("CCDC_APIURL"))
-	if ccData.GetApiURL() == "" || ccData.GetApiKey() == "" {
-		utility.HandleError(errors.New("you should specify \"CCDC_APIKEY\" and \"CCDC_APIURL\" in you OS environment"))
+	config.ParseFlags()
+	gin.SetMode(config.RunMode)
+	engine := gin.Default()
+	if err := engine.SetTrustedProxies(nil); err != nil {
+		handlers.SystemHandler(err)
+	}
+	err := router.InitRouter(engine)
+	if err != nil {
+		handlers.SystemHandler(err)
 		return
 	}
-	flag.BoolVar(&showHelp, "h", false, "display help")
-	flag.IntVar(&port, "port", 8080, "set specify port")
-	flag.Parse()
-	if showHelp {
-		fmt.Println("ccdatacollector is a microservice that collect data from a cryprocompare using its API.")
-		fmt.Println("")
-		flag.Usage()
-		return
-	}
-	wc := dataproviders.CreateWorkersControl()
-	pipe := make(chan *dataproviders.DataPipe, 20)
-	defer close(pipe)
-	go dbconnectors.ServePipe(pipe)
-	r := gin.Default()
-	if err := r.SetTrustedProxies(nil); err != nil {
-		utility.HandleError(err)
-	}
-	r.GET("/ping", ping)
-	r.POST("/collect/add", collectAdd(ccData, wc, pipe))
-	r.POST("/collect/remove", collectRemove(wc))
-	r.GET("/collect/status", collectStatus(wc))
-	if err := r.Run(":" + strconv.Itoa(port)); err != nil {
+	if err := engine.Run(config.Port); err != nil {
+		handlers.SystemHandler(err)
 		return
 	}
 }

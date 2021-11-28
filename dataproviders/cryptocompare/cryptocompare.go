@@ -41,7 +41,7 @@ func (cc *Data) GetData(fSym string, tSym string) (ds *dataproviders.Data, err e
 		return nil, err
 	}
 	client := http.Client{
-		Timeout: config.HttpClientTimeout * time.Millisecond,
+		Timeout: time.Duration(config.HttpClientTimeout) * time.Millisecond,
 	}
 	if response, err = client.Get(apiURL.String()); err != nil {
 		return nil, err

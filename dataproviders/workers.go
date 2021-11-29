@@ -10,7 +10,7 @@ type Worker struct {
 	done chan interface{}
 	From string          `json:"from"`
 	To       string          `json:"to"`
-	Interval time.Duration   `json:"interval"`
+	Interval int   `json:"interval"`
 }
 
 type Workers struct {
@@ -105,7 +105,7 @@ func (w *Worker) Work(dp *DataProvider) {
 		select {
 		case <-w.done:
 			return
-		case <-time.After(w.Interval * time.Second):
+		case <-time.After(time.Duration(w.Interval) * time.Second):
 			data, err := (*dp).GetData(w.From, w.To)
 			if err != nil {
 				handlers.SystemHandler(err)

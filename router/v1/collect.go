@@ -5,13 +5,12 @@ import (
 	"github.com/streamdp/ccdatacollector/dataproviders"
 	"github.com/streamdp/ccdatacollector/handlers"
 	"net/http"
-	"time"
 )
 
 type CollectQuery struct {
 	From     string        `json:"from" form:"fsym" binding:"required,crypto"`
 	To       string        `json:"to" form:"tsym" binding:"required,common"`
-	Interval time.Duration `json:"interval" form:"interval,default=60"`
+	Interval int           `json:"interval" form:"interval,default=60"`
 }
 
 func AddWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {

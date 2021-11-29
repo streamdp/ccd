@@ -2,7 +2,7 @@ version: "3"
 services:
    db:
       container_name: db
-      image: mysql:8.0.27
+      image: mysql
       ports:
        - "3306:3306"  
       environment:
@@ -26,3 +26,5 @@ services:
          - CCDC_APIURL=https://min-api.cryptocompare.com/data/pricemultifull
          - CCDC_WSURL=wss://streamer.cryptocompare.com/v2
       container_name: ccd-container
+      depends_on:
+         - db

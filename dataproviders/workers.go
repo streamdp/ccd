@@ -110,6 +110,9 @@ func (w *Worker) Work(dp *DataProvider) {
 			if err != nil {
 				handlers.SystemHandler(err)
 			}
+			if data == GetEmptyData(w.From, w.To) {
+				continue
+			}
 			w.Pipe <- &DataPipe{
 				From: w.From,
 				To:   w.To,

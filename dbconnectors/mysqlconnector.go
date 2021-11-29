@@ -71,9 +71,6 @@ func Connect() (db *Db, err error) {
 func (db *Db) ServePipe(pipe chan *dataproviders.DataPipe) {
 	for {
 		if data := <-pipe; true {
-			if data.Data == dataproviders.GetEmptyData(data.From, data.To){
-				continue
-			}
 			if _, err := db.Insert(data); err != nil {
 				handlers.SystemHandler(err)
 			}

@@ -21,9 +21,6 @@ func GetLastPrice(wc *dataproviders.Workers, db *dbconnectors.Db, query *PriceQu
 			return
 		}
 	}
-	if data == (dataproviders.GetEmptyData(query.From, query.To)) {
-		return
-	}
 	wc.GetPipe() <- &dataproviders.DataPipe{
 		From: query.From,
 		To:   query.To,

@@ -2,3 +2,5 @@
 *.bak
 *.~
 *.swp
+.*.swp
+model/data/

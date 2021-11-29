@@ -17,7 +17,6 @@ ENV TIME_ZONE="Europe/Minsk"
 
 COPY --from=build /build/app 	 /srv/app
 
-EXPOSE 8080
 WORKDIR /srv
 
-CMD ["/srv/app"]
+CMD ["/srv/app -debug"]

@@ -19,4 +19,4 @@ COPY --from=build /build/app 	 /srv/app
 
 WORKDIR /srv
 
-CMD ["/srv/app -debug"]
+CMD ["/srv/app"]

@@ -6,7 +6,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/streamdp/ccdatacollector/dataproviders"
 	"github.com/streamdp/ccdatacollector/dataproviders/cryptocompare"
-	"github.com/streamdp/ccdatacollector/dataproviders/ws"
 	"github.com/streamdp/ccdatacollector/dbconnectors"
 	"github.com/streamdp/ccdatacollector/handlers"
 	v1 "github.com/streamdp/ccdatacollector/router/v1"
@@ -30,10 +29,10 @@ func InitRouter(r *gin.Engine) (err error) {
 	go hub.Run(wc, db)
 
 	//- only for testing (it printing the data to the log)-//
-	hub2 := ws.NewHub()
-	go hub2.Run()
-	wsClient := ws.ServeWs(hub2, dp)
-	wsClient.Subscribe([]string{"5~CCCAGG~BTC~USD"})
+//	hub2 := ws.NewHub()
+//	go hub2.Run()
+//	wsClient := ws.ServeWs(hub2, dp)
+//	wsClient.Subscribe([]string{"5~CCCAGG~BTC~USD"})
 	//-------------------------------------------------//
 	apiGroupV1 := r.Group("/v1")
 	{

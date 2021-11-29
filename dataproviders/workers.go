@@ -1,74 +1,120 @@
 package dataproviders
 
 import (
-	"sync"
+	"github.com/streamdp/ccdatacollector/handlers"
+	"time"
 )
 
 type Worker struct {
-	pipe     chan *DataPipe
-	done     chan interface{}
-	Interval uint `json:"interval"`
-	IsAlive  bool `json:"is_alive"`
+	Pipe     chan *DataPipe
+	Done     chan interface{}
+	From     string        `json:"from"`
+	To       string        `json:"to"`
+	Interval time.Duration `json:"interval"`
 }
 
 type Workers struct {
-	List  map[string]map[string]*Worker `json:"workers"`
-	Pipe  chan *DataPipe                `json:"-"`
-	Dp    DataProvider                  `json:"-"`
-	mutex *sync.Mutex
+	workers    map[*Worker]bool
+	pipe       chan *DataPipe
+	register   chan *Worker
+	unregister chan *Worker
+	dp         DataProvider
 }
 
-func (w *Workers) GetWorker(from, to string) *Worker {
-	if w.List[from] == nil || w.List[from][to] == nil {
-		return nil
-	} else {
-		return w.List[from][to]
-	}
-}
-
-func (w *Workers) AddWorker(from string, to string, pipe chan *DataPipe) *Worker {
-	w.mutex.Lock()
-	if w.List[from] == nil {
-		w.List[from] = make(map[string]*Worker)
-		w.List[from][to] = CreateWorker(pipe)
-	} else if w.List[from][to] == nil {
-		w.List[from][to] = CreateWorker(pipe)
-	} else if !w.List[from][to].IsAlive {
-		w.List[from][to] = CreateWorker(pipe)
-	}
-	w.mutex.Unlock()
-	return w.List[from][to]
-}
-
-func CreateWorkersControl(dp DataProvider) *Workers {
+func NewWorkersControl(dp DataProvider) *Workers {
 	return &Workers{
-		List:  make(map[string]map[string]*Worker),
-		Pipe:  make(chan *DataPipe, 20),
-		Dp:    dp,
-		mutex: new(sync.Mutex),
+		workers:    make(map[*Worker]bool),
+		pipe:       make(chan *DataPipe, 20),
+		register:   make(chan *Worker),
+		unregister: make(chan *Worker),
+		dp:         dp,
 	}
 }
 
-func CreateWorker(pipe chan *DataPipe) *Worker {
+func (wc *Workers) NewWorker(from string, to string) *Worker {
 	return &Worker{
-		pipe:    pipe,
-		done:    make(chan interface{}),
-		IsAlive: false,
+		Pipe:     wc.pipe,
+		Done:     make(chan interface{}),
+		From:     from,
+		To:       to,
+		Interval: 60,
 	}
+}
+
+func (wc *Workers) Run() {
+	for {
+		select {
+		case worker := <-wc.register:
+			wc.workers[worker] = true
+		case worker := <-wc.unregister:
+			wc.workers[worker] = false
+			worker.Done <- 0
+			delete(wc.workers, worker)
+		}
+	}
+}
+
+func (wc *Workers) GetPipe() chan *DataPipe {
+	return wc.pipe
+}
+
+func (wc *Workers) GetWorkers() *map[*Worker]bool {
+	return &wc.workers
+}
+
+func (wc *Workers) GetDataProvider() *DataProvider {
+	return &wc.dp
+}
+
+func (wc *Workers) GetWorker(from string, to string) *Worker {
+	for worker := range wc.workers {
+		if worker.From == from && worker.To == to {
+			return worker
+		}
+	}
+	return nil
+}
+
+func (wc *Workers) Add(worker *Worker) *Worker {
+	wc.register <- worker
+	return worker
+}
+
+func (wc *Workers) AddWorker(from string, to string) *Worker {
+	worker := wc.NewWorker(from, to)
+	wc.register <- worker
+	return worker
+}
+
+func (wc *Workers) RemoveWorker(from string, to string) {
+	worker := wc.GetWorker(from, to)
+	wc.unregister <- worker
 }
 
 func (w *Worker) Shutdown() {
-	w.done <- 0
-}
-
-func (w *Worker) SetAlive(alive bool) {
-	w.IsAlive = alive
+	w.Done <- 0
 }
 
 func (w *Worker) GetDone() chan interface{} {
-	return w.done
+	return w.Done
 }
 
-func (w *Worker) GetPipe() chan *DataPipe {
-	return w.pipe
+func (w *Worker) Work(dp *DataProvider) {
+	defer close(w.Done)
+	for {
+		select {
+		case <-w.Done:
+			return
+		case <-time.After(w.Interval * time.Second):
+			data, err := (*dp).GetData(w.From, w.To)
+			if err != nil {
+				handlers.SystemHandler(err)
+			}
+			w.Pipe <- &DataPipe{
+				From: w.From,
+				To:   w.To,
+				Data: data,
+			}
+		}
+	}
 }

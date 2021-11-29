@@ -30,7 +30,7 @@ func (db *Db) GetLast(from string, to string) (result *dataproviders.Data, err e
 }
 
 func (db *Db) Insert(data *dataproviders.DataPipe) (result sql.Result, err error) {
-	if data.Data.Raw[data.From] == nil {
+	if data.Data == nil || data.Data.Raw[data.From] == nil {
 		return nil, errors.New("cant insert empty data")
 	}
 	r := data.Data.Raw[data.From][data.To]

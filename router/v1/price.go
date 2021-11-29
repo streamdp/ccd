@@ -36,6 +36,9 @@ func GetPrice(wc *dataproviders.Workers, db *dbconnectors.Db) handlers.HandlerFu
 			return
 		}
 		data, err := GetLastPrice(wc, db, &query)
+		if err != nil {
+			return
+		}
 		res.UpdateAllFields(http.StatusOK, "Most recent price, updated at "+
 			data.Display[query.From][query.To].Lastupdate, data)
 		return

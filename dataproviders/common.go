@@ -1,9 +1,5 @@
 package dataproviders
 
-import (
-	"time"
-)
-
 type Response struct {
 	Change24Hour    float64 `json:"CHANGE24HOUR"`
 	Changepct24Hour float64 `json:"CHANGEPCT24HOUR"`
@@ -50,31 +46,6 @@ type DataPipe struct {
 type DataProvider interface {
 	GetSerializable() *Data
 	GetData(from string, to string) (*Data, error)
-}
-
-func PullingData(wc *Workers, from string, to string) (err error) {
-	worker := wc.GetWorker(from, to)
-	defer func(w *Worker) {
-		w.SetAlive(false)
-		close(w.GetDone())
-	}(worker)
-	worker.SetAlive(true)
-	for {
-		select {
-		case <-worker.GetDone():
-			return
-		case <-time.After(time.Duration(worker.Interval) * time.Second):
-			data, err := wc.Dp.GetData(from, to)
-			if err != nil {
-				return err
-			}
-			worker.GetPipe() <- &DataPipe{
-				From: from,
-				To:   to,
-				Data: data,
-			}
-		}
-	}
 }
 
 func GetEmptyData(from string, to string) *Data {

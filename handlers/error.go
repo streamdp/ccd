@@ -11,8 +11,7 @@ type HandlerFuncResError func(*gin.Context) (Result, error)
 func GinHandler(myHandler HandlerFuncResError) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if res, err := myHandler(c); err != nil {
-			res.SetCode(http.StatusInternalServerError)
-			res.SetMessage(err.Error())
+			res.UpdateAllFields(http.StatusInternalServerError, err.Error(), nil)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, res)
 		} else {
 			c.JSON(http.StatusOK, res)

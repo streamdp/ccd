@@ -6,24 +6,14 @@ type Result struct {
 	Data    interface{} `json:"data"`
 }
 
-func (res *Result) SetCode(code int) *Result {
-	res.Code = code
-	return res
-}
-
 func (res *Result) UpdateAllFields(code int, msg string, data interface{}) *Result {
-	res.SetCode(code)
-	res.SetMessage(msg)
-	res.SetData(data)
-	return res
-}
-
-func (res *Result) SetMessage(msg string) *Result {
+	res.Code = code
 	res.Message = msg
+	res.Data = data
 	return res
 }
 
-func (res *Result) SetData(data interface{}) *Result {
+func (res *Result) UpdateDataField(data interface{}) *Result {
 	res.Data = data
 	return res
 }

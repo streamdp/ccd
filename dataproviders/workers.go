@@ -6,11 +6,11 @@ import (
 )
 
 type Worker struct {
-	Pipe     chan *DataPipe
-	Done     chan interface{}
-	From     string        `json:"from"`
-	To       string        `json:"to"`
-	Interval time.Duration `json:"interval"`
+	Pipe chan *DataPipe  `json:"-"`
+	done chan interface{}
+	From string          `json:"from"`
+	To       string          `json:"to"`
+	Interval time.Duration   `json:"interval"`
 }
 
 type Workers struct {
@@ -34,7 +34,7 @@ func NewWorkersControl(dp DataProvider) *Workers {
 func (wc *Workers) NewWorker(from string, to string) *Worker {
 	return &Worker{
 		Pipe:     wc.pipe,
-		Done:     make(chan interface{}),
+		done:     make(chan interface{}),
 		From:     from,
 		To:       to,
 		Interval: 60,
@@ -48,7 +48,7 @@ func (wc *Workers) Run() {
 			wc.workers[worker] = true
 		case worker := <-wc.unregister:
 			wc.workers[worker] = false
-			worker.Done <- 0
+			worker.done <- 0
 			delete(wc.workers, worker)
 		}
 	}
@@ -92,18 +92,18 @@ func (wc *Workers) RemoveWorker(from string, to string) {
 }
 
 func (w *Worker) Shutdown() {
-	w.Done <- 0
+	w.done <- 0
 }
 
 func (w *Worker) GetDone() chan interface{} {
-	return w.Done
+	return w.done
 }
 
 func (w *Worker) Work(dp *DataProvider) {
-	defer close(w.Done)
+	defer close(w.done)
 	for {
 		select {
-		case <-w.Done:
+		case <-w.done:
 			return
 		case <-time.After(w.Interval * time.Second):
 			data, err := (*dp).GetData(w.From, w.To)

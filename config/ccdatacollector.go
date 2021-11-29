@@ -28,7 +28,7 @@ func ParseFlags() {
 	flag.StringVar(&Crypto, "crypto", Crypto, "specify list possible crypto currencies")
 	flag.Parse()
 	if showHelp {
-		fmt.Println("ccdatacollector is a microservice that collect data from a cryprocompare using its API.")
+		fmt.Println("ccd is a microservice that collect data from a cryprocompare using its API.")
 		fmt.Println("")
 		flag.Usage()
 		os.Exit(1)

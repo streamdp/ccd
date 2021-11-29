@@ -1,0 +1,28 @@
+version: "3"
+services:
+   db:
+      container_name: db
+      image: mysql:8.0.27
+      ports:
+       - "3306:3306"  
+      environment:
+         - MYSQL_ROOT_PASSWORD=mysql
+         - MYSQL_USER=cryptocompare
+         - MYSQL_PASSWORD=mysql
+         - MYSQL_DATABASE=cryptocompare
+
+      volumes:
+         - ./model/data:/var/lib/mysql
+         - ./model/init:/docker-entrypoint-initdb.d/:ro
+      container_name: mysqldb-container
+   ccd:
+      container_name: ccd
+      image: streamdp/ccd:1.0.0
+      ports:
+       - "8080:8080"
+      environment:
+         - CCDC_DATASOURCE="cryptocompare:mysql@tcp(mysqldb-container:3306)/cryptocompare"
+         - CCDC_APIKEY=67de41c8adab038335af5e41bfd21aec7f883830efc1b0cd56c9d3271dadd64f
+         - CCDC_APIURL=https://min-api.cryptocompare.com/data/pricemultifull
+         - CCDC_WSURL=wss://streamer.cryptocompare.com/v2
+      container_name: ccd-container

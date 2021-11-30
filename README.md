@@ -71,7 +71,7 @@ List of the implemented endpoints:
 Example getting a GET request for getting actual info about selected pair:
 
 ```bash
-$ curl "https://ccdtest.gq/v1/price?fsym=ETH&tsym=JPY"
+$ curl "http://localhost:8080/v1/price?fsym=ETH&tsym=JPY"
 ```
 
 Example of sending a POST request to add a new worker:
@@ -83,7 +83,7 @@ $ curl -X POST -H "Content-Type: application/json" -d '{ "fsym": "BTC", "tsym": 
 Example of sending a GET request to remove worker:
 
 ```bash
-$ curl "https://localhost:8080/v1/collect/remove?fsym=BTC&tsym=USD&interval=60"
+$ curl "http://localhost:8080/v1/collect/remove?fsym=BTC&tsym=USD&interval=60"
 ```
 
 Working example URL: https://ccdtest.gq/v1/service/ping

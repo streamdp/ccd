@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta charset="UTF-8">
+  <title>ccd - data collecting microservice</title>
+  <style type="text/css">
+	   #centerLayer {
+   		    margin-left: 25%;
+   		    width: 50%;
+    	    padding: 10px;
+   	    }
+   	    .outer {
+            background-color: black;
+            color: white;
+            text-align: center;
+            border: 1px solid black;
+        }
+        .wborder {
+            text-align: justify-content;
+            border: 1px solid black;
+       	    padding: 20px;
+        }
+        .code {
+            background-color: gray;
+            color: white;
+            text-align: left;
+        }
+  </style>
+</head>
+<body>
+  <div id="centerLayer">
+    <div class="outer"><h1>ccd</h1></div>
+    <div class="wborder">
+        <p>It is a microservice that collect data from a cryprocompare
+        using its API.</p>
+        <p>This microservice uses:</p>
+        <ul>
+          <li>gin-gonic/gin package to start and serve HTTP server</li>
+          <li>gorilla/websocket package to work through websockets</li>
+          <li>go-sql-driver/mysql package to work with mysql database</li>
+        </ul>
+        <p>List of the implemented endpoints:</p>
+        <table>
+          <tr>
+            <td width="5%">&diams;</td>
+            <td width="20%"><strong>/v1/service/ping</strong></td>
+            <td width="25%" align="center">[GET]</td>
+            <td width="50%"><em>check node status</em></td>
+          </tr>
+          <tr>
+            <td>&diams;</td>
+            <td><strong>/v1/collect/add</strong></td>
+            <td align="center">[POST, GET]</td>
+            <td><em>add new worker to collect data about selected pair in database</em></td>
+          </tr>
+          <tr>
+            <td>&diams;</td>
+            <td><strong>/v1/collect/remove</strong></td>
+            <td align="center">[POST, GET]</td>
+            <td><em>stop and remove worker and collecting data for selected pair</em></td>
+          </tr>
+          <tr>
+            <td>&diams;</td>
+            <td><strong>/v1/collect/status</strong></td>
+            <td align="center">[GET]</td>
+            <td><em>show info about running workers</em></td>
+          </tr>
+          <tr>
+            <td>&diams;</td>
+            <td><strong>/v1/collect/update</strong></td>
+            <td align="center">[POST, GET]</td>
+            <td><em>update pulling interval for selected pair</em></td>
+          </tr>
+          <tr>
+            <td>&diams;</td>
+            <td><strong>/v1/price</strong></td>
+            <td align="center">[POST, GET]</td>
+            <td><em>get actual (or cached if dataprovider is unavailable) info for selected pair</em></td>
+          </tr>
+          <tr>
+            <td width="5%">&diams;</td>
+            <td width="20%"><strong>/v1/ws</strong></td>
+            <td width="25%" align="center">[GET]</td>
+            <td width="50%"><em>websocket connection url</em></td>
+          </tr>
+        </table>
+        <p>Example getting a GET request for getting actual info about selected pair:</p>
+        <div class="code">
+            $ curl "http://localhost:8080/v1/price?fsym=ETH&amp;tsym=JPY"
+        </div>
+        <p>Example of sending a POST request to add a new worker:</p>
+        <div class="code">
+            $ curl -X POST -H "Content-Type: application/json" -d '{ "fsym":"BTC", "tsym":"USD", "interval":60}' "http://localhost:8080/v1/collect/add"
+        </div>
+        <p>Example of sending a GET request to remove worker:</p>
+        <div class="code">
+            $ curl "http://localhost:8080/v1/collect/remove?fsym=BTC&amp;tsym=USD&amp;interval=60"
+        </div>
+        <p>Link on <a href="https://github.com/streamdp/ccd">GitHub</a>&nbsp</p>
+    </div>
+    <div class="outer"><small>timestamp: {{.time}}</small></div>
+  </div>
+</body>
+</html>

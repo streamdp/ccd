@@ -27,6 +27,9 @@ func ParseFlags() {
 	flag.StringVar(&Common, "common", Common, "specify list possible common currencies")
 	flag.StringVar(&Crypto, "crypto", Crypto, "specify list possible crypto currencies")
 	flag.Parse()
+	if GetEnv("CCDC_DEBUG") != "" {
+		debug = true
+	}
 	if showHelp {
 		fmt.Println("ccd is a microservice that collect data from a cryprocompare using its API.")
 		fmt.Println("")

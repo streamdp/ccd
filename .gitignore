@@ -3,4 +3,5 @@
 *.~
 *.swp
 .*.swp
+*.yml
 model/data/

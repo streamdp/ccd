@@ -19,5 +19,6 @@ COPY --from=build /build/app 	    /srv/app
 COPY --from=build /build/site 	/srv/site/
 
 WORKDIR /srv
+EXPOSE 8080
 
 CMD ["/srv/app"]

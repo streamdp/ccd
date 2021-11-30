@@ -37,7 +37,6 @@ func InitRouter(r *gin.Engine) (err error) {
 	//-------------------------------------------------//
 	r.LoadHTMLFiles("templates/index.tmpl")
 	r.GET("/", ServeHTML)
-
 	apiGroupV1 := r.Group("/v1")
 	{
 		apiGroupV1.GET("/service/ping", handlers.GinHandler(v1.Ping))

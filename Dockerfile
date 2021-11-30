@@ -16,7 +16,7 @@ LABEL org.opencontainers.image.authors="Streamdp <@streamdp>"
 ENV TIME_ZONE="Europe/Minsk"
 
 COPY --from=build /build/app 	    /srv/app
-COPY --from=build /build/templates 	/srv/templates/
+COPY --from=build /build/site 	/srv/site/
 
 WORKDIR /srv
 

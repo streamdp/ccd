@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func ServeHTML(c *gin.Context) {
+func IndexHTML(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.tmpl", gin.H{
 		"time": time.Now().UTC().String(),
 	})

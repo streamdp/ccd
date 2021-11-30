@@ -5,19 +5,27 @@ It is a microservice that collect data from a cryprocompare using its API.
 This microservice uses:
 
 * gin-gonic/gin package to start and serve HTTP server
-* gorilla/websocket to work through websockets
-* go-sql-driver/mysql to work with mysql database
+* gorilla/websocket package to work through websockets
+* go-sql-driver/mysql package to work with mysql database
 
-## Build the app
+## Build app
 
 ```bash
 $ go build -o ccd .
 ````
 
-## Run the app
+## Run app
+You should previously export some environment variables:
 
 ```bash
-$ ./ccd
+export CCDC_DATASOURCE=username:password@tcp(localhost:3306)/dbname
+export CCDC_APIKEY=put you api key here
+export CCDC_APIURL=https://min-api.cryptocompare.com/data/pricemultifull
+export CCDC_WSURL=wss://streamer.cryptocompare.com/v2
+```
+And run application:
+```bash
+$ ./ccd -debug
 ```
 
 The default port is 8080, you can test the application in a browser or with curl:
@@ -32,21 +40,38 @@ You can choose a different port and run more than one copy of **ccd** on your lo
 $ ./ccd -port 8081
 ``` 
 
-List of the endpoints:
+You also can specify some setting before run application: 
+```bash
+$ ./ccd -h
+ccd is a microservice that collect data from a cryprocompare using its API.
 
-* GET  **/v1/service/ping** _check node status_
+Usage of ccd:
+  -common string
+        specify list possible common currencies (default "USD,EUR,GBP,JPY,RUR")
+  -crypto string
+        specify list possible crypto currencies (default "BTC,XRP,ETH,BCH,EOS,LTC,XMR,DASH")
+  -debug
+        run the program in debug mode
+  -h    display help
+  -port string
+        set specify port (default ":8080")
+  -timeout int
+        how long to wait for a response from the api server before sending data from the cache (default 1000)
+```
 
-* POST, GET **/v1/collect/add** _add new worker to collect data about selected pair in database_
-* POST, GET **/v1/collect/remove** _stop and remove worker and collecting data for selected pair_
-* GET **/v1/collect/status** _show info about running workers_
-* POST, GET **/v1/collect/update** _update pulling interval for selected pair_
-* POST, PRICE **/v1/price** _get actual (or cached if dataprovider is unavailable) info for selected pair_
-* WS **/v1/ws** _websocket connection url_
+List of the implemented endpoints:
+* **/v1/service/ping** [GET]   _check node status_
+* **/v1/collect/add** [POST, GET] _add new worker to collect data about selected pair in database_
+* **/v1/collect/remove** [POST, GET] _stop and remove worker and collecting data for selected pair_
+* **/v1/collect/status** [GET] _show info about running workers_
+* **/v1/collect/update** [POST, GET]  _update pulling interval for selected pair_
+* **/v1/price** [POST, PRICE] _get actual (or cached if dataprovider is unavailable) info for selected pair_
+* **/v1/ws** [GET] _websocket connection url_
 
 Example getting a GET request for getting actual info about selected pair:
 
 ```bash
-$ curl "https://ccdtest.gq/v1/price?fsym=ETH&tsym=JPY"
+$ curl "http://localhost:8080/v1/price?fsym=ETH&tsym=JPY"
 ```
 
 Example of sending a POST request to add a new worker:
@@ -58,7 +83,7 @@ $ curl -X POST -H "Content-Type: application/json" -d '{ "fsym": "BTC", "tsym": 
 Example of sending a GET request to remove worker:
 
 ```bash
-$ curl "https://localhost:8080/v1/collect/remove?fsym=BTC&tsym=USD&interval=60"
+$ curl "http://localhost:8080/v1/collect/remove?fsym=BTC&tsym=USD&interval=60"
 ```
 
 Working example URL: https://ccdtest.gq/v1/service/ping

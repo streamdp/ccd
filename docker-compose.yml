@@ -22,7 +22,7 @@ services:
          - "8080"
       environment:
          - CCDC_DATASOURCE=cryptocompare:mysql@tcp(mysqldb-container:3306)/cryptocompare
-         - CCDC_APIKEY=67de41c8adab038335af5e41bfd21aec7f883830efc1b0cd56c9d3271dadd64f
+         - CCDC_APIKEY=
          - CCDC_APIURL=https://min-api.cryptocompare.com/data/pricemultifull
          - CCDC_WSURL=wss://streamer.cryptocompare.com/v2
       container_name: ccd-container

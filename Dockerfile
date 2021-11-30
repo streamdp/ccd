@@ -5,9 +5,8 @@ ADD . /build
 COPY go.* ./
 RUN go mod download
 
-RUN apk update && apk upgrade && apk add upx
+RUN apk update && apk upgrade
 RUN go build -mod=readonly -o app ./ 
-#RUN upx -9 -q app
 
 FROM umputun/baseimage:app
 

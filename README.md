@@ -66,7 +66,7 @@ List of the implemented endpoints:
 * **/v1/collect/status** [GET] _show info about running workers_
 * **/v1/collect/update** [POST, GET]  _update pulling interval for selected pair_
 * **/v1/price** [POST, PRICE] _get actual (or cached if dataprovider is unavailable) info for selected pair_
-* **/v1/ws** [WS] _websocket connection url_
+* **/v1/ws** [GET] _websocket connection url_
 
 Example getting a GET request for getting actual info about selected pair:
 

@@ -13,7 +13,6 @@ import (
 	ws1 "github.com/streamdp/ccd/router/v1/ws"
 )
 
-// InitRouter basic work on setting up the application, declare endpoints, register our custom validation functions
 func InitRouter(r *gin.Engine) (err error) {
 	dp, err := cryptocompare.Init()
 	if err != nil {
@@ -28,13 +27,11 @@ func InitRouter(r *gin.Engine) (err error) {
 	go db.ServePipe(wc.GetPipe())
 	hub := ws1.NewHub()
 	go hub.Run(wc, db)
-
 	r.LoadHTMLFiles("site/index.tmpl")
 	r.Static("/css", "site/css")
 	r.Static("/js", "site/js")
 	r.GET("/", SendHTML)
 	r.HEAD("/", SendOK)
-
 	apiV1 := r.Group("/v1")
 	{
 		apiV1.GET("/service/ping", handlers.GinHandler(v1.Ping))

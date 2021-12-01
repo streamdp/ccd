@@ -7,20 +7,22 @@ import (
 	v1 "github.com/streamdp/ccd/router/v1"
 )
 
-type Hub struct {
+type hub struct {
 	clients    map[*Client]bool
 	queryQueue chan *Query
 	register   chan *Client
 	unregister chan *Client
 }
 
+// Query basic structure for build query queue
 type Query struct {
 	sender *Client
 	query  *v1.PriceQuery
 }
 
-func NewHub() *Hub {
-	return &Hub{
+// NewHub init new hub
+func NewHub() *hub {
+	return &hub{
 		queryQueue: make(chan *Query, 256),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
@@ -28,7 +30,8 @@ func NewHub() *Hub {
 	}
 }
 
-func (h *Hub) Run(wc *dataproviders.Workers, db *dbconnectors.Db) {
+// Run loop what serving register/unregister and queryQueue chan
+func (h *hub) Run(wc *dataproviders.Workers, db *dbconnectors.Db) {
 	for {
 		select {
 		case client := <-h.register:

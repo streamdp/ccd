@@ -1,5 +1,6 @@
 package dataproviders
 
+// Response structure for easily json serialization
 type Response struct {
 	Change24Hour    float64 `json:"CHANGE24HOUR"`
 	Changepct24Hour float64 `json:"CHANGEPCT24HOUR"`
@@ -14,6 +15,7 @@ type Response struct {
 	Lastupdate      int64   `json:"LASTUPDATE"`
 }
 
+// Display structure for easily json serialization
 type Display struct {
 	Change24Hour    string `json:"CHANGE24HOUR"`
 	Changepct24Hour string `json:"CHANGEPCT24HOUR"`
@@ -29,25 +31,26 @@ type Display struct {
 	Mktcap          string `json:"MKTCAP"`
 }
 
+// Data structure for easily json serialization
 type Data struct {
 	Raw     map[string]map[string]*Response `json:"RAW"`
 	Display map[string]map[string]*Display  `json:"DISPLAY"`
 }
 
-type DisplayData struct {
-}
-
+// DataPipe  for easily transfer Data throughout chan
 type DataPipe struct {
 	From string
 	To   string
 	Data *Data
 }
 
+// DataProvider interface makes it possible to expand the list of data providers
 type DataProvider interface {
 	GetSerializable() *Data
-	GetData(from string, to string) (*Data, error)
+	Get(from string, to string) (*Data, error)
 }
 
+// GetEmptyData returns empty Data
 func GetEmptyData(from string, to string) *Data {
 	result := &Data{
 		Raw:     map[string]map[string]*Response{},

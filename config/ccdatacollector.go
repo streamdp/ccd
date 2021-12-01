@@ -17,6 +17,7 @@ var (
 	Version           = "1.0.0"
 )
 
+// ParseFlags and update config variables
 func ParseFlags() {
 	var showHelp bool
 	var showVersion bool
@@ -48,6 +49,7 @@ func ParseFlags() {
 	}
 }
 
+// GetEnv values for selected name or return null
 func GetEnv(name string) (result string) {
 	for _, e := range os.Environ() {
 		pair := strings.SplitN(e, "=", 2)

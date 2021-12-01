@@ -7,12 +7,14 @@ import (
 	"net/http"
 )
 
+// CollectQuery structure for easily json serialization/validation/binding GET and POST query data
 type CollectQuery struct {
 	From     string `json:"fsym" form:"fsym" binding:"required,crypto"`
 	To       string `json:"tsym" form:"tsym" binding:"required,common"`
 	Interval int    `json:"interval" form:"interval,default=60"`
 }
 
+// AddWorker that will collect data for the selected currency pair to the management service
 func AddWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		var worker *dataproviders.Worker
@@ -31,6 +33,7 @@ func AddWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 	}
 }
 
+// RemoveWorker from the management service and stop collecting data for the selected currencies pair
 func RemoveWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		var worker *dataproviders.Worker
@@ -48,6 +51,7 @@ func RemoveWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 	}
 }
 
+// WorkersStatus return information about running workers
 func WorkersStatus(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		res.UpdateAllFields(http.StatusOK, "Information about running workers", nil)
@@ -68,6 +72,7 @@ func WorkersStatus(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 	}
 }
 
+// UpdateWorker update pulling data interval for the selected worker by the currencies pair
 func UpdateWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		var worker *dataproviders.Worker

@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// Crypto - validate the field so that the value is from the list of сrypto currencies
 func Crypto(fl validator.FieldLevel) bool {
 	match := strings.Split(config.Crypto, ",")
 	value := fl.Field().String()

@@ -8,13 +8,15 @@ import (
 	"net/http"
 )
 
+// PriceQuery structure for easily json serialization/validation/binding GET and POST query data
 type PriceQuery struct {
 	From string `json:"fsym" form:"fsym" binding:"required,crypto"`
 	To   string `json:"tsym" form:"tsym" binding:"required,common"`
 }
 
+// GetLastPrice return up-to-date data for the selected currencies pair
 func GetLastPrice(wc *dataproviders.Workers, db *dbconnectors.Db, query *PriceQuery) (data *dataproviders.Data, err error) {
-	data, err = (*wc.GetDataProvider()).GetData(query.From, query.To)
+	data, err = (*wc.GetDataProvider()).Get(query.From, query.To)
 	if err != nil {
 		data, err = db.GetLast(query.From, query.To)
 		if err != nil {
@@ -29,6 +31,7 @@ func GetLastPrice(wc *dataproviders.Workers, db *dbconnectors.Db, query *PriceQu
 	return
 }
 
+// GetPrice return up-to-date or most recent data for the selected currencies pair
 func GetPrice(wc *dataproviders.Workers, db *dbconnectors.Db) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		query := PriceQuery{}

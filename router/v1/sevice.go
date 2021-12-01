@@ -6,6 +6,7 @@ import (
 	"net/http"
 )
 
+// Ping for check if service is alive
 func Ping(_ *gin.Context) (res handlers.Result, err error) {
 	res.UpdateAllFields(http.StatusOK, "pong", nil)
 	return

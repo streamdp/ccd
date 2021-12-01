@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// IndexHTML show a beautiful page with small intro and instruction
 func IndexHTML(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.tmpl", gin.H{
 		"year":    time.Now().Year(),

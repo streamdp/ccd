@@ -19,7 +19,7 @@ func main() {
 		handlers.SystemHandler(err)
 		return
 	}
-	if err := engine.Run(config.Port); err != nil {
+	if err = engine.Run(config.Port); err != nil {
 		handlers.SystemHandler(err)
 		return
 	}

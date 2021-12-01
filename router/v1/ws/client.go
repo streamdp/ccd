@@ -24,13 +24,14 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
+// Client is a middleman between the websocket connection and the hub.
 type Client struct {
-	hub  *Hub
+	hub  *hub
 	conn *websocket.Conn
 	send chan []byte
 }
 
-func (c *Client) PongHandler(string) (err error) {
+func (c *Client) pongHandler(string) (err error) {
 	if err = c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
 		return err
 	}
@@ -49,7 +50,7 @@ func (c *Client) readPump() {
 	if err = c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
 		return
 	}
-	c.conn.SetPongHandler(c.PongHandler)
+	c.conn.SetPongHandler(c.pongHandler)
 	for {
 		query := v1.PriceQuery{}
 		if err = c.conn.ReadJSON(&query); err != nil {
@@ -118,7 +119,8 @@ func (c *Client) writePump() {
 	}
 }
 
-func ServeWs(hub *Hub) gin.HandlerFunc {
+// ServeWs - handles websocket requests from the peer.
+func ServeWs(hub *hub) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {

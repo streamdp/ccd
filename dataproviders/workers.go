@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Worker does all the data mining work
 type Worker struct {
 	Pipe     chan *DataPipe `json:"-"`
 	done     chan interface{}
@@ -13,6 +14,7 @@ type Worker struct {
 	Interval int    `json:"interval"`
 }
 
+// Workers this is a manager who manages a group of Worker
 type Workers struct {
 	workers    map[*Worker]bool
 	pipe       chan *DataPipe
@@ -21,6 +23,7 @@ type Workers struct {
 	dp         DataProvider
 }
 
+// NewWorkersControl init Workers structure
 func NewWorkersControl(dp DataProvider) *Workers {
 	return &Workers{
 		workers:    make(map[*Worker]bool),
@@ -31,6 +34,7 @@ func NewWorkersControl(dp DataProvider) *Workers {
 	}
 }
 
+// NewWorker init Worker structure with selected currencies pair
 func (wc *Workers) NewWorker(from string, to string) *Worker {
 	return &Worker{
 		Pipe:     wc.pipe,
@@ -41,6 +45,7 @@ func (wc *Workers) NewWorker(from string, to string) *Worker {
 	}
 }
 
+// Run managing Worker
 func (wc *Workers) Run() {
 	for {
 		select {
@@ -54,18 +59,22 @@ func (wc *Workers) Run() {
 	}
 }
 
+// GetPipe return common DataPipe
 func (wc *Workers) GetPipe() chan *DataPipe {
 	return wc.pipe
 }
 
+// GetWorkers return state of the all *Workers
 func (wc *Workers) GetWorkers() *map[*Worker]bool {
 	return &wc.workers
 }
 
+// GetDataProvider return *DataProvider
 func (wc *Workers) GetDataProvider() *DataProvider {
 	return &wc.dp
 }
 
+// GetWorker for the selected currencies pair, if possible
 func (wc *Workers) GetWorker(from string, to string) *Worker {
 	for worker := range wc.workers {
 		if worker.From == from && worker.To == to {
@@ -75,30 +84,36 @@ func (wc *Workers) GetWorker(from string, to string) *Worker {
 	return nil
 }
 
+// Add Worker to the managing service by pointer
 func (wc *Workers) Add(worker *Worker) *Worker {
 	wc.register <- worker
 	return worker
 }
 
+// AddWorker a new worker that will collect data for the selected currency pair to the management service
 func (wc *Workers) AddWorker(from string, to string) *Worker {
 	worker := wc.NewWorker(from, to)
-	wc.register <- worker
+	wc.Add(worker)
 	return worker
 }
 
+//RemoveWorker from the managing service by the selected currency pair
 func (wc *Workers) RemoveWorker(from string, to string) {
 	worker := wc.GetWorker(from, to)
 	wc.unregister <- worker
 }
 
+// Shutdown Worker
 func (w *Worker) Shutdown() {
 	w.done <- 0
 }
 
+// GetDone return chan interface{} for the selected Worker by pointer
 func (w *Worker) GetDone() chan interface{} {
 	return w.done
 }
 
+// Work of the Worker is collect Data and send it throughout the Pipe
 func (w *Worker) Work(dp *DataProvider) {
 	defer close(w.done)
 	for {
@@ -106,11 +121,9 @@ func (w *Worker) Work(dp *DataProvider) {
 		case <-w.done:
 			return
 		case <-time.After(time.Duration(w.Interval) * time.Second):
-			data, err := (*dp).GetData(w.From, w.To)
+			data, err := (*dp).Get(w.From, w.To)
 			if err != nil {
 				handlers.SystemHandler(err)
-			}
-			if data == GetEmptyData(w.From, w.To) {
 				continue
 			}
 			w.Pipe <- &DataPipe{

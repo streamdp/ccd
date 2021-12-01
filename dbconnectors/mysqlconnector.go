@@ -11,10 +11,12 @@ import (
 	"time"
 )
 
+// Db needed to add new methods for an instance *sql.Db
 type Db struct {
 	instance *sql.DB
 }
 
+// GetLast row with the most recent data for the selected currencies pair
 func (db *Db) GetLast(from string, to string) (result *dataproviders.Data, err error) {
 	var displayDataRaw string
 	result = dataproviders.GetEmptyData(from, to)
@@ -29,6 +31,7 @@ func (db *Db) GetLast(from string, to string) (result *dataproviders.Data, err e
 	return result, nil
 }
 
+// Insert dataproviders.Data from the dataproviders.DataPipe to the Db
 func (db *Db) Insert(data *dataproviders.DataPipe) (result sql.Result, err error) {
 	if data.Data == nil || data.Data.Raw[data.From] == nil {
 		return nil, errors.New("cant insert empty data")
@@ -45,29 +48,32 @@ func (db *Db) Insert(data *dataproviders.DataPipe) (result sql.Result, err error
 	return
 }
 
-func (db *Db) Connect(dataSource string) (err error) {
+func (db *Db) connect(dataSource string) (err error) {
 	if db.instance, err = sql.Open("mysql", dataSource); err != nil {
 		return err
 	}
 	return nil
 }
 
+// Close Db connection
 func (db *Db) Close() (err error) {
 	return db.instance.Close()
 }
 
+// Connect after prepare to the Db
 func Connect() (db *Db, err error) {
 	db = &Db{}
 	dataSource := config.GetEnv("CCDC_DATASOURCE")
 	if dataSource == "" {
 		return nil, errors.New("please set OS environment \"CCDC_DATASOURCE\" with database connection string")
 	}
-	if err = db.Connect(dataSource); err != nil {
+	if err = db.connect(dataSource); err != nil {
 		return nil, err
 	}
 	return db, nil
 }
 
+// ServePipe and if we get dataproviders.DataPipe then save them to the Db
 func (db *Db) ServePipe(pipe chan *dataproviders.DataPipe) {
 	for {
 		if data := <-pipe; true {

@@ -15,15 +15,18 @@ var apiKey string
 var apiURL string
 var wsURL string
 
+// Data structure for easily json serialization
 type Data struct {
 	Raw     map[string]map[string]*dataproviders.Response `json:"RAW"`
 	Display map[string]map[string]*dataproviders.Display  `json:"DISPLAY"`
 }
 
+// GetSerializable convert and return Data to *dataproviders.Data
 func (cc *Data) GetSerializable() (dpStruct *dataproviders.Data) {
 	return (*dataproviders.Data)(cc)
 }
 
+// Init apiKey, apiURL, wsURL variables with environment values and return Data structure
 func Init() (cc *Data, err error) {
 	cc.SetApiKey(config.GetEnv("CCDC_APIKEY"))
 	cc.SetApiURL(config.GetEnv("CCDC_APIURL"))
@@ -34,7 +37,8 @@ func Init() (cc *Data, err error) {
 	return cc, nil
 }
 
-func (cc *Data) GetData(fSym string, tSym string) (ds *dataproviders.Data, err error) {
+// Get filled Data structure for the selected pair currencies over http/https
+func (cc *Data) Get(fSym string, tSym string) (ds *dataproviders.Data, err error) {
 	var apiURL *url.URL
 	var response *http.Response
 	var data []byte
@@ -60,6 +64,7 @@ func (cc *Data) GetData(fSym string, tSym string) (ds *dataproviders.Data, err e
 	return cc.GetSerializable(), nil
 }
 
+// BuildURL for the selected pair currencies
 func (cc *Data) BuildURL(fSym string, tSym string) (u *url.URL, err error) {
 	if apiURL == "" || apiKey == "" {
 		return nil, errors.New("please, set OS environment \"CCDC_APIKEY\" and \"CCDC_APIURL\"")
@@ -75,26 +80,32 @@ func (cc *Data) BuildURL(fSym string, tSym string) (u *url.URL, err error) {
 	return u, nil
 }
 
+// GetApiKey return Api key for authenticate our connection
 func (cc *Data) GetApiKey() string {
 	return apiKey
 }
 
+// GetApiURL return url for connection throughout http/https
 func (cc *Data) GetApiURL() string {
 	return apiURL
 }
 
+// GetWsURL return url for connection throughout websockets
 func (cc *Data) GetWsURL() string {
 	return wsURL
 }
 
+// SetApiKey sets Api key for authenticate our connection
 func (cc *Data) SetApiKey(key string) {
 	apiKey = key
 }
 
+// SetApiURL sets url for connection throughout http/https
 func (cc *Data) SetApiURL(url string) {
 	apiURL = url
 }
 
+// SetWsURL sets url for connection throughout websockets
 func (cc *Data) SetWsURL(url string) {
 	wsURL = url
 }

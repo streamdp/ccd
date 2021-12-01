@@ -13,6 +13,7 @@ import (
 	ws1 "github.com/streamdp/ccd/router/v1/ws"
 )
 
+// InitRouter basic work on setting up the application, declare endpoints, register our custom validation functions
 func InitRouter(r *gin.Engine) (err error) {
 	dp, err := cryptocompare.Init()
 	if err != nil {

@@ -1,9 +1,4 @@
 # ccd
-<style>
-    p {
-        text-align:center;
-    }
-</style>
 <p>
     <a href="https://github.com/streamdp/ccd/releases/latest">
         <img alt="GitHub release" src="https://img.shields.io/github/v/release/streamdp/ccd.svg?logo=github&style=flat-square">

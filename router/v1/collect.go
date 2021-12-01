@@ -8,9 +8,9 @@ import (
 )
 
 type CollectQuery struct {
-	From     string        `json:"fsym" form:"fsym" binding:"required,crypto"`
-	To       string        `json:"tsym" form:"tsym" binding:"required,common"`
-	Interval int           `json:"interval" form:"interval,default=60"`
+	From     string `json:"fsym" form:"fsym" binding:"required,crypto"`
+	To       string `json:"tsym" form:"tsym" binding:"required,common"`
+	Interval int    `json:"interval" form:"interval,default=60"`
 }
 
 func AddWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {

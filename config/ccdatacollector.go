@@ -14,7 +14,7 @@ var (
 	Crypto            = "BTC,XRP,ETH,BCH,EOS,LTC,XMR,DASH"
 	Common            = "USD,EUR,GBP,JPY,RUR"
 	HttpClientTimeout = 1000
-	Version			  string
+	Version           = "1.0.0"
 )
 
 func ParseFlags() {

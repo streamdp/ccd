@@ -3,8 +3,8 @@ package ws
 import (
 	"encoding/json"
 	"github.com/gorilla/websocket"
-	"github.com/streamdp/ccdatacollector/dataproviders/cryptocompare"
-	"github.com/streamdp/ccdatacollector/handlers"
+	"github.com/streamdp/ccd/dataproviders/cryptocompare"
+	"github.com/streamdp/ccd/handlers"
 	"io"
 	"net/http"
 	"net/url"

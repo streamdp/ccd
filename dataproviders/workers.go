@@ -1,7 +1,7 @@
 package dataproviders
 
 import (
-	"github.com/streamdp/ccdatacollector/handlers"
+	"github.com/streamdp/ccd/handlers"
 	"time"
 )
 

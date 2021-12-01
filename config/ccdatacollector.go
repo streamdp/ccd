@@ -14,12 +14,15 @@ var (
 	Crypto            = "BTC,XRP,ETH,BCH,EOS,LTC,XMR,DASH"
 	Common            = "USD,EUR,GBP,JPY,RUR"
 	HttpClientTimeout = 1000
+	Version			  string
 )
 
 func ParseFlags() {
 	var showHelp bool
+	var showVersion bool
 	var debug bool
 	flag.BoolVar(&showHelp, "h", false, "display help")
+	flag.BoolVar(&showVersion, "v", false, "display version")
 	flag.BoolVar(&debug, "debug", false, "run the program in debug mode")
 	flag.StringVar(&Port, "port", ":8080", "set specify port")
 	flag.IntVar(&HttpClientTimeout, "timeout", HttpClientTimeout, "how long to wait for a response from the"+
@@ -34,6 +37,10 @@ func ParseFlags() {
 		fmt.Println("ccd is a microservice that collect data from a cryprocompare using its API.")
 		fmt.Println("")
 		flag.Usage()
+		os.Exit(1)
+	}
+	if showVersion {
+		fmt.Println("ccd version: " + Version)
 		os.Exit(1)
 	}
 	if !debug {

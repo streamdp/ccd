@@ -2,9 +2,9 @@ package ws
 
 import (
 	"encoding/json"
-	"github.com/streamdp/ccdatacollector/dataproviders"
-	"github.com/streamdp/ccdatacollector/dbconnectors"
-	v1 "github.com/streamdp/ccdatacollector/router/v1"
+	"github.com/streamdp/ccd/dataproviders"
+	"github.com/streamdp/ccd/dbconnectors"
+	v1 "github.com/streamdp/ccd/router/v1"
 )
 
 type Hub struct {

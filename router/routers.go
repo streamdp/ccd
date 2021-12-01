@@ -4,14 +4,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
-	"github.com/streamdp/ccdatacollector/dataproviders"
-	"github.com/streamdp/ccdatacollector/dataproviders/cryptocompare"
+	"github.com/streamdp/ccd/dataproviders"
+	"github.com/streamdp/ccd/dataproviders/cryptocompare"
 	//	"github.com/streamdp/ccdatacollector/dataproviders/ws"
-	"github.com/streamdp/ccdatacollector/dbconnectors"
-	"github.com/streamdp/ccdatacollector/handlers"
-	v1 "github.com/streamdp/ccdatacollector/router/v1"
-	"github.com/streamdp/ccdatacollector/router/v1/validators"
-	ws1 "github.com/streamdp/ccdatacollector/router/v1/ws"
+	"github.com/streamdp/ccd/dbconnectors"
+	"github.com/streamdp/ccd/handlers"
+	v1 "github.com/streamdp/ccd/router/v1"
+	"github.com/streamdp/ccd/router/v1/validators"
+	ws1 "github.com/streamdp/ccd/router/v1/ws"
 )
 
 func InitRouter(r *gin.Engine) (err error) {

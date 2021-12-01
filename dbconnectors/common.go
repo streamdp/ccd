@@ -2,7 +2,7 @@ package dbconnectors
 
 import (
 	"database/sql"
-	"github.com/streamdp/ccdatacollector/dataproviders"
+	"github.com/streamdp/ccd/dataproviders"
 )
 
 type DbReadWrite interface {

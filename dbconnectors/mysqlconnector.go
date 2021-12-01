@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/streamdp/ccdatacollector/config"
-	"github.com/streamdp/ccdatacollector/dataproviders"
-	"github.com/streamdp/ccdatacollector/handlers"
+	"github.com/streamdp/ccd/config"
+	"github.com/streamdp/ccd/dataproviders"
+	"github.com/streamdp/ccd/handlers"
 	"time"
 )
 

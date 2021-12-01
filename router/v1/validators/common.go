@@ -2,7 +2,7 @@ package validators
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/streamdp/ccdatacollector/config"
+	"github.com/streamdp/ccd/config"
 	"strings"
 )
 

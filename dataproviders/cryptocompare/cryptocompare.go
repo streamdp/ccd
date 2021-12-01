@@ -3,8 +3,8 @@ package cryptocompare
 import (
 	"encoding/json"
 	"errors"
-	"github.com/streamdp/ccdatacollector/config"
-	"github.com/streamdp/ccdatacollector/dataproviders"
+	"github.com/streamdp/ccd/config"
+	"github.com/streamdp/ccd/dataproviders"
 	"io/ioutil"
 	"net/http"
 	"net/url"

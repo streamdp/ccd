@@ -1,8 +1,6 @@
-module github.com/streamdp/ccdatacollector
+module github.com/streamdp/ccd
 
 go 1.17
-
-replace github.com/streamdp/ccdatacollector => /home/streamdp/GolandProjects/ccdatacollector
 
 require (
 	github.com/gin-gonic/gin v1.7.7

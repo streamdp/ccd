@@ -2,9 +2,9 @@ package v1
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/streamdp/ccdatacollector/dataproviders"
-	"github.com/streamdp/ccdatacollector/dbconnectors"
-	"github.com/streamdp/ccdatacollector/handlers"
+	"github.com/streamdp/ccd/dataproviders"
+	"github.com/streamdp/ccd/dbconnectors"
+	"github.com/streamdp/ccd/handlers"
 	"net/http"
 )
 

@@ -62,7 +62,7 @@ func Connect() (db *Db, err error) {
 	if dataSource == "" {
 		return nil, errors.New("please set OS environment \"CCDC_DATASOURCE\" with database connection string")
 	}
-	if err := db.Connect(dataSource); err != nil {
+	if err = db.Connect(dataSource); err != nil {
 		return nil, err
 	}
 	return db, nil

@@ -6,11 +6,11 @@ import (
 )
 
 type Worker struct {
-	Pipe chan *DataPipe  `json:"-"`
-	done chan interface{}
-	From string          `json:"from"`
-	To       string          `json:"to"`
-	Interval int   `json:"interval"`
+	Pipe     chan *DataPipe `json:"-"`
+	done     chan interface{}
+	From     string `json:"from"`
+	To       string `json:"to"`
+	Interval int    `json:"interval"`
 }
 
 type Workers struct {

@@ -28,7 +28,6 @@ func Init() (cc *Data, err error) {
 	cc.SetApiKey(config.GetEnv("CCDC_APIKEY"))
 	cc.SetApiURL(config.GetEnv("CCDC_APIURL"))
 	cc.SetWsURL(config.GetEnv("CCDC_WSURL"))
-
 	if cc.GetApiURL() == "" || cc.GetApiKey() == "" {
 		return nil, errors.New("you should specify \"CCDC_APIKEY\" and \"CCDC_APIURL\" in you OS environment")
 	}

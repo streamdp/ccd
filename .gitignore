@@ -3,5 +3,6 @@
 *.~
 *.swp
 .*.swp
-*.yml
-model/data/
+docker-compose.yml
+
+model/_data/

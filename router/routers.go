@@ -6,7 +6,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/streamdp/ccd/dataproviders"
 	"github.com/streamdp/ccd/dataproviders/cryptocompare"
-	//	"github.com/streamdp/ccdatacollector/dataproviders/ws"
 	"github.com/streamdp/ccd/dbconnectors"
 	"github.com/streamdp/ccd/handlers"
 	v1 "github.com/streamdp/ccd/router/v1"
@@ -28,12 +27,6 @@ func InitRouter(r *gin.Engine) (err error) {
 	go db.ServePipe(wc.GetPipe())
 	hub := ws1.NewHub()
 	go hub.Run(wc, db)
-	//- only for testing (it printing data to the log)-//
-	//	hub2 := ws.NewHub()
-	//	go hub2.Run()
-	//	wsClient := ws.ServeWs(hub2, dp)
-	//	wsClient.Subscribe([]string{"5~CCCAGG~BTC~USD"})
-	//-------------------------------------------------//
 	r.LoadHTMLFiles("site/index.tmpl")
 	r.Static("/css", "site/css")
 	r.Static("/js", "site/js")

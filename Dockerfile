@@ -1,12 +1,12 @@
-FROM umputun/baseimage:buildgo-master as build
-
+FROM umputun/baseimage:buildgo-master as build 
+ARG VERSION
 WORKDIR /build
 ADD . /build
 COPY go.* ./
 RUN go mod download
 
 RUN apk update && apk upgrade
-RUN go build -mod=readonly -o app ./ 
+RUN go build -mod=readonly -o app -ldflags="-X github.com/streamdp/ccd/config.Version=$VERSION" ./
 
 FROM umputun/baseimage:app
 

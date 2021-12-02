@@ -24,7 +24,7 @@ archives:
       amd64: x86_64
     files:
       - README.md
-      - LICENSE.txt
+      - LICENSE
       - site/*
       - model/init/*
 checksum:

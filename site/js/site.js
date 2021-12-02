@@ -30,7 +30,7 @@ function get_list_with_active_nodes() {
                     let nodes = data[fsym];
                     let litag = "<li>" + fsym + " to: "
                     for (let tsym in nodes){
-                         litag += tsym+ " (interval: " + nodes[tsym]["interval"] + "), ";
+                         litag += tsym+ ":" + nodes[tsym]["interval"] + ", ";
                     }
                     result += litag.slice(0, -2) + "</li>";
                 }

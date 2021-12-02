@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	// this is a mysql-driver, it is needed for database/sql to work correctly
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/dataproviders"

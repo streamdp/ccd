@@ -9,6 +9,7 @@ import (
 )
 
 var (
+	// Port - set default port for gin-gonic engine init
 	Port              = ":8080"
 	RunMode           = gin.DebugMode
 	Crypto            = "BTC,XRP,ETH,BCH,EOS,LTC,XMR,DASH"

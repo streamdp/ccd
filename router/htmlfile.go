@@ -15,6 +15,7 @@ func SendHTML(c *gin.Context) {
 	})
 }
 
+// SendOK using for HEAD request and send 200 and nil body
 func SendOK(c *gin.Context) {
 	c.JSON(http.StatusOK, nil)
 }

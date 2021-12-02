@@ -1,12 +1,10 @@
 # ccd
-<p>
-    <a href="https://github.com/streamdp/ccd/releases/latest">
-        <img alt="GitHub release" src="https://img.shields.io/github/v/release/streamdp/ccd.svg?logo=github&style=flat-square">
-    </a>
-    <a href="https://goreportcard.com/report/github.com/streamdp/ccd">
-        <img src="https://goreportcard.com/badge/github.com/streamdp/ccd" alt="Code Status" />
-    </a>
-</p>
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/streamdp/ccd)](https://goreportcard.com/report/github.com/streamdp/ccd)
+[![Website ccdtest.gq](https://img.shields.io/website-up-down-green-red/https/ccdtest.gq.svg)](https://ccdtest.gq/)
+[![GitHub release](https://img.shields.io/github/release/streamdp/ccd.svg)](https://github.com/streamdp/ccd/releases/)
+[![GitHub license](https://img.shields.io/github/license/streamdp/ccd.svg)](https://github.com/streamdp/ccd/blob/main/LICENSE)
+
 It is a microservice that collect data from a cryprocompare using its API.
 
 This microservice uses:

@@ -24,7 +24,7 @@ jobs:
         args: release --rm-dist
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  push_to_registry:
+  push_to_the_registry:
     runs-on: ubuntu-18.04
     steps:
     - name: Check out the repo

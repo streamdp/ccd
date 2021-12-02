@@ -586,6 +586,10 @@ video {
 .m-auto {
     margin: auto;
 }
+.mx-10 {
+    margin-left: 2.5rem;
+    margin-right:  2.5rem;
+}
 .mx-auto {
     margin-left: auto;
     margin-right: auto;
@@ -842,7 +846,6 @@ video {
 .dark .dark\:prose-dark {
     color: #d1d5db;
 }
-
 .dark .dark\:prose-dark a {
     color: #e5e7eb;
 }
@@ -961,9 +964,6 @@ video {
     color: rgba(209, 213, 219, var(--tw-text-opacity));
 }
 @media (min-width: 768px) {
-    .md\:relative {
-        position: relative;
-    }
     .md\:top-0 {
         top: 0;
     }

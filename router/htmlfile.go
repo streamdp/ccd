@@ -7,10 +7,14 @@ import (
 	"time"
 )
 
-// IndexHTML show a beautiful page with small intro and instruction
-func IndexHTML(c *gin.Context) {
+// SendHTML show a beautiful page with small intro and instruction
+func SendHTML(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.tmpl", gin.H{
 		"year":    time.Now().Year(),
 		"version": config.Version,
 	})
+}
+
+func SendOK(c *gin.Context) {
+	c.JSON(http.StatusOK, nil)
 }

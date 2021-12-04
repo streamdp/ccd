@@ -70,7 +70,7 @@ List of the implemented endpoints:
 * **/v1/collect/remove** [POST, GET] _stop and remove worker and collecting data for selected pair_
 * **/v1/collect/status** [GET] _show info about running workers_
 * **/v1/collect/update** [POST, GET]  _update pulling interval for selected pair_
-* **/v1/price** [POST, PRICE] _get actual (or cached if dataprovider is unavailable) info for selected pair_
+* **/v1/price** [POST, GET] _get actual (or cached if dataprovider is unavailable) info for selected pair_
 * **/v1/ws** [GET] _websocket connection url_
 
 Example getting a GET request for getting actual info about selected pair:

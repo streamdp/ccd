@@ -92,3 +92,4 @@ $ curl "http://localhost:8080/v1/collect/remove?fsym=BTC&tsym=USD&interval=60"
 ```
 
 Working example URL: https://ccdtest.gq/v1/service/ping
+Web UI: https://ccdtest.gq

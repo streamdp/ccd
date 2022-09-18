@@ -6,5 +6,6 @@
 docker-compose.yml
 
 model/_data/
+model/data/
 
 dist/

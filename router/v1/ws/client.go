@@ -22,6 +22,7 @@ const (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
 // Client is a middleman between the websocket connection and the hub.
@@ -56,24 +57,24 @@ func (c *Client) readPump() {
 		if err = c.conn.ReadJSON(&query); err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				handlers.SystemHandler(err)
+				break
 			}
-			break
+			c.errorHandler(errors.New("invalid request: the request should look like {\"fsym\":\"CRYPTO\",\"tsym\":\"COMMON\"}"))
+			continue
 		}
-		if query != (v1.PriceQuery{}) {
-			c.hub.queryQueue <- &Query{
-				sender: c,
-				query:  &query,
-			}
-		} else {
-			c.errorHandler(errors.New("invalid request: the request should look like {'fsym':'CRYPTO','tsym':'COMMON'}"))
+		c.hub.queryQueue <- &Query{
+			send:  c.send,
+			query: &query,
 		}
 	}
 }
 
 func (c *Client) writePump() {
-	var err error
-	var writer io.WriteCloser
-	ticker := time.NewTicker(pingPeriod)
+	var (
+		err    error
+		writer io.WriteCloser
+		ticker = time.NewTicker(pingPeriod)
+	)
 	defer func() {
 		ticker.Stop()
 		if err = c.conn.Close(); err != nil {
@@ -98,8 +99,7 @@ func (c *Client) writePump() {
 			if _, err = writer.Write(message); err != nil {
 				return
 			}
-			n := len(c.send)
-			for i := 0; i < n; i++ {
+			for i := 0; i < len(c.send); i++ {
 				if _, err = writer.Write(<-c.send); err != nil {
 					return
 				}
@@ -108,8 +108,7 @@ func (c *Client) writePump() {
 				return
 			}
 		case <-ticker.C:
-			err = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err != nil {
+			if err = c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 				return
 			}
 			if err = c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
@@ -132,7 +131,7 @@ func ServeWs(hub *hub) gin.HandlerFunc {
 			conn: conn,
 			send: make(chan []byte, 256),
 		}
-		client.hub.register <- client
+		client.hub.clients[client] = struct{}{}
 		go client.writePump()
 		go client.readPump()
 	}

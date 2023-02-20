@@ -76,11 +76,11 @@ func Connect() (db *Db, err error) {
 
 // ServePipe and if we get dataproviders.DataPipe then save them to the Db
 func (db *Db) ServePipe(pipe chan *dataproviders.DataPipe) {
-	for {
-		if data := <-pipe; true {
+	go func() {
+		for data := range pipe {
 			if _, err := db.Insert(data); err != nil {
 				handlers.SystemHandler(err)
 			}
 		}
-	}
+	}()
 }

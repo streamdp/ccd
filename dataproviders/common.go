@@ -46,7 +46,6 @@ type DataPipe struct {
 
 // DataProvider interface makes it possible to expand the list of data providers
 type DataProvider interface {
-	GetSerializable() *Data
 	Get(from string, to string) (*Data, error)
 }
 

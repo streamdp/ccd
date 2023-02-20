@@ -26,8 +26,8 @@ func AddWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 			res.UpdateAllFields(http.StatusOK, "Data for this pair is already being collected", worker)
 			return
 		}
-		worker = wc.Add(wc.NewWorker(query.From, query.To))
-		go worker.Work(wc.GetDataProvider())
+		worker = wc.Register(wc.NewWorker(query.From, query.To, query.Interval))
+		worker.Work(wc.GetDataProvider())
 		res.UpdateAllFields(http.StatusCreated, "Data collection started", worker)
 		return
 	}

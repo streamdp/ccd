@@ -14,12 +14,11 @@ func main() {
 	if err := engine.SetTrustedProxies(nil); err != nil {
 		handlers.SystemHandler(err)
 	}
-	err := router.InitRouter(engine)
-	if err != nil {
+	if err := router.InitRouter(engine); err != nil {
 		handlers.SystemHandler(err)
 		return
 	}
-	if err = engine.Run(config.Port); err != nil {
+	if err := engine.Run(config.Port); err != nil {
 		handlers.SystemHandler(err)
 		return
 	}

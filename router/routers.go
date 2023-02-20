@@ -20,14 +20,14 @@ func InitRouter(r *gin.Engine) (err error) {
 		return err
 	}
 	wc := dataproviders.NewWorkersControl(dp)
-	go wc.Run()
+	wc.Run()
 	db, err := dbconnectors.Connect()
 	if err != nil {
 		return err
 	}
-	go db.ServePipe(wc.GetPipe())
+	db.ServePipe(wc.GetPipe())
 	hub := ws1.NewHub()
-	go hub.Run(wc, db)
+	hub.Run(wc, db)
 
 	r.LoadHTMLFiles("site/index.tmpl")
 	r.Static("/css", "site/css")

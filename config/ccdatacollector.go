@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const DefaultPullingInterval = 60
+
 var (
 	// Port - set default port for gin-gonic engine init
 	Port              = ":8080"

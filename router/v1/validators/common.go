@@ -10,8 +10,8 @@ import (
 func Common(fl validator.FieldLevel) bool {
 	match := strings.Split(config.Common, ",")
 	value := fl.Field().String()
-	for _, s := range match {
-		if s == value {
+	for i := range match {
+		if match[i] == value {
 			return true
 		}
 	}

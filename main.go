@@ -11,9 +11,6 @@ func main() {
 	config.ParseFlags()
 	gin.SetMode(config.RunMode)
 	engine := gin.Default()
-	if err := engine.SetTrustedProxies(nil); err != nil {
-		handlers.SystemHandler(err)
-	}
 	if err := router.InitRouter(engine); err != nil {
 		handlers.SystemHandler(err)
 		return

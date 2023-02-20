@@ -18,8 +18,7 @@ type PriceQuery struct {
 func GetLastPrice(wc *dataproviders.Workers, db *dbconnectors.Db, query *PriceQuery) (data *dataproviders.Data, err error) {
 	data, err = (*wc.GetDataProvider()).Get(query.From, query.To)
 	if err != nil {
-		data, err = db.GetLast(query.From, query.To)
-		if err != nil {
+		if data, err = db.GetLast(query.From, query.To); err != nil {
 			return
 		}
 	}

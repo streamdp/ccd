@@ -27,16 +27,13 @@ var upgrader = websocket.Upgrader{
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
-	hub  *hub
+	hub  *Hub
 	conn *websocket.Conn
 	send chan []byte
 }
 
-func (c *Client) pongHandler(string) (err error) {
-	if err = c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-		return err
-	}
-	return
+func (c *Client) pongHandler(string) error {
+	return c.conn.SetReadDeadline(time.Now().Add(pongWait))
 }
 
 func (c *Client) readPump() {
@@ -44,11 +41,13 @@ func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
 		if err = c.conn.Close(); err != nil {
+			handlers.SystemHandler(err)
 			return
 		}
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
 	if err = c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		handlers.SystemHandler(err)
 		return
 	}
 	c.conn.SetPongHandler(c.pongHandler)
@@ -78,6 +77,7 @@ func (c *Client) writePump() {
 	defer func() {
 		ticker.Stop()
 		if err = c.conn.Close(); err != nil {
+			handlers.SystemHandler(err)
 			return
 		}
 	}()
@@ -85,10 +85,12 @@ func (c *Client) writePump() {
 		select {
 		case message, ok := <-c.send:
 			if err = c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				handlers.SystemHandler(err)
 				return
 			}
 			if !ok {
 				if err = c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
+					handlers.SystemHandler(err)
 					return
 				}
 				return
@@ -97,21 +99,26 @@ func (c *Client) writePump() {
 				return
 			}
 			if _, err = writer.Write(message); err != nil {
+				handlers.SystemHandler(err)
 				return
 			}
 			for i := 0; i < len(c.send); i++ {
 				if _, err = writer.Write(<-c.send); err != nil {
+					handlers.SystemHandler(err)
 					return
 				}
 			}
 			if err = writer.Close(); err != nil {
+				handlers.SystemHandler(err)
 				return
 			}
 		case <-ticker.C:
 			if err = c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				handlers.SystemHandler(err)
 				return
 			}
 			if err = c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				handlers.SystemHandler(err)
 				return
 			}
 		}
@@ -119,7 +126,7 @@ func (c *Client) writePump() {
 }
 
 // ServeWs - handles websocket requests from the peer.
-func ServeWs(hub *hub) gin.HandlerFunc {
+func ServeWs(hub *Hub) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {

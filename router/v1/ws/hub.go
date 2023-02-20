@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"github.com/streamdp/ccd/dataproviders"
 	"github.com/streamdp/ccd/dbconnectors"
+	"github.com/streamdp/ccd/handlers"
 	v1 "github.com/streamdp/ccd/router/v1"
 )
 
-type hub struct {
+type Hub struct {
 	clients    map[*Client]struct{}
 	queryQueue chan *Query
 	unregister chan *Client
@@ -20,8 +21,8 @@ type Query struct {
 }
 
 // NewHub init new hub
-func NewHub() *hub {
-	return &hub{
+func NewHub() *Hub {
+	return &Hub{
 		queryQueue: make(chan *Query, 256),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]struct{}),
@@ -29,7 +30,7 @@ func NewHub() *hub {
 }
 
 // Run loop what serving register/unregister and queryQueue chan
-func (h *hub) Run(wc *dataproviders.Workers, db *dbconnectors.Db) {
+func (h *Hub) Run(wc *dataproviders.Workers, db *dbconnectors.Db) {
 	go func() {
 		for {
 			select {
@@ -39,12 +40,20 @@ func (h *hub) Run(wc *dataproviders.Workers, db *dbconnectors.Db) {
 					close(client.send)
 				}
 			case queue := <-h.queryQueue:
-				var binaryString []byte
-				if data, err := v1.GetLastPrice(wc, db, queue.query); err == nil {
-					if binaryString, err = json.Marshal(&data); err == nil {
-						queue.send <- binaryString
-					}
+				var (
+					data         *dataproviders.Data
+					binaryString []byte
+					err          error
+				)
+				if data, err = v1.GetLastPrice(wc, db, queue.query); err != nil {
+					handlers.SystemHandler(err)
+					continue
 				}
+				if binaryString, err = json.Marshal(&data); err != nil {
+					handlers.SystemHandler(err)
+					continue
+				}
+				queue.send <- binaryString
 			}
 		}
 	}()

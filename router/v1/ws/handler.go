@@ -33,6 +33,11 @@ type wsHandler struct {
 // HandleWs - handles websocket requests from the peer.
 func HandleWs(wc *dataproviders.Workers, db *dbconnectors.Db) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var upgrader = websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+			CheckOrigin:     func(r *http.Request) bool { return true },
+		}
 		ctx, cancel := context.WithCancel(context.Background())
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
@@ -143,12 +148,6 @@ func (c *wsHandler) handleMessagePipe() {
 		handlers.SystemHandler(err)
 		return
 	}
-}
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
 func (c *wsHandler) returnAnErrorToTheClient(err error) {

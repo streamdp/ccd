@@ -10,7 +10,7 @@ import (
 	"github.com/streamdp/ccd/handlers"
 	v1 "github.com/streamdp/ccd/router/v1"
 	"github.com/streamdp/ccd/router/v1/validators"
-	ws1 "github.com/streamdp/ccd/router/v1/ws"
+	"github.com/streamdp/ccd/router/v1/ws"
 )
 
 // InitRouter basic work on setting up the application, declare endpoints, register our custom validation functions
@@ -20,14 +20,11 @@ func InitRouter(r *gin.Engine) (err error) {
 		return err
 	}
 	wc := dataproviders.NewWorkersControl(dp)
-	wc.Run()
 	db, err := dbconnectors.Connect()
 	if err != nil {
 		return err
 	}
 	db.ServePipe(wc.GetPipe())
-	hub := ws1.NewHub()
-	hub.Run(wc, db)
 
 	r.LoadHTMLFiles("site/index.tmpl")
 	r.Static("/css", "site/css")
@@ -47,7 +44,7 @@ func InitRouter(r *gin.Engine) (err error) {
 		apiV1.GET("/collect/update", handlers.GinHandler(v1.UpdateWorker(wc)))
 		apiV1.POST("/price", handlers.GinHandler(v1.GetPrice(wc, db)))
 		apiV1.GET("/price", handlers.GinHandler(v1.GetPrice(wc, db)))
-		apiV1.GET("/ws", ws1.ServeWs(hub))
+		apiV1.GET("/ws", ws.HandleWs(wc, db))
 	}
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		if err = v.RegisterValidation("crypto", validators.Crypto); err != nil {

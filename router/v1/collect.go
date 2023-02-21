@@ -26,7 +26,7 @@ func AddWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 			res.UpdateAllFields(http.StatusOK, "Data for this pair is already being collected", worker)
 			return
 		}
-		worker = wc.Register(wc.NewWorker(query.From, query.To, query.Interval))
+		worker = wc.AddWorker(query.From, query.To, query.Interval)
 		worker.Work(wc.GetDataProvider())
 		res.UpdateAllFields(http.StatusCreated, "Data collection started", worker)
 		return
@@ -36,12 +36,11 @@ func AddWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 // RemoveWorker from the management service and stop collecting data for the selected currencies pair
 func RemoveWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
-		var worker *dataproviders.Worker
 		query := CollectQuery{}
 		if err = c.Bind(&query); err != nil {
 			return
 		}
-		if worker = wc.GetWorker(query.From, query.To); worker == nil {
+		if worker := wc.GetWorker(query.From, query.To); worker == nil {
 			res.UpdateAllFields(http.StatusOK, "No data is collected for this pair", nil)
 			return
 		}
@@ -55,11 +54,12 @@ func RemoveWorker(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 func WorkersStatus(wc *dataproviders.Workers) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		res.UpdateAllFields(http.StatusOK, "Information about running workers", nil)
-		if len(*wc.GetWorkers()) == 0 {
+		activeWorkers := wc.GetWorkers()
+		if len(activeWorkers) == 0 {
 			return
 		}
 		list := map[string]map[string]*dataproviders.Worker{}
-		for worker := range *wc.GetWorkers() {
+		for worker := range activeWorkers {
 			if list[worker.From] != nil {
 				list[worker.From][worker.To] = worker
 				continue

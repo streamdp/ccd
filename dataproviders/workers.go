@@ -3,6 +3,7 @@ package dataproviders
 import (
 	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/handlers"
+	"sync"
 	"time"
 )
 
@@ -17,19 +18,18 @@ type Worker struct {
 
 // Workers this is a manager who manages a group of Worker
 type Workers struct {
-	workers    map[*Worker]struct{}
-	pipe       chan *DataPipe
-	unregister chan *Worker
-	dp         DataProvider
+	workers map[*Worker]struct{}
+	pipe    chan *DataPipe
+	dp      DataProvider
+	mu      sync.RWMutex
 }
 
 // NewWorkersControl init Workers structure
 func NewWorkersControl(dp DataProvider) *Workers {
 	return &Workers{
-		workers:    make(map[*Worker]struct{}),
-		pipe:       make(chan *DataPipe, 20),
-		unregister: make(chan *Worker),
-		dp:         dp,
+		workers: make(map[*Worker]struct{}),
+		pipe:    make(chan *DataPipe, 20),
+		dp:      dp,
 	}
 }
 
@@ -47,24 +47,20 @@ func (wc *Workers) NewWorker(from string, to string, interval int) *Worker {
 	}
 }
 
-// Run managing Workers
-func (wc *Workers) Run() {
-	go func() {
-		for worker := range wc.unregister {
-			worker.done <- 0
-			delete(wc.workers, worker)
-		}
-	}()
-}
-
 // GetPipe return common DataPipe
 func (wc *Workers) GetPipe() chan *DataPipe {
 	return wc.pipe
 }
 
 // GetWorkers return state of the all *Workers
-func (wc *Workers) GetWorkers() *map[*Worker]struct{} {
-	return &wc.workers
+func (wc *Workers) GetWorkers() map[*Worker]struct{} {
+	var w = map[*Worker]struct{}{}
+	wc.mu.RLock()
+	for k := range wc.workers {
+		w[k] = struct{}{}
+	}
+	wc.mu.RUnlock()
+	return w
 }
 
 // GetDataProvider return *DataProvider
@@ -74,6 +70,8 @@ func (wc *Workers) GetDataProvider() *DataProvider {
 
 // GetWorker for the selected currencies pair, if possible
 func (wc *Workers) GetWorker(from string, to string) *Worker {
+	wc.mu.RLock()
+	defer wc.mu.RUnlock()
 	for worker := range wc.workers {
 		if worker.From == from && worker.To == to {
 			return worker
@@ -82,33 +80,27 @@ func (wc *Workers) GetWorker(from string, to string) *Worker {
 	return nil
 }
 
-// Register Worker to the managing service
-func (wc *Workers) Register(worker *Worker) *Worker {
-	wc.workers[worker] = struct{}{}
-	return worker
-}
-
 // AddWorker a new worker that will collect data for the selected currency pair to the management service
 func (wc *Workers) AddWorker(from string, to string, interval int) *Worker {
 	worker := wc.NewWorker(from, to, interval)
-	wc.Register(worker)
+	wc.mu.Lock()
+	wc.workers[worker] = struct{}{}
+	wc.mu.Unlock()
 	return worker
 }
 
 // RemoveWorker from the managing service by the selected currency pair
 func (wc *Workers) RemoveWorker(from string, to string) {
 	worker := wc.GetWorker(from, to)
-	wc.unregister <- worker
+	worker.Close()
+	wc.mu.Lock()
+	defer wc.mu.Unlock()
+	delete(wc.workers, worker)
 }
 
-// Shutdown Worker
-func (w *Worker) Shutdown() {
+// Close Worker
+func (w *Worker) Close() {
 	w.done <- 0
-}
-
-// GetDone return chan interface{} for the selected Worker by pointer
-func (w *Worker) GetDone() chan interface{} {
-	return w.done
 }
 
 // Work of the Worker is collect Data and send it throughout the Pipe

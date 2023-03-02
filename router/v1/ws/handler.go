@@ -4,15 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+
 	"github.com/streamdp/ccd/dataproviders"
 	"github.com/streamdp/ccd/dbconnectors"
 	"github.com/streamdp/ccd/handlers"
 	v1 "github.com/streamdp/ccd/router/v1"
-	"io"
-	"net/http"
-	"time"
 )
 
 const (
@@ -27,11 +29,11 @@ type wsHandler struct {
 	messagePipe chan []byte
 
 	wc *dataproviders.Workers
-	db *dbconnectors.Db
+	db dbconnectors.DbReadWrite
 }
 
 // HandleWs - handles websocket requests from the peer.
-func HandleWs(wc *dataproviders.Workers, db *dbconnectors.Db) gin.HandlerFunc {
+func HandleWs(wc *dataproviders.Workers, db dbconnectors.DbReadWrite) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var upgrader = websocket.Upgrader{
 			ReadBufferSize:  1024,

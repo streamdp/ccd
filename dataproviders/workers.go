@@ -1,10 +1,11 @@
 package dataproviders
 
 import (
-	"github.com/streamdp/ccd/config"
-	"github.com/streamdp/ccd/handlers"
 	"sync"
 	"time"
+
+	"github.com/streamdp/ccd/config"
+	"github.com/streamdp/ccd/handlers"
 )
 
 // Worker does all the data mining work

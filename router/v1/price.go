@@ -1,11 +1,13 @@
 package v1
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
+
 	"github.com/streamdp/ccd/dataproviders"
 	"github.com/streamdp/ccd/dbconnectors"
 	"github.com/streamdp/ccd/handlers"
-	"net/http"
 )
 
 // PriceQuery structure for easily json serialization/validation/binding GET and POST query data
@@ -15,7 +17,7 @@ type PriceQuery struct {
 }
 
 // GetLastPrice return up-to-date data for the selected currencies pair
-func GetLastPrice(wc *dataproviders.Workers, db *dbconnectors.Db, query *PriceQuery) (data *dataproviders.Data, err error) {
+func GetLastPrice(wc *dataproviders.Workers, db dbconnectors.DbReadWrite, query *PriceQuery) (data *dataproviders.Data, err error) {
 	data, err = (*wc.GetDataProvider()).Get(query.From, query.To)
 	if err != nil {
 		if data, err = db.GetLast(query.From, query.To); err != nil {
@@ -31,7 +33,7 @@ func GetLastPrice(wc *dataproviders.Workers, db *dbconnectors.Db, query *PriceQu
 }
 
 // GetPrice return up-to-date or most recent data for the selected currencies pair
-func GetPrice(wc *dataproviders.Workers, db *dbconnectors.Db) handlers.HandlerFuncResError {
+func GetPrice(wc *dataproviders.Workers, db dbconnectors.DbReadWrite) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		query := PriceQuery{}
 		if err = c.Bind(&query); err != nil {

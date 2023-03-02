@@ -7,6 +7,7 @@ require (
 	github.com/go-playground/validator/v10 v10.11.2
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/gorilla/websocket v1.5.0
+	github.com/lib/pq v1.10.7
 )
 
 require (

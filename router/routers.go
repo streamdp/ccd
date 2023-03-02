@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
+
 	"github.com/streamdp/ccd/dataproviders"
 	"github.com/streamdp/ccd/dataproviders/cryptocompare"
 	"github.com/streamdp/ccd/dbconnectors"
@@ -24,7 +25,7 @@ func InitRouter(r *gin.Engine) (err error) {
 	if err != nil {
 		return err
 	}
-	db.ServePipe(wc.GetPipe())
+	dbconnectors.ServePipe(db, wc.GetPipe())
 
 	r.LoadHTMLFiles("site/index.tmpl")
 	r.Static("/css", "site/css")

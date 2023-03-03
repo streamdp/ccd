@@ -23,10 +23,9 @@ $ go build -o ccd .
 You should previously export some environment variables:
 
 ```bash
-export CCDC_DATASOURCE=username:password@tcp(localhost:3306)/dbname
+export CCDC_DATAPROVIDER=cryptocompare
+export CCDC_DATASOURCE=mysql://username:password@tcp(localhost:3306)/dbname
 export CCDC_APIKEY=put you api key here
-export CCDC_APIURL=https://min-api.cryptocompare.com/data/pricemultifull
-export CCDC_WSURL=wss://streamer.cryptocompare.com/v2
 ```
 And run application:
 ```bash
@@ -55,6 +54,8 @@ Usage of ccd:
         specify list possible common currencies (default "USD,EUR,GBP,JPY,RUR")
   -crypto string
         specify list possible crypto currencies (default "BTC,XRP,ETH,BCH,EOS,LTC,XMR,DASH")
+  -dataprovider string
+        use selected data provider ("cryptocompare", "huobi") (default "cryptocompare")
   -debug
         run the program in debug mode
   -h    display help

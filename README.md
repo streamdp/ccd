@@ -5,13 +5,14 @@
 [![GitHub release](https://img.shields.io/github/release/streamdp/ccd.svg)](https://github.com/streamdp/ccd/releases/)
 [![GitHub license](https://img.shields.io/github/license/streamdp/ccd.svg)](https://github.com/streamdp/ccd/blob/main/LICENSE)
 
-It is a microservice that collect data from a several crypto data providers using its API.
+It is a microservice that collect data from several crypto data providers using its API.
 
 This microservice uses:
 
 * gin-gonic/gin package to start and serve HTTP server
 * gorilla/websocket package to work through websockets
 * go-sql-driver/mysql package to work with mysql database
+* lib/pq package to work with postgresql database
 
 ## Build app
 
@@ -47,7 +48,7 @@ $ ./ccd -port 8081
 You also can specify some setting before run application: 
 ```bash
 $ ./ccd -h
-ccd is a microservice that collect data from a cryprocompare using its API.
+ccd is a microservice that collect data from several crypto data providers cryprocompare using its API.
 
 Usage of ccd:
   -common string

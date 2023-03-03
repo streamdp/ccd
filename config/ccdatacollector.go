@@ -46,7 +46,7 @@ func ParseFlags() {
 		DataProvider = dataProvider
 	}
 	if showHelp {
-		fmt.Println("ccd is a microservice that collect data from a cryprocompare using its API.")
+		fmt.Println("ccd is a microservice that collect data from several crypto data providers using its API.")
 		fmt.Println("")
 		flag.Usage()
 		os.Exit(1)

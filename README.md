@@ -5,7 +5,7 @@
 [![GitHub release](https://img.shields.io/github/release/streamdp/ccd.svg)](https://github.com/streamdp/ccd/releases/)
 [![GitHub license](https://img.shields.io/github/license/streamdp/ccd.svg)](https://github.com/streamdp/ccd/blob/main/LICENSE)
 
-It is a microservice that collect data from a several dataproviders using its API.
+It is a microservice that collect data from a several crypto data providers using its API.
 
 This microservice uses:
 

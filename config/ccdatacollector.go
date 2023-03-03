@@ -3,9 +3,10 @@ package config
 import (
 	"flag"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"os"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 const DefaultPullingInterval = 60
@@ -18,6 +19,7 @@ var (
 	Common            = "USD,EUR,GBP,JPY,RUR"
 	HttpClientTimeout = 1000
 	Version           = "1.0.0"
+	DataProvider      = "cryptocompare" // "huobi"
 )
 
 // ParseFlags and update config variables
@@ -33,9 +35,15 @@ func ParseFlags() {
 		" api server before sending data from the cache")
 	flag.StringVar(&Common, "common", Common, "specify list possible common currencies")
 	flag.StringVar(&Crypto, "crypto", Crypto, "specify list possible crypto currencies")
+	flag.StringVar(&DataProvider, "dataprovider", DataProvider, "use selected data provider"+
+		" (\"cryptocompare\", \"huobi\")")
 	flag.Parse()
 	if GetEnv("CCDC_DEBUG") != "" {
 		debug = true
+	}
+	dataProvider := GetEnv("CCDC_DATAPROVIDER")
+	if dataProvider != "" {
+		DataProvider = dataProvider
 	}
 	if showHelp {
 		fmt.Println("ccd is a microservice that collect data from a cryprocompare using its API.")

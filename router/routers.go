@@ -5,8 +5,10 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 
+	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/dataproviders"
 	"github.com/streamdp/ccd/dataproviders/cryptocompare"
+	"github.com/streamdp/ccd/dataproviders/huobi"
 	"github.com/streamdp/ccd/dbconnectors"
 	"github.com/streamdp/ccd/handlers"
 	v1 "github.com/streamdp/ccd/router/v1"
@@ -16,7 +18,13 @@ import (
 
 // InitRouter basic work on setting up the application, declare endpoints, register our custom validation functions
 func InitRouter(r *gin.Engine) (err error) {
-	dp, err := cryptocompare.Init()
+	var dp dataproviders.DataProvider
+	switch config.DataProvider {
+	case "huobi":
+		dp, err = huobi.Init()
+	default:
+		dp, err = cryptocompare.Init()
+	}
 	if err != nil {
 		return err
 	}

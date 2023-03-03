@@ -3,42 +3,43 @@ package cryptocompare
 import (
 	"encoding/json"
 	"errors"
-	"github.com/streamdp/ccd/config"
-	"github.com/streamdp/ccd/dataproviders"
 	"io"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/streamdp/ccd/config"
+	"github.com/streamdp/ccd/dataproviders"
+)
+
+const (
+	apiURL = "https://min-api.cryptocompare.com"
+
+	// Multiple Symbols Full Data - Get all the current trading info (price, vol, open, high, low etc) of any list of
+	// cryptocurrencies in any other currency that you need. If the crypto does not trade directly into the toSymbol
+	// requested, BTC will be used for conversion. This API also returns Display values for all the fields. If the
+	// opposite pair trades we invert it (eg.: BTC-XMR)
+	multipleSymbolsFullData = "/data/pricemultifull"
 )
 
 // CryptoCompareData structure for easily json serialization
-type data struct {
+type cryptoCompareData struct {
 	Raw     map[string]map[string]*dataproviders.Response `json:"RAW"`
 	Display map[string]map[string]*dataproviders.Display  `json:"DISPLAY"`
 }
 
 type cryptoCompare struct {
 	apiKey string
-	apiURL string
-	wsURL  string
-}
-
-func convertToDomain(d *data) *dataproviders.Data {
-	return (*dataproviders.Data)(d)
 }
 
 // Init apiKey, apiURL, wsURL variables with environment values and return CryptoCompareData structure
 func Init() (cc dataproviders.DataProvider, err error) {
 	apiKey := config.GetEnv("CCDC_APIKEY")
-	apiURL := config.GetEnv("CCDC_APIURL")
-	wsURL := config.GetEnv("CCDC_WSURL")
-	if apiKey == "" || apiURL == "" {
-		return nil, errors.New("you should specify \"CCDC_APIKEY\" and \"CCDC_APIURL\" in you OS environment")
+	if apiKey == "" {
+		return nil, errors.New("you should specify \"CCDC_APIKEY\" in you OS environment")
 	}
 	return &cryptoCompare{
 		apiKey: apiKey,
-		apiURL: apiURL,
-		wsURL:  wsURL,
 	}, nil
 }
 
@@ -49,7 +50,7 @@ func (cc *cryptoCompare) Get(fSym string, tSym string) (ds *dataproviders.Data, 
 		response *http.Response
 		body     []byte
 	)
-	if apiUrl, err = cc.BuildURL(fSym, tSym); err != nil {
+	if apiUrl, err = cc.buildURL(fSym, tSym); err != nil {
 		return nil, err
 	}
 	client := http.Client{
@@ -65,16 +66,19 @@ func (cc *cryptoCompare) Get(fSym string, tSym string) (ds *dataproviders.Data, 
 	if response.StatusCode != 200 {
 		return nil, err
 	}
-	rawData := &data{}
+	rawData := &cryptoCompareData{}
 	if err = json.Unmarshal(body, rawData); err != nil {
 		return nil, err
 	}
 	return convertToDomain(rawData), nil
 }
 
-// BuildURL for the selected pair currencies
-func (cc *cryptoCompare) BuildURL(fSym string, tSym string) (u *url.URL, err error) {
-	if u, err = url.Parse(cc.apiURL); err != nil {
+func convertToDomain(d *cryptoCompareData) *dataproviders.Data {
+	return (*dataproviders.Data)(d)
+}
+
+func (cc *cryptoCompare) buildURL(fSym string, tSym string) (u *url.URL, err error) {
+	if u, err = url.Parse(apiURL + multipleSymbolsFullData); err != nil {
 		return nil, err
 	}
 	query := u.Query()

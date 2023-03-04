@@ -1,4 +1,4 @@
-package dataproviders
+package clients
 
 // Response structure for easily json serialization
 type Response struct {
@@ -33,31 +33,28 @@ type Display struct {
 
 // Data structure for easily json serialization
 type Data struct {
-	Raw     map[string]map[string]*Response `json:"RAW"`
-	Display map[string]map[string]*Display  `json:"DISPLAY"`
+	From    string
+	To      string
+	Raw     *Response `json:"RAW"`
+	Display *Display  `json:"DISPLAY"`
 }
 
-// DataPipe  for easily transfer Data throughout chan
-type DataPipe struct {
-	From string
-	To   string
-	Data *Data
-}
-
-// DataProvider interface makes it possible to expand the list of data providers
-type DataProvider interface {
+// RestClient interface makes it possible to expand the list of data providers
+type RestClient interface {
 	Get(from string, to string) (*Data, error)
+}
+
+type WssClient interface {
+	Subscribe(from string, to string) error
+	UnSubscribe(from string, to string) error
 }
 
 // GetEmptyData returns empty Data
 func GetEmptyData(from string, to string) *Data {
-	result := &Data{
-		Raw:     map[string]map[string]*Response{},
-		Display: map[string]map[string]*Display{},
+	return &Data{
+		From:    from,
+		To:      to,
+		Raw:     &Response{},
+		Display: &Display{},
 	}
-	result.Raw[from] = make(map[string]*Response)
-	result.Raw[from][to] = &Response{}
-	result.Display[from] = make(map[string]*Display)
-	result.Display[from][to] = &Display{}
-	return result
 }

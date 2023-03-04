@@ -5,8 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/config"
-	"github.com/streamdp/ccd/dataproviders"
 	"github.com/streamdp/ccd/dbconnectors/mysql"
 	"github.com/streamdp/ccd/dbconnectors/postgres"
 	"github.com/streamdp/ccd/handlers"
@@ -14,8 +14,8 @@ import (
 
 // DbReadWrite interface makes it possible to expand the list of data storages
 type DbReadWrite interface {
-	Insert(data *dataproviders.DataPipe) (result sql.Result, err error)
-	GetLast(from string, to string) (result *dataproviders.Data, err error)
+	Insert(data *clients.Data) (result sql.Result, err error)
+	GetLast(from string, to string) (result *clients.Data, err error)
 }
 
 func Connect() (db DbReadWrite, err error) {
@@ -41,8 +41,8 @@ func Connect() (db DbReadWrite, err error) {
 	}
 }
 
-// ServePipe and if we get dataproviders.DataPipe then save them to the Db
-func ServePipe(db DbReadWrite, pipe chan *dataproviders.DataPipe) {
+// ServePipe and if we get clients.DataPipe then save them to the Db
+func ServePipe(db DbReadWrite, pipe chan *clients.Data) {
 	go func() {
 		for data := range pipe {
 			if _, err := db.Insert(data); err != nil {

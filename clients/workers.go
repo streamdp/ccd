@@ -1,4 +1,4 @@
-package dataproviders
+package clients
 
 import (
 	"sync"
@@ -10,27 +10,26 @@ import (
 
 // Worker does all the data mining work
 type Worker struct {
-	Pipe     chan *DataPipe `json:"-"`
-	done     chan interface{}
 	From     string `json:"from"`
 	To       string `json:"to"`
 	Interval int    `json:"interval"`
+	done     chan struct{}
 }
 
 // Workers this is a manager who manages a group of Worker
 type Workers struct {
-	workers map[*Worker]struct{}
-	pipe    chan *DataPipe
-	dp      DataProvider
-	mu      sync.RWMutex
+	workers    map[*Worker]struct{}
+	pipe       chan *Data
+	restClient RestClient
+	mu         sync.RWMutex
 }
 
 // NewWorkersControl init Workers structure
-func NewWorkersControl(dp DataProvider) *Workers {
+func NewWorkersControl(r RestClient) *Workers {
 	return &Workers{
-		workers: make(map[*Worker]struct{}),
-		pipe:    make(chan *DataPipe, 20),
-		dp:      dp,
+		workers:    make(map[*Worker]struct{}),
+		pipe:       make(chan *Data, 20),
+		restClient: r,
 	}
 }
 
@@ -40,8 +39,7 @@ func (wc *Workers) NewWorker(from string, to string, interval int) *Worker {
 		interval = config.DefaultPullingInterval
 	}
 	return &Worker{
-		Pipe:     wc.pipe,
-		done:     make(chan interface{}),
+		done:     make(chan struct{}),
 		From:     from,
 		To:       to,
 		Interval: interval,
@@ -49,7 +47,7 @@ func (wc *Workers) NewWorker(from string, to string, interval int) *Worker {
 }
 
 // GetPipe return common DataPipe
-func (wc *Workers) GetPipe() chan *DataPipe {
+func (wc *Workers) GetPipe() chan *Data {
 	return wc.pipe
 }
 
@@ -64,9 +62,9 @@ func (wc *Workers) GetWorkers() map[*Worker]struct{} {
 	return w
 }
 
-// GetDataProvider return *DataProvider
-func (wc *Workers) GetDataProvider() *DataProvider {
-	return &wc.dp
+// GetRestClient return *RestClient
+func (wc *Workers) GetRestClient() *RestClient {
+	return &wc.restClient
 }
 
 // GetWorker for the selected currencies pair, if possible
@@ -101,11 +99,11 @@ func (wc *Workers) RemoveWorker(from string, to string) {
 
 // Close Worker
 func (w *Worker) Close() {
-	w.done <- 0
+	w.done <- struct{}{}
 }
 
 // Work of the Worker is collect Data and send it throughout the Pipe
-func (w *Worker) Work(dp *DataProvider) {
+func (w *Worker) Work(dp *RestClient, pipe chan *Data) {
 	go func() {
 		defer close(w.done)
 		for {
@@ -118,11 +116,7 @@ func (w *Worker) Work(dp *DataProvider) {
 					handlers.SystemHandler(err)
 					continue
 				}
-				w.Pipe <- &DataPipe{
-					From: w.From,
-					To:   w.To,
-					Data: data,
-				}
+				pipe <- data
 			}
 		}
 	}()

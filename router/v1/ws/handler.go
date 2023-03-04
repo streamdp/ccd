@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
-	"github.com/streamdp/ccd/dataproviders"
+	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/dbconnectors"
 	"github.com/streamdp/ccd/handlers"
 	v1 "github.com/streamdp/ccd/router/v1"
@@ -28,12 +28,12 @@ type wsHandler struct {
 	conn        *websocket.Conn
 	messagePipe chan []byte
 
-	wc *dataproviders.Workers
+	wc *clients.Workers
 	db dbconnectors.DbReadWrite
 }
 
 // HandleWs - handles websocket requests from the peer.
-func HandleWs(wc *dataproviders.Workers, db dbconnectors.DbReadWrite) gin.HandlerFunc {
+func HandleWs(wc *clients.Workers, db dbconnectors.DbReadWrite) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var upgrader = websocket.Upgrader{
 			ReadBufferSize:  1024,
@@ -112,7 +112,7 @@ func (c *wsHandler) handleClientRequests() {
 }
 
 func (c *wsHandler) getLastPrice(query *v1.PriceQuery) (result []byte, err error) {
-	var data *dataproviders.Data
+	var data *clients.Data
 	if data, err = v1.GetLastPrice(c.wc, c.db, query); err != nil {
 		return
 	}

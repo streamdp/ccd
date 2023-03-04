@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/streamdp/ccd/dataproviders"
+	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/dbconnectors"
 	"github.com/streamdp/ccd/handlers"
 )
@@ -17,23 +17,19 @@ type PriceQuery struct {
 }
 
 // GetLastPrice return up-to-date data for the selected currencies pair
-func GetLastPrice(wc *dataproviders.Workers, db dbconnectors.DbReadWrite, query *PriceQuery) (data *dataproviders.Data, err error) {
-	data, err = (*wc.GetDataProvider()).Get(query.From, query.To)
+func GetLastPrice(wc *clients.Workers, db dbconnectors.DbReadWrite, query *PriceQuery) (data *clients.Data, err error) {
+	data, err = (*wc.GetRestClient()).Get(query.From, query.To)
 	if err != nil {
 		if data, err = db.GetLast(query.From, query.To); err != nil {
 			return
 		}
 	}
-	wc.GetPipe() <- &dataproviders.DataPipe{
-		From: query.From,
-		To:   query.To,
-		Data: data,
-	}
+	wc.GetPipe() <- data
 	return
 }
 
 // GetPrice return up-to-date or most recent data for the selected currencies pair
-func GetPrice(wc *dataproviders.Workers, db dbconnectors.DbReadWrite) handlers.HandlerFuncResError {
+func GetPrice(wc *clients.Workers, db dbconnectors.DbReadWrite) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		query := PriceQuery{}
 		if err = c.Bind(&query); err != nil {
@@ -43,8 +39,7 @@ func GetPrice(wc *dataproviders.Workers, db dbconnectors.DbReadWrite) handlers.H
 		if err != nil {
 			return
 		}
-		res.UpdateAllFields(http.StatusOK, "Most recent price, updated at "+
-			data.Display[query.From][query.To].Lastupdate, data)
+		res.UpdateAllFields(http.StatusOK, "Most recent price, updated at "+data.Display.Lastupdate, data)
 		return
 	}
 }

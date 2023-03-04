@@ -8,7 +8,7 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"github.com/streamdp/ccd/dataproviders"
+	"github.com/streamdp/ccd/clients"
 )
 
 const Postgres = "postgres"
@@ -19,10 +19,9 @@ type Db struct {
 }
 
 // GetLast row with the most recent data for the selected currencies pair
-func (db *Db) GetLast(from string, to string) (result *dataproviders.Data, err error) {
+func (db *Db) GetLast(from string, to string) (result *clients.Data, err error) {
 	var displayDataRaw string
-	result = dataproviders.GetEmptyData(from, to)
-	r := result.Raw[from][to]
+	result = clients.GetEmptyData(from, to)
 	query := `
 		select change24hour,
 		       changepct24hour,
@@ -41,33 +40,32 @@ func (db *Db) GetLast(from string, to string) (result *dataproviders.Data, err e
 		ORDER BY lastupdate DESC limit 1;
 `
 	err = db.QueryRow(query, from, to).Scan(
-		&r.Change24Hour,
-		&r.Changepct24Hour,
-		&r.Open24Hour,
-		&r.Volume24Hour,
-		&r.Low24Hour,
-		&r.High24Hour,
-		&r.Price,
-		&r.Supply,
-		&r.Mktcap,
-		&r.Lastupdate,
+		&result.Raw.Change24Hour,
+		&result.Raw.Changepct24Hour,
+		&result.Raw.Open24Hour,
+		&result.Raw.Volume24Hour,
+		&result.Raw.Low24Hour,
+		&result.Raw.High24Hour,
+		&result.Raw.Price,
+		&result.Raw.Supply,
+		&result.Raw.Mktcap,
+		&result.Raw.Lastupdate,
 		&displayDataRaw,
 	)
 	if err != nil {
 		return nil, err
 	}
 	_ = json.Unmarshal([]byte(displayDataRaw), &result.Display)
-	result.Display[from][to].Lastupdate = time.Unix(result.Raw[from][to].Lastupdate, 0).String()
+	result.Display.Lastupdate = time.Unix(result.Raw.Lastupdate, 0).String()
 	return result, nil
 }
 
-// Insert dataproviders.Data from the dataproviders.DataPipe to the Db
-func (db *Db) Insert(data *dataproviders.DataPipe) (result sql.Result, err error) {
-	if data.Data == nil || data.Data.Raw[data.From] == nil {
+// Insert clients.Data from the clients.DataPipe to the Db
+func (db *Db) Insert(data *clients.Data) (result sql.Result, err error) {
+	if data == nil || data.Raw == nil {
 		return nil, errors.New("cant insert empty data")
 	}
-	r := data.Data.Raw[data.From][data.To]
-	d, err := json.Marshal(data.Data.Display)
+	d, err := json.Marshal(data.Display)
 	if err != nil {
 		return nil, err
 	}
@@ -96,16 +94,16 @@ func (db *Db) Insert(data *dataproviders.DataPipe) (result sql.Result, err error
 		query,
 		data.From,
 		data.To,
-		&r.Change24Hour,
-		&r.Changepct24Hour,
-		&r.Open24Hour,
-		&r.Volume24Hour,
-		&r.Low24Hour,
-		&r.High24Hour,
-		&r.Price,
-		&r.Supply,
-		&r.Mktcap,
-		&r.Lastupdate,
+		&data.Raw.Change24Hour,
+		&data.Raw.Changepct24Hour,
+		&data.Raw.Open24Hour,
+		&data.Raw.Volume24Hour,
+		&data.Raw.Low24Hour,
+		&data.Raw.High24Hour,
+		&data.Raw.Price,
+		&data.Raw.Supply,
+		&data.Raw.Mktcap,
+		&data.Raw.Lastupdate,
 		string(d),
 	)
 }

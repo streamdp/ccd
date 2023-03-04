@@ -8,12 +8,12 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/config"
-	"github.com/streamdp/ccd/dataproviders"
 )
 
 const (
-	apiURL = "https://min-api.cryptocompare.com"
+	apiUrl = "https://min-api.cryptocompare.com"
 
 	// Multiple Symbols Full Data - Get all the current trading info (price, vol, open, high, low etc) of any list of
 	// cryptocurrencies in any other currency that you need. If the crypto does not trade directly into the toSymbol
@@ -24,16 +24,16 @@ const (
 
 // CryptoCompareData structure for easily json serialization
 type cryptoCompareData struct {
-	Raw     map[string]map[string]*dataproviders.Response `json:"RAW"`
-	Display map[string]map[string]*dataproviders.Display  `json:"DISPLAY"`
+	Raw     map[string]map[string]*clients.Response `json:"RAW"`
+	Display map[string]map[string]*clients.Display  `json:"DISPLAY"`
 }
 
 type cryptoCompare struct {
 	apiKey string
 }
 
-// Init apiKey, apiURL, wsURL variables with environment values and return CryptoCompareData structure
-func Init() (cc dataproviders.DataProvider, err error) {
+// Init apiKey, apiUrl, wsURL variables with environment values and return CryptoCompareData structure
+func Init() (rc clients.RestClient, err error) {
 	apiKey := config.GetEnv("CCDC_APIKEY")
 	if apiKey == "" {
 		return nil, errors.New("you should specify \"CCDC_APIKEY\" in you OS environment")
@@ -44,19 +44,19 @@ func Init() (cc dataproviders.DataProvider, err error) {
 }
 
 // Get filled CryptoCompareData structure for the selected pair currencies over http/https
-func (cc *cryptoCompare) Get(fSym string, tSym string) (ds *dataproviders.Data, err error) {
+func (cc *cryptoCompare) Get(fSym string, tSym string) (ds *clients.Data, err error) {
 	var (
-		apiUrl   *url.URL
+		u        *url.URL
 		response *http.Response
 		body     []byte
 	)
-	if apiUrl, err = cc.buildURL(fSym, tSym); err != nil {
+	if u, err = cc.buildURL(fSym, tSym); err != nil {
 		return nil, err
 	}
 	client := http.Client{
 		Timeout: time.Duration(config.HttpClientTimeout) * time.Millisecond,
 	}
-	if response, err = client.Get(apiUrl.String()); err != nil {
+	if response, err = client.Get(u.String()); err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
@@ -70,15 +70,20 @@ func (cc *cryptoCompare) Get(fSym string, tSym string) (ds *dataproviders.Data, 
 	if err = json.Unmarshal(body, rawData); err != nil {
 		return nil, err
 	}
-	return convertToDomain(rawData), nil
+	return convertToDomain(fSym, tSym, rawData), nil
 }
 
-func convertToDomain(d *cryptoCompareData) *dataproviders.Data {
-	return (*dataproviders.Data)(d)
+func convertToDomain(from, to string, d *cryptoCompareData) *clients.Data {
+	return &clients.Data{
+		From:    from,
+		To:      to,
+		Raw:     d.Raw[from][to],
+		Display: d.Display[from][to],
+	}
 }
 
 func (cc *cryptoCompare) buildURL(fSym string, tSym string) (u *url.URL, err error) {
-	if u, err = url.Parse(apiURL + multipleSymbolsFullData); err != nil {
+	if u, err = url.Parse(apiUrl + multipleSymbolsFullData); err != nil {
 		return nil, err
 	}
 	query := u.Query()

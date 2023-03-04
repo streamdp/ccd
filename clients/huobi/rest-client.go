@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/config"
-	"github.com/streamdp/ccd/dataproviders"
 )
 
 const (
-	apiURL = "https://api.huobi.pro"
+	apiUrl = "https://api.huobi.pro"
 
 	// Get Latest Aggregated Ticker https://huobiapi.github.io/docs/spot/v1/en/#get-latest-aggregated-ticker
 	// This endpoint retrieves the latest ticker with some important 24h aggregated market data.
@@ -23,7 +23,7 @@ const (
 	latestAggregatedTicker = "/market/detail/merged"
 )
 
-type huobiData struct {
+type huobiRestData struct {
 	Ch      string `json:"ch"`
 	Status  string `json:"status"`
 	ErrCode string `json:"err-code"`
@@ -44,25 +44,25 @@ type huobiData struct {
 	} `json:"tick"`
 }
 
-type huobi struct{}
+type huobiRest struct{}
 
-func Init() (dataproviders.DataProvider, error) {
-	return &huobi{}, nil
+func Init() (clients.RestClient, error) {
+	return &huobiRest{}, nil
 }
 
-func (cc *huobi) Get(fSym string, tSym string) (ds *dataproviders.Data, err error) {
+func (h *huobiRest) Get(fSym string, tSym string) (ds *clients.Data, err error) {
 	var (
-		apiUrl   *url.URL
+		u        *url.URL
 		response *http.Response
 		body     []byte
 	)
-	if apiUrl, err = cc.buildURL(fSym, tSym); err != nil {
+	if u, err = h.buildURL(fSym, tSym); err != nil {
 		return nil, err
 	}
 	client := http.Client{
 		Timeout: time.Duration(config.HttpClientTimeout) * time.Millisecond,
 	}
-	if response, err = client.Get(apiUrl.String()); err != nil {
+	if response, err = client.Get(u.String()); err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
@@ -72,17 +72,17 @@ func (cc *huobi) Get(fSym string, tSym string) (ds *dataproviders.Data, err erro
 	if response.StatusCode != 200 {
 		return nil, err
 	}
-	rawData := &huobiData{}
+	rawData := &huobiRestData{}
 	if err = json.Unmarshal(body, rawData); err != nil {
 		return nil, err
 	}
 	if rawData.Status == "error" {
 		return nil, errors.New(rawData.ErrMsg)
 	}
-	return convertToDomain(fSym, tSym, rawData), nil
+	return convertHuobiRestDataToDomain(fSym, tSym, rawData), nil
 }
 
-func convertToDomain(from, to string, d *huobiData) *dataproviders.Data {
+func convertHuobiRestDataToDomain(from, to string, d *huobiRestData) *clients.Data {
 	if d == nil {
 		return nil
 	}
@@ -90,41 +90,35 @@ func convertToDomain(from, to string, d *huobiData) *dataproviders.Data {
 	if len(d.Tick.Bid) > 0 {
 		price = d.Tick.Bid[0]
 	}
-	return &dataproviders.Data{
-		Raw: map[string]map[string]*dataproviders.Response{
-			strings.ToUpper(from): {
-				strings.ToUpper(to): {
-					Open24Hour:     d.Tick.Open,
-					Volume24Hour:   d.Tick.Amount,
-					Volume24Hourto: d.Tick.Vol,
-					Low24Hour:      d.Tick.Low,
-					High24Hour:     d.Tick.High,
-					Price:          price,
-					Supply:         float64(d.Tick.Count),
-					Lastupdate:     d.Ts,
-				},
-			},
+	return &clients.Data{
+		From: from,
+		To:   to,
+		Raw: &clients.Response{
+			Open24Hour:     d.Tick.Open,
+			Volume24Hour:   d.Tick.Amount,
+			Volume24Hourto: d.Tick.Vol,
+			Low24Hour:      d.Tick.Low,
+			High24Hour:     d.Tick.High,
+			Price:          price,
+			Supply:         float64(d.Tick.Count),
+			Lastupdate:     d.Ts,
 		},
-		Display: map[string]map[string]*dataproviders.Display{
-			strings.ToUpper(from): {
-				strings.ToUpper(to): {
-					Open24Hour:     strconv.FormatFloat(d.Tick.Open, 'f', -1, 64),
-					Volume24Hour:   strconv.FormatFloat(d.Tick.Amount, 'f', -1, 64),
-					Volume24Hourto: strconv.FormatFloat(d.Tick.Vol, 'f', -1, 64),
-					High24Hour:     strconv.FormatFloat(d.Tick.High, 'f', -1, 64),
-					Price:          strconv.FormatFloat(price, 'f', -1, 64),
-					FromSymbol:     strings.ToUpper(from),
-					ToSymbol:       strings.ToUpper(to),
-					Lastupdate:     strconv.FormatInt(d.Ts, 10),
-					Supply:         strconv.Itoa(d.Tick.Count),
-				},
-			},
+		Display: &clients.Display{
+			Open24Hour:     strconv.FormatFloat(d.Tick.Open, 'f', -1, 64),
+			Volume24Hour:   strconv.FormatFloat(d.Tick.Amount, 'f', -1, 64),
+			Volume24Hourto: strconv.FormatFloat(d.Tick.Vol, 'f', -1, 64),
+			High24Hour:     strconv.FormatFloat(d.Tick.High, 'f', -1, 64),
+			Price:          strconv.FormatFloat(price, 'f', -1, 64),
+			FromSymbol:     strings.ToUpper(from),
+			ToSymbol:       strings.ToUpper(to),
+			Lastupdate:     strconv.FormatInt(d.Ts, 10),
+			Supply:         strconv.Itoa(d.Tick.Count),
 		},
 	}
 }
 
-func (cc *huobi) buildURL(fSym string, tSym string) (u *url.URL, err error) {
-	if u, err = url.Parse(apiURL + latestAggregatedTicker); err != nil {
+func (h *huobiRest) buildURL(fSym string, tSym string) (u *url.URL, err error) {
+	if u, err = url.Parse(apiUrl + latestAggregatedTicker); err != nil {
 		return nil, err
 	}
 	if strings.ToLower(tSym) == "usd" {

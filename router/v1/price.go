@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -18,9 +19,10 @@ type PriceQuery struct {
 
 // GetLastPrice return up-to-date data for the selected currencies pair
 func GetLastPrice(r clients.RestClient, db db.DbReadWrite, query *PriceQuery) (data *clients.Data, err error) {
-	data, err = r.Get(query.From, query.To)
+	from, to := strings.ToUpper(query.From), strings.ToUpper(query.To)
+	data, err = r.Get(from, to)
 	if err != nil {
-		if data, err = db.GetLast(query.From, query.To); err != nil {
+		if data, err = db.GetLast(from, to); err != nil {
 			return
 		}
 	}

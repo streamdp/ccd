@@ -4,12 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
+	"nhooyr.io/websocket"
 
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/db"
@@ -35,13 +34,10 @@ type wsHandler struct {
 // HandleWs - handles websocket requests from the peer.
 func HandleWs(rc clients.RestClient, db db.DbReadWrite) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var upgrader = websocket.Upgrader{
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
-			CheckOrigin:     func(r *http.Request) bool { return true },
-		}
 		ctx, cancel := context.WithCancel(context.Background())
-		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+		conn, err := websocket.Accept(c.Writer, c.Request, &websocket.AcceptOptions{
+			InsecureSkipVerify: true,
+		})
 		if err != nil {
 			cancel()
 			handlers.SystemHandler(err)
@@ -56,25 +52,9 @@ func HandleWs(rc clients.RestClient, db db.DbReadWrite) gin.HandlerFunc {
 			db:          db,
 		}
 		h.conn.SetReadLimit(maxMessageSize)
-		h.conn.SetPingHandler(h.pingHandler)
-		h.conn.SetPongHandler(h.pongHandler)
 		go h.handleMessagePipe()
 		go h.handleClientRequests()
 	}
-}
-
-func (w *wsHandler) pingHandler(string) error {
-	if err := w.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-		return err
-	}
-	return w.conn.WriteMessage(websocket.PongMessage, nil)
-}
-
-func (w *wsHandler) pongHandler(string) error {
-	if err := w.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-		return err
-	}
-	return w.conn.WriteMessage(websocket.PingMessage, nil)
 }
 
 func (w *wsHandler) handleClientRequests() {
@@ -92,11 +72,14 @@ func (w *wsHandler) handleClientRequests() {
 				err   error
 				query = v1.PriceQuery{}
 			)
-			if err = w.conn.ReadJSON(&query); err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					handlers.SystemHandler(err)
+			if _, data, err = w.conn.Read(w.ctx); err != nil {
+				handlers.SystemHandler(err)
+				if isWebsocketCloseError(err) {
 					return
 				}
+				continue
+			}
+			if err = json.Unmarshal(data, &query); err != nil {
 				w.returnAnErrorToTheClient(errors.New(
 					"invalid request: the request should look like {\"fsym\":\"CRYPTO\",\"tsym\":\"COMMON\"}",
 				))
@@ -104,11 +87,21 @@ func (w *wsHandler) handleClientRequests() {
 			}
 			if data, err = w.getLastPrice(&query); err != nil {
 				handlers.SystemHandler(err)
-				return
+				continue
 			}
 			w.messagePipe <- data
 		}
 	}
+}
+
+func isWebsocketCloseError(err error) bool {
+	if e, ok := errors.Unwrap(errors.Unwrap(err)).(websocket.CloseError); ok {
+		switch e.Code {
+		case websocket.StatusAbnormalClosure, websocket.StatusNormalClosure, websocket.StatusNoStatusRcvd:
+			return true
+		}
+	}
+	return false
 }
 
 func (w *wsHandler) getLastPrice(query *v1.PriceQuery) (result []byte, err error) {
@@ -125,28 +118,15 @@ func (w *wsHandler) getLastPrice(query *v1.PriceQuery) (result []byte, err error
 func (w *wsHandler) handleMessagePipe() {
 	defer w.cancel()
 	for message := range w.messagePipe {
-		var (
-			writer io.WriteCloser
-			err    error
-		)
-		if err = w.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+		ctx, cancel := context.WithTimeout(w.ctx, writeWait)
+		if err := w.conn.Write(ctx, websocket.MessageText, message); err != nil {
 			handlers.SystemHandler(err)
+			cancel()
 			return
 		}
-		if writer, err = w.conn.NextWriter(websocket.TextMessage); err != nil {
-			handlers.SystemHandler(err)
-			return
-		}
-		if _, err = writer.Write(message); err != nil {
-			handlers.SystemHandler(err)
-			return
-		}
-		if err = writer.Close(); err != nil {
-			handlers.SystemHandler(err)
-			return
-		}
+		cancel()
 	}
-	if err := w.conn.Close(); err != nil {
+	if err := w.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 		handlers.SystemHandler(err)
 		return
 	}

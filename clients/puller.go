@@ -42,7 +42,7 @@ func (p *RestPuller) DataPipe() chan *Data {
 
 // ListWorkers return all puller w
 func (p *RestPuller) ListWorkers() Workers {
-	var w = Workers{}
+	var w = make(Workers, len(p.w))
 	p.pullerMu.RLock()
 	for k := range p.w {
 		w[k] = struct{}{}

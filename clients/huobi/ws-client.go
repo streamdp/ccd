@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -53,18 +54,57 @@ type huobiWs struct {
 }
 
 func InitWs(pipe chan *clients.Data) clients.WssClient {
-	ctx := context.Background()
-	conn, _, err := websocket.Dial(ctx, wssUrl, nil)
-	if err != nil {
-		handlers.SystemHandler(err)
-	}
 	h := &huobiWs{
-		ctx:        ctx,
-		conn:       conn,
+		ctx:        context.Background(),
 		subscribes: map[string]*channel{},
+	}
+	if err := h.reconnect(); err != nil {
+		handlers.SystemHandler(err)
 	}
 	h.handleWsMessages(pipe)
 	return h
+}
+
+func (h *huobiWs) reconnect() (err error) {
+	if h.conn != nil {
+		if err := h.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
+			handlers.SystemHandler(err)
+		}
+	}
+	h.conn, _, err = websocket.Dial(h.ctx, wssUrl, nil)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (h *huobiWs) resubscribe() (err error) {
+	for k, v := range h.subscribes {
+		if err = h.sendSubscribeMsg(k, v.id); err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (h *huobiWs) handleWssError(err error) error {
+	handlers.SystemHandler(err)
+	for {
+		select {
+		case <-time.After(time.Minute):
+			return errors.New("reconnect failed")
+		default:
+			if err = h.reconnect(); err != nil {
+				time.Sleep(time.Second)
+				continue
+			}
+			if err = h.resubscribe(); err != nil {
+				time.Sleep(time.Second)
+				continue
+			}
+			return nil
+		}
+	}
 }
 
 func (h *huobiWs) handleWsMessages(pipe chan *clients.Data) {
@@ -85,18 +125,20 @@ func (h *huobiWs) handleWsMessages(pipe chan *clients.Data) {
 					err  error
 				)
 				if _, r, err = h.conn.Reader(h.ctx); err != nil {
-					handlers.SystemHandler(err)
-					return
+					if err = h.handleWssError(err); err != nil {
+						return
+					}
+					continue
 				}
 				if body, err = gzipDecompress(r); err != nil {
 					handlers.SystemHandler(err)
 					continue
 				}
 				if bytes.Contains(body, []byte("ping")) {
-					body = bytes.Replace(body, []byte("ping"), []byte("pong"), -1)
-					if err = h.conn.Write(h.ctx, websocket.MessageText, body); err != nil {
-						handlers.SystemHandler(err)
-						return
+					if err = h.pingHandler(body); err != nil {
+						if err = h.handleWssError(err); err != nil {
+							return
+						}
 					}
 					continue
 				}
@@ -117,59 +159,68 @@ func (h *huobiWs) handleWsMessages(pipe chan *clients.Data) {
 	}()
 }
 
+func (h *huobiWs) pingHandler(message []byte) (err error) {
+	message = bytes.Replace(message, []byte("ping"), []byte("pong"), -1)
+	return h.conn.Write(h.ctx, websocket.MessageText, message)
+}
+
 func (h *huobiWs) getPair(ch string) (from, to string) {
 	h.subMu.Lock()
 	defer h.subMu.Unlock()
-	s := strings.Split(ch, ".")
-	if len(s) != 3 {
-		return
-	}
-	if c, ok := h.subscribes[s[1]]; ok {
+	if c, ok := h.subscribes[ch]; ok {
 		return c.from, c.to
 	}
 	return
 }
 
-func buildSymbol(from, to string) string {
+func buildChannelName(from, to string) string {
 	if strings.ToLower(to) == "usd" {
 		to = "usdt"
 	}
-	return strings.ToLower(from + to)
+	return fmt.Sprintf("market.%s.ticker", strings.ToLower(from+to))
 }
 
-func (h *huobiWs) UnSubscribe(from, to string) (err error) {
+func (h *huobiWs) Unsubscribe(from, to string) (err error) {
 	h.subMu.Lock()
 	defer h.subMu.Unlock()
-	var symbol = buildSymbol(from, to)
-	if c, ok := h.subscribes[symbol]; ok {
-		if err = h.conn.Write(h.ctx, websocket.MessageText, []byte(
-			fmt.Sprintf("{\"unsub\": \"market.%s.ticker\", \"id\":\"%d\"}", symbol, c.id)),
-		); err != nil {
+	var ch = buildChannelName(from, to)
+	if c, ok := h.subscribes[ch]; ok {
+		if err = h.sendUnsubscribeMsg(ch, c.id); err != nil {
 			return
 		}
-		delete(h.subscribes, symbol)
+		delete(h.subscribes, ch)
 	}
 	return
+}
+
+func (h *huobiWs) sendUnsubscribeMsg(ch string, id int64) error {
+	return h.conn.Write(h.ctx, websocket.MessageText, []byte(
+		fmt.Sprintf("{\"unsub\": \"%s\", \"id\":\"%d\"}", ch, id)),
+	)
 }
 
 func (h *huobiWs) Subscribe(from, to string) (err error) {
 	h.subMu.Lock()
 	defer h.subMu.Unlock()
 	var (
-		id     = time.Now().UnixMilli()
-		symbol = buildSymbol(from, to)
+		id = time.Now().UnixMilli()
+		ch = buildChannelName(from, to)
 	)
-	if err = h.conn.Write(h.ctx, websocket.MessageText, []byte(
-		fmt.Sprintf("{\"sub\": \"market.%s.ticker\", \"id\":\"%d\"}", symbol, id)),
-	); err != nil {
+	if err = h.sendSubscribeMsg(ch, id); err != nil {
 		return
 	}
-	h.subscribes[symbol] = &channel{
+	h.subscribes[ch] = &channel{
 		from: strings.ToUpper(from),
 		to:   strings.ToUpper(to),
 		id:   id,
 	}
 	return
+}
+
+func (h *huobiWs) sendSubscribeMsg(ch string, id int64) error {
+	return h.conn.Write(h.ctx, websocket.MessageText, []byte(
+		fmt.Sprintf("{\"sub\": \"%s\", \"id\":\"%d\"}", ch, id)),
+	)
 }
 
 func gzipDecompress(r io.Reader) ([]byte, error) {

@@ -113,7 +113,7 @@ func Unsubscribe(w clients.WssClient) handlers.HandlerFuncResError {
 		if err = c.Bind(&query); err != nil {
 			return
 		}
-		if err = w.UnSubscribe(query.From, query.To); err != nil {
+		if err = w.Unsubscribe(query.From, query.To); err != nil {
 			res.UpdateAllFields(http.StatusOK, "Unsubscribe error:", err)
 			return
 		}

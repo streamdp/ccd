@@ -46,7 +46,7 @@ type RestClient interface {
 
 type WssClient interface {
 	Subscribe(from string, to string) error
-	UnSubscribe(from string, to string) error
+	Unsubscribe(from string, to string) error
 }
 
 // GetEmptyData returns empty Data

@@ -38,15 +38,19 @@ func InitRouter(e *gin.Engine) (err error) {
 	}
 	p := clients.NewPuller(r, db.DataPipe())
 
+	// health checks
+	e.GET("/healthz", SendOK)
+
+	// serve web page
 	e.LoadHTMLFiles("site/index.tmpl")
 	e.Static("/css", "site/css")
 	e.Static("/js", "site/js")
 	e.GET("/", SendHTML)
 	e.HEAD("/", SendOK)
 
+	// serve api
 	apiV1 := e.Group("/v1")
 	{
-		apiV1.GET("/service/ping", handlers.GinHandler(v1.Ping))
 		apiV1.POST("/collect/add", handlers.GinHandler(v1.AddWorker(p)))
 		apiV1.GET("/collect/add", handlers.GinHandler(v1.AddWorker(p)))
 		apiV1.POST("/collect/remove", handlers.GinHandler(v1.RemoveWorker(p)))

@@ -25,9 +25,20 @@ You should previously export some environment variables:
 
 ```bash
 export CCDC_DATAPROVIDER=cryptocompare
-export CCDC_DATASOURCE=mysql://username:password@tcp(localhost:3306)/dbname
+export CCDC_DATASOURCE=postgres://username:password@127.0.0.1:5432/dbname?sslmode=disable
 export CCDC_APIKEY=put you api key here
 ```
+
+if you want use **huobi** as data provider export this:
+```bash
+export CCDC_DATAPROVIDER=huobi
+```
+
+If you use **mysql** db, you should export something like this:
+```bash
+export CCDC_DATASOURCE=mysql://username:password@tcp(localhost:3306)/dbname
+``` 
+
 And run application:
 ```bash
 $ ./ccd -debug
@@ -67,13 +78,17 @@ Usage of ccd:
 ```
 
 List of the implemented endpoints:
-* **/v1/service/ping** [GET]   _check node status_
-* **/v1/collect/add** [POST, GET] _add new worker to collect data about selected pair in database_
-* **/v1/collect/remove** [POST, GET] _stop and remove worker and collecting data for selected pair_
+* **/healthz** [GET]   _check node status_
+* **/v1/collect/add** [POST, GET] _add new worker to collect data for the selected pair_
+* **/v1/collect/remove** [POST, GET] _stop and remove worker and collecting data for the selected pair_
 * **/v1/collect/status** [GET] _show info about running workers_
-* **/v1/collect/update** [POST, GET]  _update pulling interval for selected pair_
-* **/v1/price** [POST, GET] _get actual (or cached if dataprovider is unavailable) info for selected pair_
-* **/v1/ws** [GET] _websocket connection url_
+* **/v1/collect/update** [POST, GET]  _update pulling interval for the selected pair_
+* **/v1/price** [POST, GET] _get actual (or cached if dataprovider is unavailable) info for the selected pair_
+* **/v1/ws** [GET] _websocket connection url, when you connected, try to send request like {"fsym":"BTC","tsym":"USD"}_
+
+Next work only for huobi just now:
+* **/v1/ws/subscribe** [POST, GET] _subscribe to collect data for the selected pair (if implemented)_
+* **/v1/ws/unsubscribe** [POST, GET] _unsubscribe to stop collect data for the selected pair (if implemented)_
 
 Example getting a GET request for getting actual info about selected pair:
 
@@ -92,6 +107,13 @@ Example of sending a GET request to remove worker:
 ```bash
 $ curl "http://localhost:8080/v1/collect/remove?fsym=BTC&tsym=USD&interval=60"
 ```
+
+Example of sending a GET request to subscribe wss channel:
+
+```bash
+$ curl "http://localhost:8080/v1/ws/subscribe?fsym=BTC&tsym=USD"
+```
+
 
 Working example URL: https://ccdtest.gq/v1/service/ping
 

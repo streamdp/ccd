@@ -28,12 +28,12 @@ type wsHandler struct {
 	conn        *websocket.Conn
 	messagePipe chan []byte
 
-	wc *clients.Workers
+	wc *clients.RestPuller
 	db dbconnectors.DbReadWrite
 }
 
 // HandleWs - handles websocket requests from the peer.
-func HandleWs(wc *clients.Workers, db dbconnectors.DbReadWrite) gin.HandlerFunc {
+func HandleWs(wc *clients.RestPuller, db dbconnectors.DbReadWrite) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var upgrader = websocket.Upgrader{
 			ReadBufferSize:  1024,

@@ -17,19 +17,19 @@ type PriceQuery struct {
 }
 
 // GetLastPrice return up-to-date data for the selected currencies pair
-func GetLastPrice(wc *clients.Workers, db dbconnectors.DbReadWrite, query *PriceQuery) (data *clients.Data, err error) {
-	data, err = (*wc.GetRestClient()).Get(query.From, query.To)
+func GetLastPrice(p *clients.RestPuller, db dbconnectors.DbReadWrite, query *PriceQuery) (data *clients.Data, err error) {
+	data, err = (*p.Client()).Get(query.From, query.To)
 	if err != nil {
 		if data, err = db.GetLast(query.From, query.To); err != nil {
 			return
 		}
 	}
-	wc.GetPipe() <- data
+	p.DataPipe() <- data
 	return
 }
 
 // GetPrice return up-to-date or most recent data for the selected currencies pair
-func GetPrice(wc *clients.Workers, db dbconnectors.DbReadWrite) handlers.HandlerFuncResError {
+func GetPrice(wc *clients.RestPuller, db dbconnectors.DbReadWrite) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		query := PriceQuery{}
 		if err = c.Bind(&query); err != nil {

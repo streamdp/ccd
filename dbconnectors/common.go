@@ -16,6 +16,7 @@ import (
 type DbReadWrite interface {
 	Insert(data *clients.Data) (result sql.Result, err error)
 	GetLast(from string, to string) (result *clients.Data, err error)
+	DataPipe() chan *clients.Data
 }
 
 func Connect() (db DbReadWrite, err error) {
@@ -33,18 +34,21 @@ func Connect() (db DbReadWrite, err error) {
 	}
 	switch driverName {
 	case postgres.Postgres:
-		return postgres.Connect(dataSource)
+		db, err = postgres.Connect(dataSource)
 	case mysql.Mysql:
 		fallthrough
 	default:
-		return mysql.Connect(connectionString)
+		db, err = mysql.Connect(connectionString)
 	}
+	if err == nil {
+		serve(db)
+	}
+	return
 }
 
-// ServePipe and if we get clients.DataPipe then save them to the Db
-func ServePipe(db DbReadWrite, pipe chan *clients.Data) {
+func serve(db DbReadWrite) {
 	go func() {
-		for data := range pipe {
+		for data := range db.DataPipe() {
 			if _, err := db.Insert(data); err != nil {
 				handlers.SystemHandler(err)
 			}

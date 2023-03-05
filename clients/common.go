@@ -39,18 +39,19 @@ type Data struct {
 	Display *Display  `json:"DISPLAY"`
 }
 
-// RestClient interface makes it possible to expand the list of data providers
+// RestClient interface makes it possible to expand the list of rest data providers
 type RestClient interface {
 	Get(from string, to string) (*Data, error)
 }
 
+// WssClient interface makes it possible to expand the list of wss data providers
 type WssClient interface {
 	Subscribe(from string, to string) error
 	Unsubscribe(from string, to string) error
 }
 
-// GetEmptyData returns empty Data
-func GetEmptyData(from string, to string) *Data {
+// EmptyData returns empty Data
+func EmptyData(from string, to string) *Data {
 	return &Data{
 		From:    from,
 		To:      to,

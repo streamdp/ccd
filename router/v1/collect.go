@@ -17,46 +17,45 @@ type CollectQuery struct {
 }
 
 // AddWorker that will collect data for the selected currency pair to the management service
-func AddWorker(wc *clients.Workers) handlers.HandlerFuncResError {
+func AddWorker(p *clients.RestPuller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		var worker *clients.Worker
 		query := CollectQuery{}
 		if err = c.Bind(&query); err != nil {
 			return
 		}
-		if worker = wc.GetWorker(query.From, query.To); worker != nil {
+		if worker = p.Worker(query.From, query.To); worker != nil {
 			res.UpdateAllFields(http.StatusOK, "Data for this pair is already being collected", worker)
 			return
 		}
-		worker = wc.AddWorker(query.From, query.To, query.Interval)
-		worker.Work(wc.GetRestClient(), wc.GetPipe())
+		worker = p.AddWorker(query.From, query.To, query.Interval)
 		res.UpdateAllFields(http.StatusCreated, "Data collection started", worker)
 		return
 	}
 }
 
 // RemoveWorker from the management service and stop collecting data for the selected currencies pair
-func RemoveWorker(wc *clients.Workers) handlers.HandlerFuncResError {
+func RemoveWorker(p *clients.RestPuller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		query := CollectQuery{}
 		if err = c.Bind(&query); err != nil {
 			return
 		}
-		if worker := wc.GetWorker(query.From, query.To); worker == nil {
+		if p.Worker(query.From, query.To) == nil {
 			res.UpdateAllFields(http.StatusOK, "No data is collected for this pair", nil)
 			return
 		}
-		wc.RemoveWorker(query.From, query.To)
+		p.RemoveWorker(query.From, query.To)
 		res.UpdateAllFields(http.StatusOK, "Worker stopped successfully", nil)
 		return
 	}
 }
 
 // WorkersStatus return information about running workers
-func WorkersStatus(wc *clients.Workers) handlers.HandlerFuncResError {
+func WorkersStatus(p *clients.RestPuller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		res.UpdateAllFields(http.StatusOK, "Information about running workers", nil)
-		activeWorkers := wc.GetWorkers()
+		activeWorkers := p.Workers()
 		if len(activeWorkers) == 0 {
 			return
 		}
@@ -75,14 +74,14 @@ func WorkersStatus(wc *clients.Workers) handlers.HandlerFuncResError {
 }
 
 // UpdateWorker update pulling data interval for the selected worker by the currencies pair
-func UpdateWorker(wc *clients.Workers) handlers.HandlerFuncResError {
+func UpdateWorker(p *clients.RestPuller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		var worker *clients.Worker
 		query := CollectQuery{}
 		if err = c.Bind(&query); err != nil {
 			return
 		}
-		if worker = wc.GetWorker(query.From, query.To); worker == nil {
+		if worker = p.Worker(query.From, query.To); worker == nil {
 			res.UpdateAllFields(http.StatusOK, "No data is collected for this pair", worker)
 			return
 		}
@@ -117,7 +116,7 @@ func Unsubscribe(w clients.WssClient) handlers.HandlerFuncResError {
 			res.UpdateAllFields(http.StatusOK, "Unsubscribe error:", err)
 			return
 		}
-		res.UpdateAllFields(http.StatusOK, "Subscribed successfully, data collection stopped successfully", nil)
+		res.UpdateAllFields(http.StatusOK, "Unsubscribed successfully, data collection stopped ", []string{query.From, query.To})
 		return
 	}
 }

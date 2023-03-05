@@ -16,12 +16,13 @@ const Postgres = "postgres"
 // Db needed to add new methods for an instance *sql.Db
 type Db struct {
 	*sql.DB
+	pipe chan *clients.Data
 }
 
 // GetLast row with the most recent data for the selected currencies pair
 func (db *Db) GetLast(from string, to string) (result *clients.Data, err error) {
 	var displayDataRaw string
-	result = clients.GetEmptyData(from, to)
+	result = clients.EmptyData(from, to)
 	query := `
 		select change24hour,
 		       changepct24hour,
@@ -108,13 +109,20 @@ func (db *Db) Insert(data *clients.Data) (result sql.Result, err error) {
 	)
 }
 
+func (db *Db) DataPipe() chan *clients.Data {
+	return db.pipe
+}
+
 // Connect after prepare to the Db
 func Connect(dataSource string) (db *Db, err error) {
 	sqlDb := &sql.DB{}
 	if sqlDb, err = sql.Open(Postgres, dataSource); err != nil {
 		return
 	}
-	return &Db{sqlDb}, nil
+	return &Db{
+		DB:   sqlDb,
+		pipe: make(chan *clients.Data, 1000),
+	}, nil
 }
 
 // Close Db connection

@@ -126,6 +126,7 @@ func (h *huobiWs) handleWsMessages(pipe chan *clients.Data) {
 				)
 				if _, r, err = h.conn.Reader(h.ctx); err != nil {
 					if err = h.handleWssError(err); err != nil {
+						handlers.SystemHandler(err)
 						return
 					}
 					continue
@@ -137,6 +138,7 @@ func (h *huobiWs) handleWsMessages(pipe chan *clients.Data) {
 				if bytes.Contains(body, []byte("ping")) {
 					if err = h.pingHandler(body); err != nil {
 						if err = h.handleWssError(err); err != nil {
+							handlers.SystemHandler(err)
 							return
 						}
 					}

@@ -9,7 +9,7 @@ import (
 	"github.com/streamdp/ccd/clients/cryptocompare"
 	"github.com/streamdp/ccd/clients/huobi"
 	"github.com/streamdp/ccd/config"
-	"github.com/streamdp/ccd/dbconnectors"
+	"github.com/streamdp/ccd/db"
 	"github.com/streamdp/ccd/handlers"
 	v1 "github.com/streamdp/ccd/router/v1"
 	"github.com/streamdp/ccd/router/v1/validators"
@@ -18,7 +18,7 @@ import (
 
 // InitRouter basic work on setting up the application, declare endpoints, register our custom validation functions
 func InitRouter(e *gin.Engine) (err error) {
-	db, err := dbconnectors.Connect()
+	db, err := db.Connect()
 	if err != nil {
 		return err
 	}

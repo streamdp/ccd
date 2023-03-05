@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/streamdp/ccd/clients"
-	"github.com/streamdp/ccd/dbconnectors"
+	"github.com/streamdp/ccd/db"
 	"github.com/streamdp/ccd/handlers"
 )
 
@@ -17,7 +17,7 @@ type PriceQuery struct {
 }
 
 // GetLastPrice return up-to-date data for the selected currencies pair
-func GetLastPrice(r clients.RestClient, db dbconnectors.DbReadWrite, query *PriceQuery) (data *clients.Data, err error) {
+func GetLastPrice(r clients.RestClient, db db.DbReadWrite, query *PriceQuery) (data *clients.Data, err error) {
 	data, err = r.Get(query.From, query.To)
 	if err != nil {
 		if data, err = db.GetLast(query.From, query.To); err != nil {
@@ -29,7 +29,7 @@ func GetLastPrice(r clients.RestClient, db dbconnectors.DbReadWrite, query *Pric
 }
 
 // GetPrice return up-to-date or most recent data for the selected currencies pair
-func GetPrice(wc *clients.RestPuller, db dbconnectors.DbReadWrite) handlers.HandlerFuncResError {
+func GetPrice(wc *clients.RestPuller, db db.DbReadWrite) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		query := PriceQuery{}
 		if err = c.Bind(&query); err != nil {

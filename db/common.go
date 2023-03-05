@@ -1,4 +1,4 @@
-package dbconnectors
+package db
 
 import (
 	"database/sql"
@@ -7,8 +7,8 @@ import (
 
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/config"
-	"github.com/streamdp/ccd/dbconnectors/mysql"
-	"github.com/streamdp/ccd/dbconnectors/postgres"
+	"github.com/streamdp/ccd/db/mysql"
+	"github.com/streamdp/ccd/db/postgres"
 	"github.com/streamdp/ccd/handlers"
 )
 

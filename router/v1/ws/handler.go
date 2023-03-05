@@ -12,7 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/streamdp/ccd/clients"
-	"github.com/streamdp/ccd/dbconnectors"
+	"github.com/streamdp/ccd/db"
 	"github.com/streamdp/ccd/handlers"
 	v1 "github.com/streamdp/ccd/router/v1"
 )
@@ -29,11 +29,11 @@ type wsHandler struct {
 	messagePipe chan []byte
 
 	rc clients.RestClient
-	db dbconnectors.DbReadWrite
+	db db.DbReadWrite
 }
 
 // HandleWs - handles websocket requests from the peer.
-func HandleWs(rc clients.RestClient, db dbconnectors.DbReadWrite) gin.HandlerFunc {
+func HandleWs(rc clients.RestClient, db db.DbReadWrite) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var upgrader = websocket.Upgrader{
 			ReadBufferSize:  1024,

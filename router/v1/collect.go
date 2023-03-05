@@ -19,17 +19,17 @@ type CollectQuery struct {
 // AddWorker that will collect data for the selected currency pair to the management service
 func AddWorker(p *clients.RestPuller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
-		var worker *clients.Worker
+		var w *clients.Worker
 		query := CollectQuery{}
 		if err = c.Bind(&query); err != nil {
 			return
 		}
-		if worker = p.Worker(query.From, query.To); worker != nil {
-			res.UpdateAllFields(http.StatusOK, "Data for this pair is already being collected", worker)
+		if w = p.Worker(query.From, query.To); w != nil {
+			res.UpdateAllFields(http.StatusOK, "Data for this pair is already being collected", w)
 			return
 		}
-		worker = p.AddWorker(query.From, query.To, query.Interval)
-		res.UpdateAllFields(http.StatusCreated, "Data collection started", worker)
+		w = p.AddWorker(query.From, query.To, query.Interval)
+		res.UpdateAllFields(http.StatusCreated, "Data collection started", w)
 		return
 	}
 }
@@ -52,10 +52,16 @@ func RemoveWorker(p *clients.RestPuller) handlers.HandlerFuncResError {
 }
 
 // WorkersStatus return information about running workers
-func WorkersStatus(p *clients.RestPuller) handlers.HandlerFuncResError {
+func WorkersStatus(p *clients.RestPuller, w clients.WssClient) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		res.UpdateAllFields(http.StatusOK, "Information about running workers", nil)
-		activeWorkers := p.Workers()
+		activeWorkers := p.ListWorkers()
+		for k, v := range w.ListSubscribes() {
+			activeWorkers[&clients.Worker{
+				From: k.From,
+				To:   k.To,
+			}] = v
+		}
 		if len(activeWorkers) == 0 {
 			return
 		}
@@ -76,17 +82,17 @@ func WorkersStatus(p *clients.RestPuller) handlers.HandlerFuncResError {
 // UpdateWorker update pulling data interval for the selected worker by the currencies pair
 func UpdateWorker(p *clients.RestPuller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
-		var worker *clients.Worker
+		var w *clients.Worker
 		query := CollectQuery{}
 		if err = c.Bind(&query); err != nil {
 			return
 		}
-		if worker = p.Worker(query.From, query.To); worker == nil {
-			res.UpdateAllFields(http.StatusOK, "No data is collected for this pair", worker)
+		if w = p.Worker(query.From, query.To); w == nil {
+			res.UpdateAllFields(http.StatusOK, "No data is collected for this pair", w)
 			return
 		}
-		worker.Interval = query.Interval
-		res.UpdateAllFields(http.StatusOK, "Worker updated successfully", worker)
+		w.Interval = query.Interval
+		res.UpdateAllFields(http.StatusOK, "Worker updated successfully", w)
 		return
 	}
 }
@@ -98,7 +104,7 @@ func Subscribe(w clients.WssClient) handlers.HandlerFuncResError {
 			return
 		}
 		if err = w.Subscribe(query.From, query.To); err != nil {
-			res.UpdateAllFields(http.StatusOK, "Subscribe error:", err)
+			res.UpdateAllFields(http.StatusOK, "subscribe error:", err)
 			return
 		}
 		res.UpdateAllFields(http.StatusCreated, "Subscribed successfully, data collection started", []string{query.From, query.To})

@@ -44,10 +44,16 @@ type RestClient interface {
 	Get(from string, to string) (*Data, error)
 }
 
+type Subscribe struct {
+	From, To string
+}
+type Subscribes map[*Subscribe]struct{}
+
 // WssClient interface makes it possible to expand the list of wss data providers
 type WssClient interface {
 	Subscribe(from string, to string) error
 	Unsubscribe(from string, to string) error
+	ListSubscribes() Subscribes
 }
 
 // EmptyData returns empty Data

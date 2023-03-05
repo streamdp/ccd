@@ -28,12 +28,12 @@ type wsHandler struct {
 	conn        *websocket.Conn
 	messagePipe chan []byte
 
-	wc *clients.RestPuller
+	rc clients.RestClient
 	db dbconnectors.DbReadWrite
 }
 
 // HandleWs - handles websocket requests from the peer.
-func HandleWs(wc *clients.RestPuller, db dbconnectors.DbReadWrite) gin.HandlerFunc {
+func HandleWs(rc clients.RestClient, db dbconnectors.DbReadWrite) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var upgrader = websocket.Upgrader{
 			ReadBufferSize:  1024,
@@ -52,7 +52,7 @@ func HandleWs(wc *clients.RestPuller, db dbconnectors.DbReadWrite) gin.HandlerFu
 			cancel:      cancel,
 			conn:        conn,
 			messagePipe: make(chan []byte, 256),
-			wc:          wc,
+			rc:          rc,
 			db:          db,
 		}
 		h.conn.SetReadLimit(maxMessageSize)
@@ -63,28 +63,28 @@ func HandleWs(wc *clients.RestPuller, db dbconnectors.DbReadWrite) gin.HandlerFu
 	}
 }
 
-func (c *wsHandler) pingHandler(string) error {
-	if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+func (w *wsHandler) pingHandler(string) error {
+	if err := w.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 		return err
 	}
-	return c.conn.WriteMessage(websocket.PongMessage, nil)
+	return w.conn.WriteMessage(websocket.PongMessage, nil)
 }
 
-func (c *wsHandler) pongHandler(string) error {
-	if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+func (w *wsHandler) pongHandler(string) error {
+	if err := w.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 		return err
 	}
-	return c.conn.WriteMessage(websocket.PingMessage, nil)
+	return w.conn.WriteMessage(websocket.PingMessage, nil)
 }
 
-func (c *wsHandler) handleClientRequests() {
+func (w *wsHandler) handleClientRequests() {
 	defer func() {
-		c.cancel()
-		close(c.messagePipe)
+		w.cancel()
+		close(w.messagePipe)
 	}()
 	for {
 		select {
-		case <-c.ctx.Done():
+		case <-w.ctx.Done():
 			return
 		default:
 			var (
@@ -92,28 +92,28 @@ func (c *wsHandler) handleClientRequests() {
 				err   error
 				query = v1.PriceQuery{}
 			)
-			if err = c.conn.ReadJSON(&query); err != nil {
+			if err = w.conn.ReadJSON(&query); err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					handlers.SystemHandler(err)
 					return
 				}
-				c.returnAnErrorToTheClient(errors.New(
+				w.returnAnErrorToTheClient(errors.New(
 					"invalid request: the request should look like {\"fsym\":\"CRYPTO\",\"tsym\":\"COMMON\"}",
 				))
 				continue
 			}
-			if data, err = c.getLastPrice(&query); err != nil {
+			if data, err = w.getLastPrice(&query); err != nil {
 				handlers.SystemHandler(err)
 				return
 			}
-			c.messagePipe <- data
+			w.messagePipe <- data
 		}
 	}
 }
 
-func (c *wsHandler) getLastPrice(query *v1.PriceQuery) (result []byte, err error) {
+func (w *wsHandler) getLastPrice(query *v1.PriceQuery) (result []byte, err error) {
 	var data *clients.Data
-	if data, err = v1.GetLastPrice(c.wc, c.db, query); err != nil {
+	if data, err = v1.GetLastPrice(w.rc, w.db, query); err != nil {
 		return
 	}
 	if result, err = json.Marshal(&data); err != nil {
@@ -122,18 +122,18 @@ func (c *wsHandler) getLastPrice(query *v1.PriceQuery) (result []byte, err error
 	return
 }
 
-func (c *wsHandler) handleMessagePipe() {
-	defer c.cancel()
-	for message := range c.messagePipe {
+func (w *wsHandler) handleMessagePipe() {
+	defer w.cancel()
+	for message := range w.messagePipe {
 		var (
 			writer io.WriteCloser
 			err    error
 		)
-		if err = c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+		if err = w.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 			handlers.SystemHandler(err)
 			return
 		}
-		if writer, err = c.conn.NextWriter(websocket.TextMessage); err != nil {
+		if writer, err = w.conn.NextWriter(websocket.TextMessage); err != nil {
 			handlers.SystemHandler(err)
 			return
 		}
@@ -146,13 +146,13 @@ func (c *wsHandler) handleMessagePipe() {
 			return
 		}
 	}
-	if err := c.conn.Close(); err != nil {
+	if err := w.conn.Close(); err != nil {
 		handlers.SystemHandler(err)
 		return
 	}
 }
 
-func (c *wsHandler) returnAnErrorToTheClient(err error) {
+func (w *wsHandler) returnAnErrorToTheClient(err error) {
 	var binaryString []byte
 	res := handlers.Result{}
 	res.UpdateAllFields(http.StatusBadRequest, err.Error(), nil)
@@ -160,5 +160,5 @@ func (c *wsHandler) returnAnErrorToTheClient(err error) {
 		handlers.SystemHandler(err)
 		return
 	}
-	c.messagePipe <- binaryString
+	w.messagePipe <- binaryString
 }

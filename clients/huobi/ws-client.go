@@ -50,7 +50,7 @@ type huobiWs struct {
 	ctx        context.Context
 	conn       *websocket.Conn
 	subscribes map[string]*channel
-	subMu      sync.Mutex
+	subMu      sync.RWMutex
 }
 
 func InitWs(pipe chan *clients.Data) clients.WssClient {
@@ -79,6 +79,8 @@ func (h *huobiWs) reconnect() (err error) {
 }
 
 func (h *huobiWs) resubscribe() (err error) {
+	h.subMu.RLock()
+	defer h.subMu.RUnlock()
 	for k, v := range h.subscribes {
 		if err = h.sendSubscribeMsg(k, v.id); err != nil {
 			return
@@ -161,14 +163,14 @@ func (h *huobiWs) handleWsMessages(pipe chan *clients.Data) {
 	}()
 }
 
-func (h *huobiWs) pingHandler(message []byte) (err error) {
-	message = bytes.Replace(message, []byte("ping"), []byte("pong"), -1)
-	return h.conn.Write(h.ctx, websocket.MessageText, message)
+func (h *huobiWs) pingHandler(m []byte) (err error) {
+	m = bytes.Replace(m, []byte("ping"), []byte("pong"), -1)
+	return h.conn.Write(h.ctx, websocket.MessageText, m)
 }
 
 func (h *huobiWs) getPair(ch string) (from, to string) {
-	h.subMu.Lock()
-	defer h.subMu.Unlock()
+	h.subMu.RLock()
+	defer h.subMu.RUnlock()
 	if c, ok := h.subscribes[ch]; ok {
 		return c.from, c.to
 	}
@@ -223,6 +225,19 @@ func (h *huobiWs) sendSubscribeMsg(ch string, id int64) error {
 	return h.conn.Write(h.ctx, websocket.MessageText, []byte(
 		fmt.Sprintf("{\"sub\": \"%s\", \"id\":\"%d\"}", ch, id)),
 	)
+}
+
+func (h *huobiWs) ListSubscribes() clients.Subscribes {
+	h.subMu.RLock()
+	defer h.subMu.RUnlock()
+	w := make(clients.Subscribes, len(h.subscribes))
+	for _, v := range h.subscribes {
+		w[&clients.Subscribe{
+			From: v.from,
+			To:   v.to,
+		}] = struct{}{}
+	}
+	return w
 }
 
 func gzipDecompress(r io.Reader) ([]byte, error) {

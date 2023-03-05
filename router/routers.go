@@ -22,6 +22,7 @@ func InitRouter(e *gin.Engine) (err error) {
 	if err != nil {
 		return err
 	}
+
 	var (
 		r clients.RestClient
 		w clients.WssClient
@@ -36,6 +37,7 @@ func InitRouter(e *gin.Engine) (err error) {
 	if err != nil {
 		return err
 	}
+
 	p := clients.NewPuller(r, db.DataPipe())
 
 	// health checks
@@ -55,12 +57,12 @@ func InitRouter(e *gin.Engine) (err error) {
 		apiV1.GET("/collect/add", handlers.GinHandler(v1.AddWorker(p)))
 		apiV1.POST("/collect/remove", handlers.GinHandler(v1.RemoveWorker(p)))
 		apiV1.GET("/collect/remove", handlers.GinHandler(v1.RemoveWorker(p)))
-		apiV1.GET("/collect/status", handlers.GinHandler(v1.WorkersStatus(p)))
+		apiV1.GET("/collect/status", handlers.GinHandler(v1.WorkersStatus(p, w)))
 		apiV1.POST("/collect/update", handlers.GinHandler(v1.UpdateWorker(p)))
 		apiV1.GET("/collect/update", handlers.GinHandler(v1.UpdateWorker(p)))
 		apiV1.POST("/price", handlers.GinHandler(v1.GetPrice(p, db)))
 		apiV1.GET("/price", handlers.GinHandler(v1.GetPrice(p, db)))
-		apiV1.GET("/ws", ws.HandleWs(p, db))
+		apiV1.GET("/ws", ws.HandleWs(p.Client(), db))
 		if w != nil {
 			apiV1.POST("/ws/subscribe", handlers.GinHandler(v1.Subscribe(w)))
 			apiV1.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(w)))

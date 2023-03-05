@@ -2,23 +2,13 @@ package clients
 
 import (
 	"sync"
-	"time"
 
 	"github.com/streamdp/ccd/config"
-	"github.com/streamdp/ccd/handlers"
 )
-
-// Worker does all the data mining run
-type Worker struct {
-	From     string `json:"from"`
-	To       string `json:"to"`
-	Interval int    `json:"interval"`
-	done     chan struct{}
-}
 
 // RestPuller puller base struct
 type RestPuller struct {
-	workers  map[*Worker]struct{}
+	w        Workers
 	dataPipe chan *Data
 	client   RestClient
 	pullerMu sync.RWMutex
@@ -27,13 +17,13 @@ type RestPuller struct {
 // NewPuller init rest puller
 func NewPuller(r RestClient, dataPipe chan *Data) *RestPuller {
 	return &RestPuller{
-		workers:  make(map[*Worker]struct{}),
+		w:        Workers{},
 		dataPipe: dataPipe,
 		client:   r,
 	}
 }
 
-func (p *RestPuller) newWorker(from string, to string, interval int) *Worker {
+func (p *RestPuller) createWorker(from string, to string, interval int) *Worker {
 	if interval <= 0 {
 		interval = config.DefaultPullingInterval
 	}
@@ -50,11 +40,11 @@ func (p *RestPuller) DataPipe() chan *Data {
 	return p.dataPipe
 }
 
-// Workers return all puller workers
-func (p *RestPuller) Workers() map[*Worker]struct{} {
-	var w = map[*Worker]struct{}{}
+// ListWorkers return all puller w
+func (p *RestPuller) ListWorkers() Workers {
+	var w = Workers{}
 	p.pullerMu.RLock()
-	for k := range p.workers {
+	for k := range p.w {
 		w[k] = struct{}{}
 	}
 	p.pullerMu.RUnlock()
@@ -62,17 +52,17 @@ func (p *RestPuller) Workers() map[*Worker]struct{} {
 }
 
 // Client return rest client
-func (p *RestPuller) Client() *RestClient {
-	return &p.client
+func (p *RestPuller) Client() RestClient {
+	return p.client
 }
 
 // Worker return worker for the selected currencies pair, if possible
 func (p *RestPuller) Worker(from string, to string) *Worker {
 	p.pullerMu.RLock()
 	defer p.pullerMu.RUnlock()
-	for worker := range p.workers {
-		if worker.From == from && worker.To == to {
-			return worker
+	for w := range p.w {
+		if w.From == from && w.To == to {
+			return w
 		}
 	}
 	return nil
@@ -80,42 +70,19 @@ func (p *RestPuller) Worker(from string, to string) *Worker {
 
 // AddWorker to collect data for the selected currency pair to the puller
 func (p *RestPuller) AddWorker(from string, to string, interval int) *Worker {
-	worker := p.newWorker(from, to, interval)
-	worker.run(p.Client(), p.DataPipe())
+	w := p.createWorker(from, to, interval)
+	w.run(p.Client(), p.DataPipe())
 	p.pullerMu.Lock()
-	p.workers[worker] = struct{}{}
+	p.w[w] = struct{}{}
 	p.pullerMu.Unlock()
-	return worker
+	return w
 }
 
 // RemoveWorker from the puller by the selected currency pair
 func (p *RestPuller) RemoveWorker(from string, to string) {
-	worker := p.Worker(from, to)
-	worker.close()
+	w := p.Worker(from, to)
+	w.stop()
 	p.pullerMu.Lock()
 	defer p.pullerMu.Unlock()
-	delete(p.workers, worker)
-}
-
-func (w *Worker) close() {
-	w.done <- struct{}{}
-}
-
-func (w *Worker) run(dp *RestClient, dataPipe chan *Data) {
-	go func() {
-		defer close(w.done)
-		for {
-			select {
-			case <-w.done:
-				return
-			case <-time.After(time.Duration(w.Interval) * time.Second):
-				data, err := (*dp).Get(w.From, w.To)
-				if err != nil {
-					handlers.SystemHandler(err)
-					continue
-				}
-				dataPipe <- data
-			}
-		}
-	}()
+	delete(p.w, w)
 }

@@ -115,6 +115,6 @@ $ curl "http://localhost:8080/v1/ws/subscribe?fsym=BTC&tsym=USD"
 ```
 
 
-Working example URL: https://ccdtest.gq/v1/service/ping
+Working example URL: https://ccdtest.gq/healthz
 
 Web UI: https://ccdtest.gq

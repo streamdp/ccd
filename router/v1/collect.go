@@ -55,18 +55,20 @@ func RemoveWorker(p *clients.RestPuller) handlers.HandlerFuncResError {
 func WorkersStatus(p *clients.RestPuller, w clients.WssClient) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (res handlers.Result, err error) {
 		res.UpdateAllFields(http.StatusOK, "Information about running workers", nil)
-		activeWorkers := p.ListWorkers()
-		for k, v := range w.ListSubscribes() {
-			activeWorkers[&clients.Worker{
-				From: k.From,
-				To:   k.To,
-			}] = v
+		workers := p.ListWorkers()
+		if w != nil {
+			for k, v := range w.ListSubscribes() {
+				workers[&clients.Worker{
+					From: k.From,
+					To:   k.To,
+				}] = v
+			}
 		}
-		if len(activeWorkers) == 0 {
+		if len(workers) == 0 {
 			return
 		}
 		list := map[string]map[string]*clients.Worker{}
-		for worker := range activeWorkers {
+		for worker := range workers {
 			if list[worker.From] != nil {
 				list[worker.From][worker.To] = worker
 				continue

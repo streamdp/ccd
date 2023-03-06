@@ -1,5 +1,7 @@
 package clients
 
+import "strings"
+
 // Response structure for easily json serialization
 type Response struct {
 	Change24Hour    float64 `json:"CHANGE24HOUR"`
@@ -11,8 +13,8 @@ type Response struct {
 	High24Hour      float64 `json:"HIGH24HOUR"`
 	Price           float64 `json:"PRICE"`
 	Supply          float64 `json:"SUPPLY"`
-	Mktcap          float64 `json:"MKTCAP"`
-	Lastupdate      int64   `json:"LASTUPDATE"`
+	MktCap          float64 `json:"MKTCAP"`
+	LastUpdate      int64   `json:"LASTUPDATE"`
 }
 
 // Display structure for easily json serialization
@@ -26,9 +28,9 @@ type Display struct {
 	Price           string `json:"PRICE"`
 	FromSymbol      string `json:"FROMSYMBOL"`
 	ToSymbol        string `json:"TOSYMBOL"`
-	Lastupdate      string `json:"LASTUPDATE"`
+	LastUpdate      string `json:"LASTUPDATE"`
 	Supply          string `json:"SUPPLY"`
-	Mktcap          string `json:"MKTCAP"`
+	MktCap          string `json:"MKTCAP"`
 }
 
 // Data structure for easily json serialization
@@ -52,8 +54,8 @@ type RestClient interface {
 	Get(from string, to string) (*Data, error)
 }
 
-// WssClient interface makes it possible to expand the list of wss data providers
-type WssClient interface {
+// WsClient interface makes it possible to expand the list of wss data providers
+type WsClient interface {
 	Subscribe(from string, to string) error
 	Unsubscribe(from string, to string) error
 	ListSubscribes() Subscribes
@@ -65,6 +67,18 @@ type Subscribe struct {
 	id   int64
 }
 type Subscribes map[string]*Subscribe
+
+func NewSubscribe(from, to string, id int64) *Subscribe {
+	return &Subscribe{
+		From: strings.ToUpper(from),
+		To:   strings.ToUpper(to),
+		id:   id,
+	}
+}
+
+func (s *Subscribe) Id() int64 {
+	return s.id
+}
 
 // EmptyData returns empty Data
 func EmptyData(from string, to string) *Data {

@@ -101,7 +101,7 @@ func convertHuobiRestDataToDomain(from, to string, d *huobiRestData) *clients.Da
 			High24Hour:     d.Tick.High,
 			Price:          price,
 			Supply:         float64(d.Tick.Count),
-			Lastupdate:     d.Ts,
+			LastUpdate:     d.Ts,
 		},
 		Display: &clients.Display{
 			Open24Hour:     strconv.FormatFloat(d.Tick.Open, 'f', -1, 64),
@@ -111,7 +111,7 @@ func convertHuobiRestDataToDomain(from, to string, d *huobiRestData) *clients.Da
 			Price:          strconv.FormatFloat(price, 'f', -1, 64),
 			FromSymbol:     strings.ToUpper(from),
 			ToSymbol:       strings.ToUpper(to),
-			Lastupdate:     strconv.FormatInt(d.Ts, 10),
+			LastUpdate:     strconv.FormatInt(d.Ts, 10),
 			Supply:         strconv.Itoa(d.Tick.Count),
 		},
 	}

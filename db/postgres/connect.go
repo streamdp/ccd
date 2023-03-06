@@ -49,15 +49,15 @@ func (d *Db) GetLast(from string, to string) (result *clients.Data, err error) {
 		&result.Raw.High24Hour,
 		&result.Raw.Price,
 		&result.Raw.Supply,
-		&result.Raw.Mktcap,
-		&result.Raw.Lastupdate,
+		&result.Raw.MktCap,
+		&result.Raw.LastUpdate,
 		&displayDataRaw,
 	)
 	if err != nil {
 		return nil, err
 	}
 	_ = json.Unmarshal([]byte(displayDataRaw), &result.Display)
-	result.Display.Lastupdate = time.Unix(result.Raw.Lastupdate, 0).String()
+	result.Display.LastUpdate = time.Unix(result.Raw.LastUpdate, 0).String()
 	return result, nil
 }
 
@@ -103,8 +103,8 @@ func (d *Db) Insert(data *clients.Data) (result sql.Result, err error) {
 		&data.Raw.High24Hour,
 		&data.Raw.Price,
 		&data.Raw.Supply,
-		&data.Raw.Mktcap,
-		&data.Raw.Lastupdate,
+		&data.Raw.MktCap,
+		&data.Raw.LastUpdate,
 		string(dsp),
 	)
 }

@@ -1,12 +1,11 @@
 module github.com/streamdp/ccd
 
-go 1.17
+go 1.20
 
 require (
 	github.com/gin-gonic/gin v1.9.0
 	github.com/go-playground/validator/v10 v10.11.2
 	github.com/go-sql-driver/mysql v1.7.0
-	github.com/gorilla/websocket v1.5.0
 	github.com/lib/pq v1.10.7
 )
 

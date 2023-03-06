@@ -20,24 +20,29 @@ import (
 func InitRouter(e *gin.Engine) (err error) {
 	d, err := db.Connect()
 	if err != nil {
-		return err
+		return
 	}
 
 	var (
 		r clients.RestClient
-		w clients.WssClient
+		w clients.WsClient
 	)
 	switch config.DataProvider {
 	case "huobi":
-		r, err = huobi.Init()
-		w = huobi.InitWs(d.DataPipe())
+		if r, err = huobi.Init(); err != nil {
+			return
+		}
+		if w, err = huobi.InitWs(d.DataPipe()); err != nil {
+			return
+		}
 	default:
-		r, err = cryptocompare.Init()
+		if r, err = cryptocompare.Init(); err != nil {
+			return
+		}
+		if w, err = cryptocompare.InitWs(d.DataPipe()); err != nil {
+			return
+		}
 	}
-	if err != nil {
-		return err
-	}
-
 	p := clients.NewPuller(r, d.DataPipe())
 
 	// health checks

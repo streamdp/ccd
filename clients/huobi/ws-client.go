@@ -21,7 +21,7 @@ import (
 
 const wssUrl = "wss://api.huobi.pro/ws"
 
-type huobiWssData struct {
+type huobiWsData struct {
 	Ch   string `json:"ch"`
 	Ts   int64  `json:"ts"`
 	Tick struct {
@@ -41,28 +41,23 @@ type huobiWssData struct {
 	} `json:"tick"`
 }
 
-type channel struct {
-	from, to string
-	id       int64
-}
-
 type huobiWs struct {
 	ctx        context.Context
 	conn       *websocket.Conn
-	subscribes map[string]*channel
+	subscribes clients.Subscribes
 	subMu      sync.RWMutex
 }
 
-func InitWs(pipe chan *clients.Data) clients.WssClient {
+func InitWs(pipe chan *clients.Data) (clients.WsClient, error) {
 	h := &huobiWs{
 		ctx:        context.Background(),
-		subscribes: map[string]*channel{},
+		subscribes: clients.Subscribes{},
 	}
 	if err := h.reconnect(); err != nil {
-		handlers.SystemHandler(err)
+		return nil, err
 	}
 	h.handleWsMessages(pipe)
-	return h
+	return h, nil
 }
 
 func (h *huobiWs) reconnect() (err error) {
@@ -72,9 +67,6 @@ func (h *huobiWs) reconnect() (err error) {
 		}
 	}
 	h.conn, _, err = websocket.Dial(h.ctx, wssUrl, nil)
-	if err != nil {
-		return
-	}
 	return
 }
 
@@ -82,14 +74,14 @@ func (h *huobiWs) resubscribe() (err error) {
 	h.subMu.RLock()
 	defer h.subMu.RUnlock()
 	for k, v := range h.subscribes {
-		if err = h.sendSubscribeMsg(k, v.id); err != nil {
+		if err = h.sendSubscribeMsg(k, v.Id()); err != nil {
 			return
 		}
 	}
 	return
 }
 
-func (h *huobiWs) handleWssError(err error) error {
+func (h *huobiWs) handleWsError(err error) error {
 	handlers.SystemHandler(err)
 	for {
 		select {
@@ -127,7 +119,7 @@ func (h *huobiWs) handleWsMessages(pipe chan *clients.Data) {
 					err  error
 				)
 				if _, r, err = h.conn.Reader(h.ctx); err != nil {
-					if err = h.handleWssError(err); err != nil {
+					if err = h.handleWsError(err); err != nil {
 						handlers.SystemHandler(err)
 						return
 					}
@@ -139,14 +131,14 @@ func (h *huobiWs) handleWsMessages(pipe chan *clients.Data) {
 				}
 				if bytes.Contains(body, []byte("ping")) {
 					if err = h.pingHandler(body); err != nil {
-						if err = h.handleWssError(err); err != nil {
+						if err = h.handleWsError(err); err != nil {
 							handlers.SystemHandler(err)
 							return
 						}
 					}
 					continue
 				}
-				data := &huobiWssData{}
+				data := &huobiWsData{}
 				if err = json.Unmarshal(body, data); err != nil {
 					handlers.SystemHandler(err)
 					continue
@@ -156,7 +148,7 @@ func (h *huobiWs) handleWsMessages(pipe chan *clients.Data) {
 				}
 				from, to := h.pairFromChannelName(data.Ch)
 				if from != "" && to != "" {
-					pipe <- convertHuobiWssDataToDomain(from, to, data)
+					pipe <- convertHuobiWsDataToDomain(from, to, data)
 				}
 			}
 		}
@@ -172,7 +164,7 @@ func (h *huobiWs) pairFromChannelName(ch string) (from, to string) {
 	h.subMu.RLock()
 	defer h.subMu.RUnlock()
 	if c, ok := h.subscribes[ch]; ok {
-		return c.from, c.to
+		return c.From, c.To
 	}
 	return
 }
@@ -189,7 +181,7 @@ func (h *huobiWs) Unsubscribe(from, to string) (err error) {
 	defer h.subMu.Unlock()
 	var ch = buildChannelName(from, to)
 	if c, ok := h.subscribes[ch]; ok {
-		if err = h.sendUnsubscribeMsg(ch, c.id); err != nil {
+		if err = h.sendUnsubscribeMsg(ch, c.Id()); err != nil {
 			return
 		}
 		delete(h.subscribes, ch)
@@ -213,11 +205,7 @@ func (h *huobiWs) Subscribe(from, to string) (err error) {
 	if err = h.sendSubscribeMsg(ch, id); err != nil {
 		return
 	}
-	h.subscribes[ch] = &channel{
-		from: strings.ToUpper(from),
-		to:   strings.ToUpper(to),
-		id:   id,
-	}
+	h.subscribes[ch] = clients.NewSubscribe(from, to, id)
 	return
 }
 
@@ -232,10 +220,7 @@ func (h *huobiWs) ListSubscribes() clients.Subscribes {
 	h.subMu.RLock()
 	defer h.subMu.RUnlock()
 	for k, v := range h.subscribes {
-		s[k] = &clients.Subscribe{
-			From: v.from,
-			To:   v.to,
-		}
+		s[k] = v
 	}
 	return s
 }
@@ -248,7 +233,7 @@ func gzipDecompress(r io.Reader) ([]byte, error) {
 	return io.ReadAll(r)
 }
 
-func convertHuobiWssDataToDomain(from, to string, d *huobiWssData) *clients.Data {
+func convertHuobiWsDataToDomain(from, to string, d *huobiWsData) *clients.Data {
 	if d == nil {
 		return nil
 	}
@@ -263,7 +248,7 @@ func convertHuobiWssDataToDomain(from, to string, d *huobiWssData) *clients.Data
 			High24Hour:     d.Tick.High,
 			Price:          d.Tick.Bid,
 			Supply:         float64(d.Tick.Count),
-			Lastupdate:     d.Ts,
+			LastUpdate:     d.Ts,
 		},
 		Display: &clients.Display{
 			Open24Hour:     strconv.FormatFloat(d.Tick.Open, 'f', -1, 64),
@@ -273,7 +258,7 @@ func convertHuobiWssDataToDomain(from, to string, d *huobiWssData) *clients.Data
 			Price:          strconv.FormatFloat(d.Tick.Bid, 'f', -1, 64),
 			FromSymbol:     strings.ToUpper(from),
 			ToSymbol:       strings.ToUpper(to),
-			Lastupdate:     strconv.FormatInt(d.Ts, 10),
+			LastUpdate:     strconv.FormatInt(d.Ts, 10),
 			Supply:         strconv.Itoa(d.Tick.Count),
 		},
 	}

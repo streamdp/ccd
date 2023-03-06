@@ -52,7 +52,7 @@ func RemoveWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 }
 
 // PullingStatus return information about running pull tasks
-func PullingStatus(p clients.RestApiPuller, w clients.WssClient) handlers.HandlerFuncResError {
+func PullingStatus(p clients.RestApiPuller, w clients.WsClient) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (r handlers.Result, err error) {
 		r.UpdateAllFields(http.StatusOK, "Information about running tasks", nil)
 		var (
@@ -108,7 +108,7 @@ func UpdateWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 	}
 }
 
-func Subscribe(w clients.WssClient) handlers.HandlerFuncResError {
+func Subscribe(w clients.WsClient) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (r handlers.Result, err error) {
 		q := CollectQuery{}
 		if err = c.Bind(&q); err != nil {
@@ -123,7 +123,7 @@ func Subscribe(w clients.WssClient) handlers.HandlerFuncResError {
 	}
 }
 
-func Unsubscribe(w clients.WssClient) handlers.HandlerFuncResError {
+func Unsubscribe(w clients.WsClient) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (r handlers.Result, err error) {
 		q := CollectQuery{}
 		if err = c.Bind(&q); err != nil {

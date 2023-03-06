@@ -34,13 +34,20 @@ type cryptoCompare struct {
 
 // Init apiKey, apiUrl, wsURL variables with environment values and return CryptoCompareData structure
 func Init() (rc clients.RestClient, err error) {
-	apiKey := config.GetEnv("CCDC_APIKEY")
-	if apiKey == "" {
-		return nil, errors.New("you should specify \"CCDC_APIKEY\" in you OS environment")
+	var apiKey string
+	if apiKey, err = getApiKey(); err != nil {
+		return
 	}
 	return &cryptoCompare{
 		apiKey: apiKey,
 	}, nil
+}
+
+func getApiKey() (apiKey string, err error) {
+	if apiKey = config.GetEnv("CCDC_APIKEY"); apiKey == "" {
+		return "", errors.New("you should specify \"CCDC_APIKEY\" in you OS environment")
+	}
+	return
 }
 
 // Get filled CryptoCompareData structure for the selected pair currencies over http/https

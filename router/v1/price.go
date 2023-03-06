@@ -41,7 +41,7 @@ func Price(rc clients.RestClient, db db.Database) handlers.HandlerFuncResError {
 		if err != nil {
 			return
 		}
-		r.UpdateAllFields(http.StatusOK, "Most recent price, updated at "+p.Display.Lastupdate, p)
+		r.UpdateAllFields(http.StatusOK, "Most recent price, updated at "+p.Display.LastUpdate, p)
 		return
 	}
 }

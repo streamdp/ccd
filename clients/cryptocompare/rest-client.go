@@ -22,13 +22,7 @@ const (
 	multipleSymbolsFullData = "/data/pricemultifull"
 )
 
-// CryptoCompareData structure for easily json serialization
-type cryptoCompareData struct {
-	Raw     map[string]map[string]*clients.Response `json:"RAW"`
-	Display map[string]map[string]*clients.Display  `json:"DISPLAY"`
-}
-
-type cryptoCompare struct {
+type cryptoCompareRest struct {
 	apiKey string
 }
 
@@ -38,7 +32,7 @@ func Init() (rc clients.RestClient, err error) {
 	if apiKey, err = getApiKey(); err != nil {
 		return
 	}
-	return &cryptoCompare{
+	return &cryptoCompareRest{
 		apiKey: apiKey,
 	}, nil
 }
@@ -51,7 +45,7 @@ func getApiKey() (apiKey string, err error) {
 }
 
 // Get filled CryptoCompareData structure for the selected pair currencies over http/https
-func (cc *cryptoCompare) Get(fSym string, tSym string) (ds *clients.Data, err error) {
+func (cc *cryptoCompareRest) Get(fSym string, tSym string) (ds *clients.Data, err error) {
 	var (
 		u        *url.URL
 		response *http.Response
@@ -89,7 +83,7 @@ func convertToDomain(from, to string, d *cryptoCompareData) *clients.Data {
 	}
 }
 
-func (cc *cryptoCompare) buildURL(fSym string, tSym string) (u *url.URL, err error) {
+func (cc *cryptoCompareRest) buildURL(fSym string, tSym string) (u *url.URL, err error) {
 	if u, err = url.Parse(apiUrl + multipleSymbolsFullData); err != nil {
 		return nil, err
 	}

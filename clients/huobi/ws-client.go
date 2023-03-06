@@ -21,26 +21,6 @@ import (
 
 const wssUrl = "wss://api.huobi.pro/ws"
 
-type huobiWsData struct {
-	Ch   string `json:"ch"`
-	Ts   int64  `json:"ts"`
-	Tick struct {
-		Open      float64 `json:"open"`
-		High      float64 `json:"high"`
-		Low       float64 `json:"low"`
-		Close     float64 `json:"close"`
-		Amount    float64 `json:"amount"`
-		Vol       float64 `json:"vol"`
-		Count     int     `json:"count"`
-		Bid       float64 `json:"bid"`
-		BidSize   float64 `json:"bidSize"`
-		Ask       float64 `json:"ask"`
-		AskSize   float64 `json:"askSize"`
-		LastPrice float64 `json:"lastPrice"`
-		LastSize  float64 `json:"lastSize"`
-	} `json:"tick"`
-}
-
 type huobiWs struct {
 	ctx        context.Context
 	conn       *websocket.Conn

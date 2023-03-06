@@ -19,21 +19,6 @@ import (
 
 const wssUrl = "wss://streamer.cryptocompare.com/v2"
 
-type cryptoCompareWsData struct {
-	Type                string  `json:"TYPE"`
-	FromSymbol          string  `json:"FROMSYMBOL"`
-	ToSymbol            string  `json:"TOSYMBOL"`
-	Price               float64 `json:"PRICE"`
-	LastUpdate          int64   `json:"LASTUPDATE"`
-	Volume24Hour        float64 `json:"VOLUME24HOUR"`
-	Volume24HourTo      float64 `json:"VOLUME24HOURTO"`
-	Open24Hour          float64 `json:"OPEN24HOUR"`
-	High24Hour          float64 `json:"HIGH24HOUR"`
-	Low24Hour           float64 `json:"LOW24HOUR"`
-	CurrentSupply       float64 `json:"CURRENTSUPPLY"`
-	CurrentSupplyMktCap float64 `json:"CURRENTSUPPLYMKTCAP"`
-}
-
 type cryptoCompareWs struct {
 	ctx        context.Context
 	conn       *websocket.Conn

@@ -154,7 +154,7 @@ func (h *huobiWs) handleWsMessages(pipe chan *clients.Data) {
 				if data.Ch == "" {
 					continue
 				}
-				from, to := h.getPair(data.Ch)
+				from, to := h.pairFromChannelName(data.Ch)
 				if from != "" && to != "" {
 					pipe <- convertHuobiWssDataToDomain(from, to, data)
 				}
@@ -168,7 +168,7 @@ func (h *huobiWs) pingHandler(m []byte) (err error) {
 	return h.conn.Write(h.ctx, websocket.MessageText, m)
 }
 
-func (h *huobiWs) getPair(ch string) (from, to string) {
+func (h *huobiWs) pairFromChannelName(ch string) (from, to string) {
 	h.subMu.RLock()
 	defer h.subMu.RUnlock()
 	if c, ok := h.subscribes[ch]; ok {
@@ -228,16 +228,16 @@ func (h *huobiWs) sendSubscribeMsg(ch string, id int64) error {
 }
 
 func (h *huobiWs) ListSubscribes() clients.Subscribes {
+	s := make(clients.Subscribes, len(h.subscribes))
 	h.subMu.RLock()
 	defer h.subMu.RUnlock()
-	w := make(clients.Subscribes, len(h.subscribes))
-	for _, v := range h.subscribes {
-		w[&clients.Subscribe{
+	for k, v := range h.subscribes {
+		s[k] = &clients.Subscribe{
 			From: v.from,
 			To:   v.to,
-		}] = struct{}{}
+		}
 	}
-	return w
+	return s
 }
 
 func gzipDecompress(r io.Reader) ([]byte, error) {

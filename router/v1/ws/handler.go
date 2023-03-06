@@ -28,11 +28,11 @@ type wsHandler struct {
 	messagePipe chan []byte
 
 	rc clients.RestClient
-	db db.DbReadWrite
+	db db.Database
 }
 
 // HandleWs - handles websocket requests from the peer.
-func HandleWs(rc clients.RestClient, db db.DbReadWrite) gin.HandlerFunc {
+func HandleWs(r clients.RestClient, db db.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithCancel(context.Background())
 		conn, err := websocket.Accept(c.Writer, c.Request, &websocket.AcceptOptions{
@@ -48,7 +48,7 @@ func HandleWs(rc clients.RestClient, db db.DbReadWrite) gin.HandlerFunc {
 			cancel:      cancel,
 			conn:        conn,
 			messagePipe: make(chan []byte, 256),
-			rc:          rc,
+			rc:          r,
 			db:          db,
 		}
 		h.conn.SetReadLimit(maxMessageSize)
@@ -104,9 +104,9 @@ func isWebsocketCloseError(err error) bool {
 	return false
 }
 
-func (w *wsHandler) getLastPrice(query *v1.PriceQuery) (result []byte, err error) {
+func (w *wsHandler) getLastPrice(q *v1.PriceQuery) (result []byte, err error) {
 	var data *clients.Data
-	if data, err = v1.GetLastPrice(w.rc, w.db, query); err != nil {
+	if data, err = v1.LastPrice(w.rc, w.db, q); err != nil {
 		return
 	}
 	if result, err = json.Marshal(&data); err != nil {
@@ -134,9 +134,9 @@ func (w *wsHandler) handleMessagePipe() {
 
 func (w *wsHandler) returnAnErrorToTheClient(err error) {
 	var binaryString []byte
-	res := handlers.Result{}
-	res.UpdateAllFields(http.StatusBadRequest, err.Error(), nil)
-	if binaryString, err = json.Marshal(&res); err != nil {
+	r := handlers.Result{}
+	r.UpdateAllFields(http.StatusBadRequest, err.Error(), nil)
+	if binaryString, err = json.Marshal(&r); err != nil {
 		handlers.SystemHandler(err)
 		return
 	}

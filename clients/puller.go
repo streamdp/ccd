@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/streamdp/ccd/config"
@@ -8,26 +9,26 @@ import (
 
 // RestPuller puller base struct
 type RestPuller struct {
-	w        Workers
+	t        Tasks
 	dataPipe chan *Data
 	client   RestClient
 	pullerMu sync.RWMutex
 }
 
 // NewPuller init rest puller
-func NewPuller(r RestClient, dataPipe chan *Data) *RestPuller {
+func NewPuller(r RestClient, dataPipe chan *Data) RestApiPuller {
 	return &RestPuller{
-		w:        Workers{},
+		t:        Tasks{},
 		dataPipe: dataPipe,
 		client:   r,
 	}
 }
 
-func (p *RestPuller) createWorker(from string, to string, interval int) *Worker {
+func (p *RestPuller) newTask(from string, to string, interval int) *Task {
 	if interval <= 0 {
 		interval = config.DefaultPullingInterval
 	}
-	return &Worker{
+	return &Task{
 		done:     make(chan struct{}),
 		From:     from,
 		To:       to,
@@ -35,54 +36,43 @@ func (p *RestPuller) createWorker(from string, to string, interval int) *Worker 
 	}
 }
 
-// DataPipe return communication channel between pullers and database
-func (p *RestPuller) DataPipe() chan *Data {
-	return p.dataPipe
-}
-
-// ListWorkers return all puller w
-func (p *RestPuller) ListWorkers() Workers {
-	var w = make(Workers, len(p.w))
-	p.pullerMu.RLock()
-	for k := range p.w {
-		w[k] = struct{}{}
-	}
-	p.pullerMu.RUnlock()
-	return w
-}
-
-// Client return rest client
-func (p *RestPuller) Client() RestClient {
-	return p.client
-}
-
-// Worker return worker for the selected currencies pair, if possible
-func (p *RestPuller) Worker(from string, to string) *Worker {
+// ListTasks return all tasks
+func (p *RestPuller) ListTasks() Tasks {
+	var t = make(Tasks, len(p.t))
 	p.pullerMu.RLock()
 	defer p.pullerMu.RUnlock()
-	for w := range p.w {
-		if w.From == from && w.To == to {
-			return w
-		}
+	for k, v := range p.t {
+		t[k] = v
 	}
-	return nil
+	return t
 }
 
-// AddWorker to collect data for the selected currency pair to the puller
-func (p *RestPuller) AddWorker(from string, to string, interval int) *Worker {
-	w := p.createWorker(from, to, interval)
-	w.run(p.Client(), p.DataPipe())
+// Task return task with selected currencies pair, if possible
+func (p *RestPuller) Task(from string, to string) *Task {
+	p.pullerMu.RLock()
+	defer p.pullerMu.RUnlock()
+	return p.t[buildTaskName(from, to)]
+}
+
+func buildTaskName(from, to string) string {
+	return strings.ToUpper(from + to)
+}
+
+// AddTask to collect data for the selected currency pair to the puller
+func (p *RestPuller) AddTask(from string, to string, interval int) *Task {
+	t := p.newTask(from, to, interval)
+	t.run(p.client, p.dataPipe)
 	p.pullerMu.Lock()
-	p.w[w] = struct{}{}
+	p.t[buildTaskName(from, to)] = t
 	p.pullerMu.Unlock()
-	return w
+	return t
 }
 
-// RemoveWorker from the puller by the selected currency pair
-func (p *RestPuller) RemoveWorker(from string, to string) {
-	w := p.Worker(from, to)
-	w.stop()
+// RemoveTask from the puller by the selected currency pair
+func (p *RestPuller) RemoveTask(from string, to string) {
+	t := p.Task(from, to)
+	t.close()
 	p.pullerMu.Lock()
 	defer p.pullerMu.Unlock()
-	delete(p.w, w)
+	delete(p.t, buildTaskName(from, to))
 }

@@ -30,7 +30,10 @@ function get_list_with_active_nodes() {
                     let nodes = data[fsym];
                     let litag = "<li>" + fsym + " to: "
                     for (let tsym in nodes){
-                         litag += tsym+ ":" + nodes[tsym]["interval"] + ", ";
+                        if (nodes[tsym]["interval"] === undefined) {
+                            nodes[tsym]["interval"] = "interval not set (wss)"
+                        }
+                        litag += tsym+ ":" + nodes[tsym]["interval"] + ", ";
                     }
                     result += litag.slice(0, -2) + "</li>";
                 }

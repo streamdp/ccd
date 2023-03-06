@@ -6,24 +6,24 @@ import (
 	"github.com/streamdp/ccd/handlers"
 )
 
-// Worker does all the data mining run
-type Worker struct {
+// Task does all the data mining run
+type Task struct {
 	From     string `json:"from"`
 	To       string `json:"to"`
 	Interval int    `json:"interval"`
 	done     chan struct{}
 }
-type Workers map[*Worker]struct{}
+type Tasks map[string]*Task
 
-func (w *Worker) run(r RestClient, dataPipe chan *Data) {
+func (t *Task) run(r RestClient, dataPipe chan *Data) {
 	go func() {
-		defer close(w.done)
+		defer close(t.done)
 		for {
 			select {
-			case <-w.done:
+			case <-t.done:
 				return
-			case <-time.After(time.Duration(w.Interval) * time.Second):
-				data, err := r.Get(w.From, w.To)
+			case <-time.After(time.Duration(t.Interval) * time.Second):
+				data, err := r.Get(t.From, t.To)
 				if err != nil {
 					handlers.SystemHandler(err)
 					continue
@@ -34,6 +34,6 @@ func (w *Worker) run(r RestClient, dataPipe chan *Data) {
 	}()
 }
 
-func (w *Worker) stop() {
-	w.done <- struct{}{}
+func (t *Task) close() {
+	t.done <- struct{}{}
 }

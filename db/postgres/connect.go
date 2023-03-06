@@ -20,7 +20,7 @@ type Db struct {
 }
 
 // GetLast row with the most recent data for the selected currencies pair
-func (db *Db) GetLast(from string, to string) (result *clients.Data, err error) {
+func (d *Db) GetLast(from string, to string) (result *clients.Data, err error) {
 	var displayDataRaw string
 	result = clients.EmptyData(from, to)
 	query := `
@@ -40,7 +40,7 @@ func (db *Db) GetLast(from string, to string) (result *clients.Data, err error) 
 		  and toSym=(select _id from tsym where symbol=$2)
 		ORDER BY lastupdate DESC limit 1;
 `
-	err = db.QueryRow(query, from, to).Scan(
+	err = d.QueryRow(query, from, to).Scan(
 		&result.Raw.Change24Hour,
 		&result.Raw.Changepct24Hour,
 		&result.Raw.Open24Hour,
@@ -62,11 +62,11 @@ func (db *Db) GetLast(from string, to string) (result *clients.Data, err error) 
 }
 
 // Insert clients.Data from the clients.DataPipe to the Db
-func (db *Db) Insert(data *clients.Data) (result sql.Result, err error) {
+func (d *Db) Insert(data *clients.Data) (result sql.Result, err error) {
 	if data == nil || data.Raw == nil {
 		return nil, errors.New("cant insert empty data")
 	}
-	d, err := json.Marshal(data.Display)
+	dsp, err := json.Marshal(data.Display)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (db *Db) Insert(data *clients.Data) (result sql.Result, err error) {
 		        $3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
 		)
 `
-	return db.Exec(
+	return d.Exec(
 		query,
 		data.From,
 		data.To,
@@ -105,16 +105,16 @@ func (db *Db) Insert(data *clients.Data) (result sql.Result, err error) {
 		&data.Raw.Supply,
 		&data.Raw.Mktcap,
 		&data.Raw.Lastupdate,
-		string(d),
+		string(dsp),
 	)
 }
 
-func (db *Db) DataPipe() chan *clients.Data {
-	return db.pipe
+func (d *Db) DataPipe() chan *clients.Data {
+	return d.pipe
 }
 
 // Connect after prepare to the Db
-func Connect(dataSource string) (db *Db, err error) {
+func Connect(dataSource string) (d *Db, err error) {
 	sqlDb := &sql.DB{}
 	if sqlDb, err = sql.Open(Postgres, dataSource); err != nil {
 		return
@@ -126,6 +126,6 @@ func Connect(dataSource string) (db *Db, err error) {
 }
 
 // Close Db connection
-func (db *Db) Close() (err error) {
-	return db.Close()
+func (d *Db) Close() (err error) {
+	return d.Close()
 }

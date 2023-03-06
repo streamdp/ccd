@@ -17,31 +17,31 @@ type PriceQuery struct {
 	To   string `json:"tsym" form:"tsym" binding:"required,common"`
 }
 
-// GetLastPrice return up-to-date data for the selected currencies pair
-func GetLastPrice(r clients.RestClient, db db.DbReadWrite, query *PriceQuery) (data *clients.Data, err error) {
+// LastPrice return up-to-date data for the selected currencies pair
+func LastPrice(r clients.RestClient, db db.Database, query *PriceQuery) (d *clients.Data, err error) {
 	from, to := strings.ToUpper(query.From), strings.ToUpper(query.To)
-	data, err = r.Get(from, to)
+	d, err = r.Get(from, to)
 	if err != nil {
-		if data, err = db.GetLast(from, to); err != nil {
+		if d, err = db.GetLast(from, to); err != nil {
 			return
 		}
 	}
-	db.DataPipe() <- data
+	db.DataPipe() <- d
 	return
 }
 
-// GetPrice return up-to-date or most recent data for the selected currencies pair
-func GetPrice(wc *clients.RestPuller, db db.DbReadWrite) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (res handlers.Result, err error) {
-		query := PriceQuery{}
-		if err = c.Bind(&query); err != nil {
+// Price return up-to-date or most recent data for the selected currencies pair
+func Price(rc clients.RestClient, db db.Database) handlers.HandlerFuncResError {
+	return func(c *gin.Context) (r handlers.Result, err error) {
+		q := PriceQuery{}
+		if err = c.Bind(&q); err != nil {
 			return
 		}
-		data, err := GetLastPrice(wc.Client(), db, &query)
+		p, err := LastPrice(rc, db, &q)
 		if err != nil {
 			return
 		}
-		res.UpdateAllFields(http.StatusOK, "Most recent price, updated at "+data.Display.Lastupdate, data)
+		r.UpdateAllFields(http.StatusOK, "Most recent price, updated at "+p.Display.Lastupdate, p)
 		return
 	}
 }

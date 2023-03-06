@@ -39,15 +39,18 @@ type Data struct {
 	Display *Display  `json:"DISPLAY"`
 }
 
+// RestApiPuller interface makes it possible to expand the list of rest api pullers
+type RestApiPuller interface {
+	AddTask(from string, to string, interval int) *Task
+	RemoveTask(from string, to string)
+	Task(from string, to string) *Task
+	ListTasks() Tasks
+}
+
 // RestClient interface makes it possible to expand the list of rest data providers
 type RestClient interface {
 	Get(from string, to string) (*Data, error)
 }
-
-type Subscribe struct {
-	From, To string
-}
-type Subscribes map[*Subscribe]struct{}
 
 // WssClient interface makes it possible to expand the list of wss data providers
 type WssClient interface {
@@ -55,6 +58,13 @@ type WssClient interface {
 	Unsubscribe(from string, to string) error
 	ListSubscribes() Subscribes
 }
+
+type Subscribe struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+	id   int64
+}
+type Subscribes map[string]*Subscribe
 
 // EmptyData returns empty Data
 func EmptyData(from string, to string) *Data {

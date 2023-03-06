@@ -17,114 +17,123 @@ type CollectQuery struct {
 }
 
 // AddWorker that will collect data for the selected currency pair to the management service
-func AddWorker(p *clients.RestPuller) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (res handlers.Result, err error) {
-		var w *clients.Worker
-		query := CollectQuery{}
-		if err = c.Bind(&query); err != nil {
+func AddWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
+	return func(c *gin.Context) (r handlers.Result, err error) {
+		var t *clients.Task
+		q := CollectQuery{}
+		if err = c.Bind(&q); err != nil {
 			return
 		}
-		if w = p.Worker(query.From, query.To); w != nil {
-			res.UpdateAllFields(http.StatusOK, "Data for this pair is already being collected", w)
+		if t = p.Task(q.From, q.To); t != nil {
+			r.UpdateAllFields(http.StatusOK, "Data for this pair is already being collected", t)
 			return
 		}
-		w = p.AddWorker(query.From, query.To, query.Interval)
-		res.UpdateAllFields(http.StatusCreated, "Data collection started", w)
+		t = p.AddTask(q.From, q.To, q.Interval)
+		r.UpdateAllFields(http.StatusCreated, "Data collection started", t)
 		return
 	}
 }
 
 // RemoveWorker from the management service and stop collecting data for the selected currencies pair
-func RemoveWorker(p *clients.RestPuller) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (res handlers.Result, err error) {
-		query := CollectQuery{}
-		if err = c.Bind(&query); err != nil {
+func RemoveWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
+	return func(c *gin.Context) (r handlers.Result, err error) {
+		q := CollectQuery{}
+		if err = c.Bind(&q); err != nil {
 			return
 		}
-		if p.Worker(query.From, query.To) == nil {
-			res.UpdateAllFields(http.StatusOK, "No data is collected for this pair", nil)
+		if p.Task(q.From, q.To) == nil {
+			r.UpdateAllFields(http.StatusOK, "No data is collected for this pair", nil)
 			return
 		}
-		p.RemoveWorker(query.From, query.To)
-		res.UpdateAllFields(http.StatusOK, "Worker stopped successfully", nil)
+		p.RemoveTask(q.From, q.To)
+		r.UpdateAllFields(http.StatusOK, "Task stopped successfully", nil)
 		return
 	}
 }
 
-// WorkersStatus return information about running workers
-func WorkersStatus(p *clients.RestPuller, w clients.WssClient) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (res handlers.Result, err error) {
-		res.UpdateAllFields(http.StatusOK, "Information about running workers", nil)
-		workers := p.ListWorkers()
-		if w != nil {
-			for k, v := range w.ListSubscribes() {
-				workers[&clients.Worker{
-					From: k.From,
-					To:   k.To,
-				}] = v
-			}
+// PullingStatus return information about running pull tasks
+func PullingStatus(p clients.RestApiPuller, w clients.WssClient) handlers.HandlerFuncResError {
+	return func(c *gin.Context) (r handlers.Result, err error) {
+		r.UpdateAllFields(http.StatusOK, "Information about running tasks", nil)
+		var (
+			tasks      clients.Tasks
+			subscribes clients.Subscribes
+		)
+		if p != nil {
+			tasks = p.ListTasks()
 		}
-		if len(workers) == 0 {
+		if w != nil {
+			subscribes = w.ListSubscribes()
+		}
+		if len(tasks) == 0 && len(subscribes) == 0 {
 			return
 		}
-		list := map[string]map[string]*clients.Worker{}
-		for worker := range workers {
-			if list[worker.From] != nil {
-				list[worker.From][worker.To] = worker
+		list := map[string]map[string]interface{}{}
+		for _, v := range tasks {
+			if list[v.From] != nil {
+				list[v.From][v.To] = v
 				continue
 			}
-			list[worker.From] = make(map[string]*clients.Worker)
-			list[worker.From][worker.To] = worker
+			list[v.From] = make(map[string]interface{})
+			list[v.From][v.To] = v
 		}
-		res.UpdateDataField(list)
+		for _, v := range subscribes {
+			if list[v.From] != nil {
+				list[v.From][v.To] = v
+				continue
+			}
+			list[v.From] = make(map[string]interface{})
+			list[v.From][v.To] = v
+		}
+		r.UpdateDataField(list)
 		return
 	}
 }
 
 // UpdateWorker update pulling data interval for the selected worker by the currencies pair
-func UpdateWorker(p *clients.RestPuller) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (res handlers.Result, err error) {
-		var w *clients.Worker
-		query := CollectQuery{}
-		if err = c.Bind(&query); err != nil {
+func UpdateWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
+	return func(c *gin.Context) (r handlers.Result, err error) {
+		var t *clients.Task
+		q := CollectQuery{}
+		if err = c.Bind(&q); err != nil {
 			return
 		}
-		if w = p.Worker(query.From, query.To); w == nil {
-			res.UpdateAllFields(http.StatusOK, "No data is collected for this pair", w)
+		if t = p.Task(q.From, q.To); t == nil {
+			r.UpdateAllFields(http.StatusOK, "No data is collected for this pair", t)
 			return
 		}
-		w.Interval = query.Interval
-		res.UpdateAllFields(http.StatusOK, "Worker updated successfully", w)
+		t.Interval = q.Interval
+		r.UpdateAllFields(http.StatusOK, "Task updated successfully", t)
 		return
 	}
 }
 
 func Subscribe(w clients.WssClient) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (res handlers.Result, err error) {
-		query := CollectQuery{}
-		if err = c.Bind(&query); err != nil {
+	return func(c *gin.Context) (r handlers.Result, err error) {
+		q := CollectQuery{}
+		if err = c.Bind(&q); err != nil {
 			return
 		}
-		if err = w.Subscribe(query.From, query.To); err != nil {
-			res.UpdateAllFields(http.StatusOK, "subscribe error:", err)
+		if err = w.Subscribe(q.From, q.To); err != nil {
+			r.UpdateAllFields(http.StatusOK, "subscribe error:", err)
 			return
 		}
-		res.UpdateAllFields(http.StatusCreated, "Subscribed successfully, data collection started", []string{query.From, query.To})
+		r.UpdateAllFields(http.StatusCreated, "Subscribed successfully, data collection started", []string{q.From, q.To})
 		return
 	}
 }
 
 func Unsubscribe(w clients.WssClient) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (res handlers.Result, err error) {
-		query := CollectQuery{}
-		if err = c.Bind(&query); err != nil {
+	return func(c *gin.Context) (r handlers.Result, err error) {
+		q := CollectQuery{}
+		if err = c.Bind(&q); err != nil {
 			return
 		}
-		if err = w.Unsubscribe(query.From, query.To); err != nil {
-			res.UpdateAllFields(http.StatusOK, "Unsubscribe error:", err)
+		if err = w.Unsubscribe(q.From, q.To); err != nil {
+			r.UpdateAllFields(http.StatusOK, "Unsubscribe error:", err)
 			return
 		}
-		res.UpdateAllFields(http.StatusOK, "Unsubscribed successfully, data collection stopped ", []string{query.From, query.To})
+		r.UpdateAllFields(http.StatusOK, "Unsubscribed successfully, data collection stopped ", []string{q.From, q.To})
 		return
 	}
 }

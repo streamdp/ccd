@@ -12,14 +12,14 @@ import (
 	"github.com/streamdp/ccd/handlers"
 )
 
-// DbReadWrite interface makes it possible to expand the list of data storages
-type DbReadWrite interface {
+// Database interface makes it possible to expand the list of data storages
+type Database interface {
 	Insert(data *clients.Data) (result sql.Result, err error)
 	GetLast(from string, to string) (result *clients.Data, err error)
 	DataPipe() chan *clients.Data
 }
 
-func Connect() (db DbReadWrite, err error) {
+func Connect() (d Database, err error) {
 	var (
 		driverName       = mysql.Mysql
 		dataSource       = config.GetEnv("CCDC_DATASOURCE")
@@ -34,22 +34,22 @@ func Connect() (db DbReadWrite, err error) {
 	}
 	switch driverName {
 	case postgres.Postgres:
-		db, err = postgres.Connect(dataSource)
+		d, err = postgres.Connect(dataSource)
 	case mysql.Mysql:
 		fallthrough
 	default:
-		db, err = mysql.Connect(connectionString)
+		d, err = mysql.Connect(connectionString)
 	}
 	if err == nil {
-		serve(db)
+		serve(d)
 	}
 	return
 }
 
-func serve(db DbReadWrite) {
+func serve(d Database) {
 	go func() {
-		for data := range db.DataPipe() {
-			if _, err := db.Insert(data); err != nil {
+		for data := range d.DataPipe() {
+			if _, err := d.Insert(data); err != nil {
 				handlers.SystemHandler(err)
 			}
 		}

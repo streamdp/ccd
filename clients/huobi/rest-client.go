@@ -44,7 +44,9 @@ func (h *huobiRest) Get(fSym string, tSym string) (ds *clients.Data, err error) 
 	if response, err = client.Get(u.String()); err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(response.Body)
 	if body, err = io.ReadAll(response.Body); err != nil {
 		return nil, err
 	}

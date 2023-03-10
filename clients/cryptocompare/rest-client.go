@@ -60,18 +60,21 @@ func (cc *cryptoCompareRest) Get(fSym string, tSym string) (ds *clients.Data, er
 	if response, err = client.Get(u.String()); err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(response.Body)
 	if body, err = io.ReadAll(response.Body); err != nil {
-		return nil, err
+		return
 	}
 	if response.StatusCode != 200 {
-		return nil, err
+		return
 	}
 	rawData := &cryptoCompareData{}
 	if err = json.Unmarshal(body, rawData); err != nil {
-		return nil, err
+		return
 	}
-	return convertToDomain(fSym, tSym, rawData), nil
+	ds = convertToDomain(fSym, tSym, rawData)
+	return
 }
 
 func convertToDomain(from, to string, d *cryptoCompareData) *clients.Data {

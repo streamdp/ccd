@@ -44,6 +44,8 @@ func (h *huobiWs) reconnect() (err error) {
 	if h.conn != nil {
 		if err := h.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 			handlers.SystemHandler(err)
+			// reducing logs and CPU load when API key expired
+			time.Sleep(10 * time.Second)
 		}
 	}
 	h.conn, _, err = websocket.Dial(h.ctx, wssUrl, nil)

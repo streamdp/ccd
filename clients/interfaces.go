@@ -2,10 +2,12 @@ package clients
 
 // RestApiPuller interface makes it possible to expand the list of rest api pullers
 type RestApiPuller interface {
-	AddTask(from string, to string, interval int) *Task
-	RemoveTask(from string, to string)
 	Task(from string, to string) *Task
+	AddTask(from string, to string, interval int64) *Task
+	RemoveTask(from string, to string)
 	ListTasks() Tasks
+	UpdateTask(t *Task, interval int64) *Task
+	RestoreLastSession() error
 }
 
 // RestClient interface makes it possible to expand the list of rest data providers

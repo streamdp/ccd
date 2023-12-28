@@ -1,9 +1,12 @@
 package router
 
 import (
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
+	"github.com/streamdp/ccd/session"
 
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/clients/cryptocompare"
@@ -17,7 +20,7 @@ import (
 )
 
 // InitRouter basic work on setting up the application, declare endpoints, register our custom validation functions
-func InitRouter(e *gin.Engine) (err error) {
+func InitRouter(e *gin.Engine, s *session.KeysStore) (err error) {
 	d, err := db.Connect()
 	if err != nil {
 		return
@@ -43,7 +46,11 @@ func InitRouter(e *gin.Engine) (err error) {
 			return
 		}
 	}
-	p := clients.NewPuller(r, d.DataPipe())
+	p := clients.NewPuller(r, s, d.DataPipe())
+
+	if err = p.RestoreLastSession(); err != nil {
+		log.Println("error restoring last session")
+	}
 
 	// health checks
 	e.GET("/healthz", SendOK)
@@ -83,5 +90,6 @@ func InitRouter(e *gin.Engine) (err error) {
 			return err
 		}
 	}
+
 	return nil
 }

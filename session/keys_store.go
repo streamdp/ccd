@@ -2,6 +2,7 @@ package session
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/go-redis/redis"
@@ -25,7 +26,7 @@ var c = redisConfig{
 	host:     "127.0.0.1",
 	port:     6379,
 	password: "",
-	db:       1,
+	db:       0,
 }
 
 func init() {
@@ -54,6 +55,7 @@ func NewKeysStore() *KeysStore {
 		DB:       c.db,
 	})
 	if _, err := client.Ping().Result(); err != nil {
+		log.Println(fmt.Sprintf("failed to connect redis on %s:%d", c.host, c.port))
 		return nil
 	}
 	return &KeysStore{

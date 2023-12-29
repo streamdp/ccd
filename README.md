@@ -13,6 +13,8 @@ This microservice uses:
 * nhooyr.io/websocket package to manage websocket connection
 * go-sql-driver/mysql package to work with mysql database
 * lib/pq package to work with postgresql database
+* go-redis/redis package for saving the active session and restoring it when the puller is restarted
+
 
 ## Build app
 
@@ -27,6 +29,8 @@ You should previously export some environment variables:
 export CCDC_DATAPROVIDER=cryptocompare
 export CCDC_DATASOURCE=postgres://username:password@127.0.0.1:5432/dbname?sslmode=disable
 export CCDC_APIKEY=put you api key here
+export REDIS_HOSTNAME=redis hostname
+export REDIS_PASSWORD=redis password
 ```
 
 if you want use **huobi** as data provider export this:

@@ -82,7 +82,7 @@ func (s *KeysStore) GetSession() map[string]string {
 	return s.c.HGetAll(sessionName).Val()
 }
 
-func (s *KeysStore) AppendWorkerToSession(name string, interval int64) {
+func (s *KeysStore) AppendTaskToSession(name string, interval int64) {
 	if s == nil {
 		return
 	}

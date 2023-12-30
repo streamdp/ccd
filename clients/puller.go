@@ -76,7 +76,7 @@ func (p *RestPuller) AddTask(from string, to string, interval int64) *Task {
 	p.pullerMu.Lock()
 	p.t[name] = t
 	p.pullerMu.Unlock()
-	p.s.AppendTaskToSession(name, interval)
+	p.s.AddTaskToSession(name, interval)
 	return t
 }
 
@@ -91,6 +91,7 @@ func (p *RestPuller) RemoveTask(from string, to string) {
 	p.s.RemoveTaskFromSession(name)
 }
 
+// RestoreLastSession get the last session from the session store and restore it
 func (p *RestPuller) RestoreLastSession() (err error) {
 	if p.s == nil {
 		return
@@ -110,6 +111,6 @@ func (p *RestPuller) RestoreLastSession() (err error) {
 
 func (p *RestPuller) UpdateTask(t *Task, interval int64) *Task {
 	atomic.StoreInt64(&t.Interval, interval)
-	p.s.AppendTaskToSession(buildTaskName(t.From, t.To), interval)
+	p.s.AddTaskToSession(buildTaskName(t.From, t.To), interval)
 	return t
 }

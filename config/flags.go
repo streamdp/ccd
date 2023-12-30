@@ -23,9 +23,11 @@ var (
 
 // ParseFlags and update config variables
 func ParseFlags() {
-	var showHelp bool
-	var showVersion bool
-	var debug bool
+	var (
+		showHelp    bool
+		showVersion bool
+		debug       bool
+	)
 	flag.BoolVar(&showHelp, "h", false, "display help")
 	flag.BoolVar(&showVersion, "v", false, "display version")
 	flag.BoolVar(&debug, "debug", false, "run the program in debug mode")
@@ -40,8 +42,7 @@ func ParseFlags() {
 	if GetEnv("CCDC_DEBUG") != "" {
 		debug = true
 	}
-	dataProvider := GetEnv("CCDC_DATAPROVIDER")
-	if dataProvider != "" {
+	if dataProvider := GetEnv("CCDC_DATAPROVIDER"); dataProvider != "" {
 		DataProvider = dataProvider
 	}
 	if showHelp {

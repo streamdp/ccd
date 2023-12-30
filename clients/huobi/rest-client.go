@@ -23,10 +23,16 @@ const (
 	latestAggregatedTicker = "/market/detail/merged"
 )
 
-type huobiRest struct{}
+type huobiRest struct {
+	client *http.Client
+}
 
 func Init() (clients.RestClient, error) {
-	return &huobiRest{}, nil
+	return &huobiRest{
+		client: &http.Client{
+			Timeout: time.Duration(config.HttpClientTimeout) * time.Millisecond,
+		},
+	}, nil
 }
 
 func (h *huobiRest) Get(fSym string, tSym string) (ds *clients.Data, err error) {
@@ -38,10 +44,8 @@ func (h *huobiRest) Get(fSym string, tSym string) (ds *clients.Data, err error) 
 	if u, err = h.buildURL(fSym, tSym); err != nil {
 		return nil, err
 	}
-	client := http.Client{
-		Timeout: time.Duration(config.HttpClientTimeout) * time.Millisecond,
-	}
-	if response, err = client.Get(u.String()); err != nil {
+
+	if response, err = h.client.Get(u.String()); err != nil {
 		return nil, err
 	}
 	defer func(Body io.ReadCloser) {

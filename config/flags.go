@@ -45,6 +45,12 @@ func ParseFlags() {
 	if dataProvider := GetEnv("CCDC_DATAPROVIDER"); dataProvider != "" {
 		DataProvider = dataProvider
 	}
+	if common := GetEnv("CCDC_COMMON"); common != "" {
+		Common = common
+	}
+	if crypto := GetEnv("CCDC_CRYPTO"); crypto != "" {
+		Crypto = crypto
+	}
 	if showHelp {
 		fmt.Println("ccd is a microservice that collect data from several crypto data providers using its API.")
 		fmt.Println("")

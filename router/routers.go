@@ -66,16 +66,23 @@ func InitRouter(e *gin.Engine, s *session.KeysStore) (err error) {
 	// serve api
 	apiV1 := e.Group("/v1")
 	{
-		apiV1.POST("/collect/add", handlers.GinHandler(v1.AddWorker(p)))
 		apiV1.GET("/collect/add", handlers.GinHandler(v1.AddWorker(p)))
-		apiV1.POST("/collect/remove", handlers.GinHandler(v1.RemoveWorker(p)))
 		apiV1.GET("/collect/remove", handlers.GinHandler(v1.RemoveWorker(p)))
-		apiV1.GET("/collect/status", handlers.GinHandler(v1.PullingStatus(p, w)))
-		apiV1.POST("/collect/update", handlers.GinHandler(v1.UpdateWorker(p)))
 		apiV1.GET("/collect/update", handlers.GinHandler(v1.UpdateWorker(p)))
-		apiV1.POST("/price", handlers.GinHandler(v1.Price(r, d)))
+		apiV1.GET("/collect/status", handlers.GinHandler(v1.PullingStatus(p, w)))
+		apiV1.GET("/symbols/add", handlers.GinHandler(v1.AddSymbol(d)))
+		apiV1.GET("/symbols/update", handlers.GinHandler(v1.UpdateSymbol(d)))
+		apiV1.GET("/symbols/remove", handlers.GinHandler(v1.RemoveSymbol(d)))
 		apiV1.GET("/price", handlers.GinHandler(v1.Price(r, d)))
 		apiV1.GET("/ws", ws.HandleWs(r, d))
+
+		apiV1.POST("/collect", handlers.GinHandler(v1.AddWorker(p)))
+		apiV1.PUT("/collect", handlers.GinHandler(v1.UpdateWorker(p)))
+		apiV1.DELETE("/collect", handlers.GinHandler(v1.RemoveWorker(p)))
+		apiV1.POST("/symbols", handlers.GinHandler(v1.AddSymbol(d)))
+		apiV1.PUT("/symbols", handlers.GinHandler(v1.UpdateSymbol(d)))
+		apiV1.DELETE("/symbols", handlers.GinHandler(v1.RemoveSymbol(d)))
+		apiV1.POST("/price", handlers.GinHandler(v1.Price(r, d)))
 		if w != nil {
 			apiV1.POST("/ws/subscribe", handlers.GinHandler(v1.Subscribe(w)))
 			apiV1.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(w)))
@@ -84,10 +91,7 @@ func InitRouter(e *gin.Engine, s *session.KeysStore) (err error) {
 		}
 	}
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		if err = v.RegisterValidation("crypto", validators.Crypto); err != nil {
-			return err
-		}
-		if err = v.RegisterValidation("common", validators.Common); err != nil {
+		if err = v.RegisterValidation("symbols", validators.Symbols); err != nil {
 			return err
 		}
 	}

@@ -8,9 +8,9 @@ import (
 	"github.com/streamdp/ccd/config"
 )
 
-// Common - validate the field so that the value is from the list of common currencies
-func Common(fl validator.FieldLevel) bool {
-	match := strings.Split(config.Common, ",")
+// Symbols - validate the field so that the value is from the list of currencies
+func Symbols(fl validator.FieldLevel) bool {
+	match := strings.Split(config.Symbols, ",")
 	value := fl.Field().String()
 	for i := range match {
 		if match[i] == value {

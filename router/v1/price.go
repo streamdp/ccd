@@ -13,8 +13,8 @@ import (
 
 // PriceQuery structure for easily json serialization/validation/binding GET and POST query data
 type PriceQuery struct {
-	From string `json:"fsym" form:"fsym" binding:"required,crypto"`
-	To   string `json:"tsym" form:"tsym" binding:"required,common"`
+	From string `json:"fsym" form:"fsym" binding:"required,symbols"`
+	To   string `json:"tsym" form:"tsym" binding:"required,symbols"`
 }
 
 // LastPrice return up-to-date data for the selected currencies pair

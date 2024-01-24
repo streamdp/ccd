@@ -37,8 +37,8 @@ func (db *Db) GetLast(from string, to string) (result *clients.Data, err error) 
 		    lastupdate, 
 		    displaydataraw 
 		from data 
-		where fromSym=(select _id from fsym where symbol=?) 
-		  and toSym=(select _id from tsym where symbol=?) 
+		where fromSym=(select _id from symbols where symbol=?) 
+		  and toSym=(select _id from symbols where symbol=?) 
 		ORDER BY lastupdate DESC limit 1;
 `
 	err = db.QueryRow(query, from, to).Scan(
@@ -87,8 +87,8 @@ func (db *Db) Insert(data *clients.Data) (result sql.Result, err error) {
 		                  displaydataraw
 		) 
 		values (
-		        (SELECT _id FROM fsym WHERE symbol=?),
-		        (SELECT _id FROM tsym WHERE symbol=?),
+		        (SELECT _id FROM symbols WHERE symbol=?),
+		        (SELECT _id FROM symbols WHERE symbol=?),
 		        ?,?,?,?,?,?,?,?,?,?,?
 		)
 `
@@ -108,6 +108,27 @@ func (db *Db) Insert(data *clients.Data) (result sql.Result, err error) {
 		&data.Raw.LastUpdate,
 		string(d),
 	)
+}
+
+func (db *Db) AddSymbol(s string, u string) (result sql.Result, err error) {
+	if s == "" {
+		return nil, errors.New("cant insert empty symbol")
+	}
+	return db.Exec(`insert into symbols (symbol,unicode) values (?,?);`, s, u)
+}
+
+func (db *Db) UpdateSymbol(s, u string) (result sql.Result, err error) {
+	if s == "" {
+		return nil, errors.New("empty symbol")
+	}
+	return db.Exec(`update symbols set unicode=? where symbol=?;`, u, s)
+}
+
+func (db *Db) RemoveSymbol(s string) (result sql.Result, err error) {
+	if s == "" {
+		return nil, errors.New("empty symbol")
+	}
+	return db.Exec(`delete from symbols where symbol=?;`, s)
 }
 
 func (db *Db) DataPipe() chan *clients.Data {

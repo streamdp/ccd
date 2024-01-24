@@ -24,14 +24,11 @@ create table data
 drop table if exists symbols;
 create table symbols
 (
-    _id     int auto_increment
-        primary key,
-    symbol  varchar(64) collate latin1_swedish_ci default '' not null,
-    unicode char                                             null,
-    constraint symbols_symbol_uindex
-        unique (symbol)
-)
-    collate = utf8_general_ci;
+    _id int auto_increment primary key,
+    symbol varchar(64) collate latin1_swedish_ci default '' not null,
+    unicode char null,
+    constraint symbols_symbol_uindex unique (symbol)
+) collate = utf8_general_ci;
 
 insert into symbols(symbol, unicode)
     values ('USDT','₮'),

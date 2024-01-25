@@ -1,10 +1,11 @@
 package clients
 
 import (
+	"log"
 	"sync/atomic"
 	"time"
 
-	"github.com/streamdp/ccd/handlers"
+	"github.com/streamdp/ccd/domain"
 )
 
 // Task does all the data mining run
@@ -16,7 +17,7 @@ type Task struct {
 }
 type Tasks map[string]*Task
 
-func (t *Task) run(r RestClient, dataPipe chan *Data) {
+func (t *Task) run(r RestClient, l *log.Logger, dataPipe chan *domain.Data) {
 	timer := time.NewTimer(time.Duration(atomic.LoadInt64(&t.Interval)) * time.Second)
 	go func() {
 		defer close(t.done)
@@ -28,7 +29,7 @@ func (t *Task) run(r RestClient, dataPipe chan *Data) {
 			case <-timer.C:
 				data, err := r.Get(t.From, t.To)
 				if err != nil {
-					handlers.SystemHandler(err)
+					l.Println(err)
 					continue
 				}
 				dataPipe <- data

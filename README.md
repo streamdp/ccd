@@ -27,10 +27,10 @@ You should previously export some environment variables:
 
 ```bash
 export CCDC_DATAPROVIDER=cryptocompare
-export CCDC_DATASOURCE=postgres://username:password@127.0.0.1:5432/dbname?sslmode=disable
+export CCDC_DATABASEURL=postgres://username:password@127.0.0.1:5432/dbname?sslmode=disable
 export CCDC_APIKEY=put you api key here
-export CCDC_SYMBOLS="BTC,XRP,ETH,LTC,USD,EUR,GBP,JPY,USDT"
-export REDIS_URL=redis://:redis_password@127.0.0.1:6379/0
+export CCDC_SESSIONSTORE=redis // or "db", default value is "db"
+export REDIS_URL=redis://:redis_password@127.0.0.1:6379/0 // only when "redis" session store selected
 ```
 
 if you want use **huobi** as data provider export this:
@@ -40,7 +40,7 @@ export CCDC_DATAPROVIDER=huobi
 
 If you use **mysql** db, you should export something like this:
 ```bash
-export CCDC_DATASOURCE=mysql://username:password@tcp(localhost:3306)/dbname
+export CCDC_DATABASEURL=mysql://username:password@tcp(localhost:3306)/dbname
 ``` 
 
 And run application:
@@ -66,8 +66,6 @@ $ ./ccd -h
 ccd is a microservice that collect data from several crypto data providers cryprocompare using its API.
 
 Usage of ccd:
-  -symbols string
-        specify list possible currencies (default "BTC,XRP,ETH,LTC,USD,EUR,GBP,JPY,USDT")
   -dataprovider string
         use selected data provider ("cryptocompare", "huobi") (default "cryptocompare")
   -debug
@@ -75,6 +73,8 @@ Usage of ccd:
   -h    display help
   -port string
         set specify port (default ":8080")
+  -session string
+        set session store "db" or "redis" (default "db")  
   -timeout int
         how long to wait for a response from the api server before sending data from the cache (default 1000)
 ```

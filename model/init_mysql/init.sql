@@ -40,3 +40,14 @@ insert into symbols(symbol, unicode)
            ('EUR','€'),
            ('GBP','£'),
            ('JPY','¥');
+
+drop table if exists session cascade;
+create table session
+(
+    _id       int auto_increment primary key,
+    task_name varchar(64) not null default '',
+    `interval`  integer default 60 not null
+);
+
+create unique index session_task_name_uindex
+    on session (task_name);

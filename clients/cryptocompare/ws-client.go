@@ -5,37 +5,39 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/streamdp/ccd/domain"
 	"nhooyr.io/websocket"
 
 	"github.com/streamdp/ccd/clients"
-	"github.com/streamdp/ccd/handlers"
 )
 
 const wssUrl = "wss://streamer.cryptocompare.com/v2"
 
 type cryptoCompareWs struct {
 	ctx        context.Context
+	l          *log.Logger
 	conn       *websocket.Conn
 	apiKey     string
-	subscribes clients.Subscribes
+	subscribes domain.Subscribes
 	subMu      sync.RWMutex
 }
 
-func InitWs(pipe chan *clients.Data) (_ clients.WsClient, err error) {
+func InitWs(pipe chan *domain.Data, l *log.Logger) (_ clients.WsClient, err error) {
 	var apiKey string
 	if apiKey, err = getApiKey(); err != nil {
 		return nil, err
 	}
 	h := &cryptoCompareWs{
 		ctx:        context.Background(),
+		l:          l,
 		apiKey:     apiKey,
-		subscribes: clients.Subscribes{},
+		subscribes: domain.Subscribes{},
 	}
 	if err = h.reconnect(); err != nil {
 		return nil, err
@@ -47,7 +49,7 @@ func InitWs(pipe chan *clients.Data) (_ clients.WsClient, err error) {
 func (c *cryptoCompareWs) reconnect() (err error) {
 	if c.conn != nil {
 		if err = c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
-			handlers.SystemHandler(err)
+			c.l.Println(err)
 			// reducing logs and CPU load when API key expired
 			time.Sleep(10 * time.Second)
 		}
@@ -82,7 +84,7 @@ func (c *cryptoCompareWs) resubscribe() (err error) {
 }
 
 func (c *cryptoCompareWs) handleWssError(err error) error {
-	handlers.SystemHandler(err)
+	c.l.Println(err)
 	for {
 		select {
 		case <-time.After(time.Minute):
@@ -101,11 +103,11 @@ func (c *cryptoCompareWs) handleWssError(err error) error {
 	}
 }
 
-func (c *cryptoCompareWs) handleWsMessages(pipe chan *clients.Data) {
+func (c *cryptoCompareWs) handleWsMessages(pipe chan *domain.Data) {
 	go func() {
 		defer func(conn *websocket.Conn, code websocket.StatusCode, reason string) {
 			if err := conn.Close(code, reason); err != nil {
-				handlers.SystemHandler(err)
+				c.l.Println(err)
 			}
 		}(c.conn, websocket.StatusNormalClosure, "")
 		var (
@@ -123,7 +125,7 @@ func (c *cryptoCompareWs) handleWsMessages(pipe chan *clients.Data) {
 			case <-tick.C:
 				if hb <= 0 {
 					if err := c.handleWssError(errors.New("heartbeat loss")); err != nil {
-						handlers.SystemHandler(err)
+						c.l.Println(err)
 						return
 					}
 				}
@@ -135,14 +137,14 @@ func (c *cryptoCompareWs) handleWsMessages(pipe chan *clients.Data) {
 				)
 				if _, body, err = c.conn.Read(c.ctx); err != nil {
 					if err = c.handleWssError(err); err != nil {
-						handlers.SystemHandler(err)
+						c.l.Println(err)
 						return
 					}
 					continue
 				}
 				data := &cryptoCompareWsData{}
 				if err = json.Unmarshal(body, data); err != nil {
-					handlers.SystemHandler(err)
+					c.l.Println(err)
 					continue
 				}
 				switch data.Type {
@@ -186,7 +188,7 @@ func (c *cryptoCompareWs) Subscribe(from, to string) (err error) {
 	if err = c.sendSubscribeMsg(ch); err != nil {
 		return
 	}
-	c.subscribes[ch] = clients.NewSubscribe(from, to, 0)
+	c.subscribes[ch] = domain.NewSubscribe(from, to, 0)
 	return
 }
 
@@ -196,8 +198,8 @@ func (c *cryptoCompareWs) sendSubscribeMsg(ch string) error {
 	)
 }
 
-func (c *cryptoCompareWs) ListSubscribes() clients.Subscribes {
-	s := make(clients.Subscribes, len(c.subscribes))
+func (c *cryptoCompareWs) ListSubscribes() domain.Subscribes {
+	s := make(domain.Subscribes, len(c.subscribes))
 	c.subMu.RLock()
 	defer c.subMu.RUnlock()
 	for k, v := range c.subscribes {
@@ -206,35 +208,33 @@ func (c *cryptoCompareWs) ListSubscribes() clients.Subscribes {
 	return s
 }
 
-func convertCryptoCompareWsDataToDomain(d *cryptoCompareWsData) *clients.Data {
+func convertCryptoCompareWsDataToDomain(d *cryptoCompareWsData) *domain.Data {
 	if d == nil {
 		return nil
 	}
-	return &clients.Data{
-		From: d.FromSymbol,
-		To:   d.ToSymbol,
-		Raw: &clients.Response{
-			Open24Hour:     d.Open24Hour,
-			Volume24Hour:   d.Volume24Hour,
-			Volume24Hourto: d.Volume24HourTo,
-			Low24Hour:      d.Low24Hour,
-			High24Hour:     d.High24Hour,
-			Price:          d.Price,
-			Supply:         d.CurrentSupply,
-			MktCap:         d.CurrentSupplyMktCap,
-			LastUpdate:     d.LastUpdate,
-		},
-		Display: &clients.Display{
-			Open24Hour:     strconv.FormatFloat(d.Open24Hour, 'f', -1, 64),
-			Volume24Hour:   strconv.FormatFloat(d.Volume24Hour, 'f', -1, 64),
-			Volume24Hourto: strconv.FormatFloat(d.Volume24HourTo, 'f', -1, 64),
-			High24Hour:     strconv.FormatFloat(d.High24Hour, 'f', -1, 64),
-			Price:          strconv.FormatFloat(d.Price, 'f', -1, 64),
-			FromSymbol:     strings.ToUpper(d.FromSymbol),
-			ToSymbol:       strings.ToUpper(d.ToSymbol),
-			LastUpdate:     strconv.FormatInt(d.LastUpdate, 10),
-			Supply:         strconv.FormatFloat(d.CurrentSupply, 'f', -1, 64),
-			MktCap:         strconv.FormatFloat(d.CurrentSupplyMktCap, 'f', -1, 64),
-		},
+	b, _ := json.Marshal(&domain.Raw{
+		FromSymbol:     d.FromSymbol,
+		ToSymbol:       d.ToSymbol,
+		Open24Hour:     d.Open24Hour,
+		Volume24Hour:   d.Volume24Hour,
+		Volume24HourTo: d.Volume24HourTo,
+		High24Hour:     d.High24Hour,
+		Price:          d.Price,
+		LastUpdate:     d.LastUpdate,
+		Supply:         d.CurrentSupply,
+		MktCap:         d.CurrentSupplyMktCap,
+	})
+	return &domain.Data{
+		FromSymbol:     d.FromSymbol,
+		ToSymbol:       d.ToSymbol,
+		Open24Hour:     d.Open24Hour,
+		Volume24Hour:   d.Volume24Hour,
+		Low24Hour:      d.Low24Hour,
+		High24Hour:     d.High24Hour,
+		Price:          d.Price,
+		Supply:         d.CurrentSupply,
+		MktCap:         d.CurrentSupplyMktCap,
+		LastUpdate:     d.LastUpdate,
+		DisplayDataRaw: string(b),
 	}
 }

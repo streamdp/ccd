@@ -8,30 +8,32 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
+	"log"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/streamdp/ccd/domain"
 	"nhooyr.io/websocket"
 
 	"github.com/streamdp/ccd/clients"
-	"github.com/streamdp/ccd/handlers"
 )
 
 const wssUrl = "wss://api.huobi.pro/ws"
 
 type huobiWs struct {
 	ctx        context.Context
+	l          *log.Logger
 	conn       *websocket.Conn
-	subscribes clients.Subscribes
+	subscribes domain.Subscribes
 	subMu      sync.RWMutex
 }
 
-func InitWs(pipe chan *clients.Data) (clients.WsClient, error) {
+func InitWs(pipe chan *domain.Data, l *log.Logger) (clients.WsClient, error) {
 	h := &huobiWs{
 		ctx:        context.Background(),
-		subscribes: clients.Subscribes{},
+		l:          l,
+		subscribes: domain.Subscribes{},
 	}
 	if err := h.reconnect(); err != nil {
 		return nil, err
@@ -43,7 +45,7 @@ func InitWs(pipe chan *clients.Data) (clients.WsClient, error) {
 func (h *huobiWs) reconnect() (err error) {
 	if h.conn != nil {
 		if err := h.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
-			handlers.SystemHandler(err)
+			h.l.Println(err)
 			// reducing logs and CPU load when API key expired
 			time.Sleep(10 * time.Second)
 		}
@@ -64,7 +66,7 @@ func (h *huobiWs) resubscribe() (err error) {
 }
 
 func (h *huobiWs) handleWsError(err error) error {
-	handlers.SystemHandler(err)
+	h.l.Println(err)
 	for {
 		select {
 		case <-time.After(time.Minute):
@@ -83,11 +85,11 @@ func (h *huobiWs) handleWsError(err error) error {
 	}
 }
 
-func (h *huobiWs) handleWsMessages(pipe chan *clients.Data) {
+func (h *huobiWs) handleWsMessages(pipe chan *domain.Data) {
 	go func() {
 		defer func(conn *websocket.Conn, code websocket.StatusCode, reason string) {
 			if err := conn.Close(code, reason); err != nil {
-				handlers.SystemHandler(err)
+				h.l.Println(err)
 			}
 		}(h.conn, websocket.StatusNormalClosure, "")
 		for {
@@ -102,19 +104,19 @@ func (h *huobiWs) handleWsMessages(pipe chan *clients.Data) {
 				)
 				if _, r, err = h.conn.Reader(h.ctx); err != nil {
 					if err = h.handleWsError(err); err != nil {
-						handlers.SystemHandler(err)
+						h.l.Println(err)
 						return
 					}
 					continue
 				}
 				if body, err = gzipDecompress(r); err != nil {
-					handlers.SystemHandler(err)
+					h.l.Println(err)
 					continue
 				}
 				if bytes.Contains(body, []byte("ping")) {
 					if err = h.pingHandler(body); err != nil {
 						if err = h.handleWsError(err); err != nil {
-							handlers.SystemHandler(err)
+							h.l.Println(err)
 							return
 						}
 					}
@@ -122,7 +124,7 @@ func (h *huobiWs) handleWsMessages(pipe chan *clients.Data) {
 				}
 				data := &huobiWsData{}
 				if err = json.Unmarshal(body, data); err != nil {
-					handlers.SystemHandler(err)
+					h.l.Println(err)
 					continue
 				}
 				if data.Ch == "" {
@@ -187,7 +189,7 @@ func (h *huobiWs) Subscribe(from, to string) (err error) {
 	if err = h.sendSubscribeMsg(ch, id); err != nil {
 		return
 	}
-	h.subscribes[ch] = clients.NewSubscribe(from, to, id)
+	h.subscribes[ch] = domain.NewSubscribe(from, to, id)
 	return
 }
 
@@ -197,8 +199,8 @@ func (h *huobiWs) sendSubscribeMsg(ch string, id int64) error {
 	)
 }
 
-func (h *huobiWs) ListSubscribes() clients.Subscribes {
-	s := make(clients.Subscribes, len(h.subscribes))
+func (h *huobiWs) ListSubscribes() domain.Subscribes {
+	s := make(domain.Subscribes, len(h.subscribes))
 	h.subMu.RLock()
 	defer h.subMu.RUnlock()
 	for k, v := range h.subscribes {
@@ -215,33 +217,31 @@ func gzipDecompress(r io.Reader) ([]byte, error) {
 	return io.ReadAll(r)
 }
 
-func convertHuobiWsDataToDomain(from, to string, d *huobiWsData) *clients.Data {
+func convertHuobiWsDataToDomain(from, to string, d *huobiWsData) *domain.Data {
 	if d == nil {
 		return nil
 	}
-	return &clients.Data{
-		From: from,
-		To:   to,
-		Raw: &clients.Response{
-			Open24Hour:     d.Tick.Open,
-			Volume24Hour:   d.Tick.Amount,
-			Volume24Hourto: d.Tick.Vol,
-			Low24Hour:      d.Tick.Low,
-			High24Hour:     d.Tick.High,
-			Price:          d.Tick.Bid,
-			Supply:         float64(d.Tick.Count),
-			LastUpdate:     d.Ts,
-		},
-		Display: &clients.Display{
-			Open24Hour:     strconv.FormatFloat(d.Tick.Open, 'f', -1, 64),
-			Volume24Hour:   strconv.FormatFloat(d.Tick.Amount, 'f', -1, 64),
-			Volume24Hourto: strconv.FormatFloat(d.Tick.Vol, 'f', -1, 64),
-			High24Hour:     strconv.FormatFloat(d.Tick.High, 'f', -1, 64),
-			Price:          strconv.FormatFloat(d.Tick.Bid, 'f', -1, 64),
-			FromSymbol:     strings.ToUpper(from),
-			ToSymbol:       strings.ToUpper(to),
-			LastUpdate:     strconv.FormatInt(d.Ts, 10),
-			Supply:         strconv.Itoa(d.Tick.Count),
-		},
+	b, _ := json.Marshal(&domain.Raw{
+		FromSymbol:     from,
+		ToSymbol:       to,
+		Open24Hour:     d.Tick.Open,
+		Volume24Hour:   d.Tick.Amount,
+		Volume24HourTo: d.Tick.Vol,
+		High24Hour:     d.Tick.High,
+		Price:          d.Tick.Bid,
+		LastUpdate:     d.Ts,
+		Supply:         float64(d.Tick.Count),
+	})
+	return &domain.Data{
+		FromSymbol:     from,
+		ToSymbol:       to,
+		Open24Hour:     d.Tick.Open,
+		Volume24Hour:   d.Tick.Amount,
+		Low24Hour:      d.Tick.Low,
+		High24Hour:     d.Tick.High,
+		Price:          d.Tick.Bid,
+		Supply:         float64(d.Tick.Count),
+		LastUpdate:     d.Ts,
+		DisplayDataRaw: string(b),
 	}
 }

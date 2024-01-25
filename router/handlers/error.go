@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,9 +19,4 @@ func GinHandler(myHandler HandlerFuncResError) gin.HandlerFunc {
 			c.JSON(http.StatusOK, res)
 		}
 	}
-}
-
-// SystemHandler handling and logging error
-func SystemHandler(err error) {
-	log.Println(err)
 }

@@ -6,12 +6,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/config"
+	"github.com/streamdp/ccd/domain"
 )
 
 const (
@@ -35,7 +35,7 @@ func Init() (clients.RestClient, error) {
 	}, nil
 }
 
-func (h *huobiRest) Get(fSym string, tSym string) (ds *clients.Data, err error) {
+func (h *huobiRest) Get(fSym string, tSym string) (ds *domain.Data, err error) {
 	var (
 		u        *url.URL
 		response *http.Response
@@ -67,7 +67,7 @@ func (h *huobiRest) Get(fSym string, tSym string) (ds *clients.Data, err error) 
 	return convertHuobiRestDataToDomain(fSym, tSym, rawData), nil
 }
 
-func convertHuobiRestDataToDomain(from, to string, d *huobiRestData) *clients.Data {
+func convertHuobiRestDataToDomain(from, to string, d *huobiRestData) *domain.Data {
 	if d == nil {
 		return nil
 	}
@@ -75,30 +75,28 @@ func convertHuobiRestDataToDomain(from, to string, d *huobiRestData) *clients.Da
 	if len(d.Tick.Bid) > 0 {
 		price = d.Tick.Bid[0]
 	}
-	return &clients.Data{
-		From: from,
-		To:   to,
-		Raw: &clients.Response{
-			Open24Hour:     d.Tick.Open,
-			Volume24Hour:   d.Tick.Amount,
-			Volume24Hourto: d.Tick.Vol,
-			Low24Hour:      d.Tick.Low,
-			High24Hour:     d.Tick.High,
-			Price:          price,
-			Supply:         float64(d.Tick.Count),
-			LastUpdate:     d.Ts,
-		},
-		Display: &clients.Display{
-			Open24Hour:     strconv.FormatFloat(d.Tick.Open, 'f', -1, 64),
-			Volume24Hour:   strconv.FormatFloat(d.Tick.Amount, 'f', -1, 64),
-			Volume24Hourto: strconv.FormatFloat(d.Tick.Vol, 'f', -1, 64),
-			High24Hour:     strconv.FormatFloat(d.Tick.High, 'f', -1, 64),
-			Price:          strconv.FormatFloat(price, 'f', -1, 64),
-			FromSymbol:     strings.ToUpper(from),
-			ToSymbol:       strings.ToUpper(to),
-			LastUpdate:     strconv.FormatInt(d.Ts, 10),
-			Supply:         strconv.Itoa(d.Tick.Count),
-		},
+	b, _ := json.Marshal(&domain.Raw{
+		FromSymbol:     from,
+		ToSymbol:       to,
+		Open24Hour:     d.Tick.Open,
+		Volume24Hour:   d.Tick.Amount,
+		Volume24HourTo: d.Tick.Vol,
+		High24Hour:     d.Tick.High,
+		Price:          price,
+		LastUpdate:     d.Ts,
+		Supply:         float64(d.Tick.Count),
+	})
+	return &domain.Data{
+		FromSymbol:     from,
+		ToSymbol:       to,
+		Open24Hour:     d.Tick.Open,
+		Volume24Hour:   d.Tick.Amount,
+		Low24Hour:      d.Tick.Low,
+		High24Hour:     d.Tick.High,
+		Price:          price,
+		Supply:         float64(d.Tick.Count),
+		LastUpdate:     d.Ts,
+		DisplayDataRaw: string(b),
 	}
 }
 

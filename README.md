@@ -120,6 +120,6 @@ $ curl "http://localhost:8080/v1/ws/subscribe?fsym=BTC&tsym=USD"
 ```
 
 
-Working example URL: https://ccdtest.gq/healthz
+Working example URL: https://ccd.run.place/healthz
 
-Web UI: https://ccdtest.gq
+Web UI: https://ccd.run.place

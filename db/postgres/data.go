@@ -57,9 +57,6 @@ func (d *Db) Insert(data *domain.Data) (result sql.Result, err error) {
 	if data == nil {
 		return nil, errors.New("cant insert empty data")
 	}
-	if err != nil {
-		return nil, err
-	}
 	query := `insert into data (
                   fromSym,
                   toSym,

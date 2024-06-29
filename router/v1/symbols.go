@@ -25,7 +25,9 @@ func AddSymbol(sr *repos.SymbolRepo) handlers.HandlerFuncResError {
 		if err = sr.Add(q.Symbol, q.Unicode); err != nil {
 			return
 		}
-		r.UpdateAllFields(http.StatusOK, fmt.Sprintf("symbol %s successfully added to the db", q.Symbol), nil)
+		r.UpdateAllFields(
+			http.StatusOK, fmt.Sprintf("symbol %s successfully added to the db", q.Symbol), nil,
+		)
 		return
 	}
 }

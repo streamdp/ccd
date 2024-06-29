@@ -19,17 +19,15 @@ type CollectQuery struct {
 // AddWorker that will collect data for the selected currency pair to the management service
 func AddWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (r handlers.Result, err error) {
-		var t *clients.Task
 		q := CollectQuery{}
 		if err = c.Bind(&q); err != nil {
 			return
 		}
-		if t = p.Task(q.From, q.To); t != nil {
+		if t := p.Task(q.From, q.To); t != nil {
 			r.UpdateAllFields(http.StatusOK, "Data for this pair is already being collected", t)
 			return
 		}
-		t = p.AddTask(q.From, q.To, q.Interval)
-		r.UpdateAllFields(http.StatusCreated, "Data collection started", t)
+		r.UpdateAllFields(http.StatusCreated, "Data collection started", p.AddTask(q.From, q.To, q.Interval))
 		return
 	}
 }
@@ -118,7 +116,9 @@ func Subscribe(w clients.WsClient) handlers.HandlerFuncResError {
 			r.UpdateAllFields(http.StatusOK, "subscribe error:", err)
 			return
 		}
-		r.UpdateAllFields(http.StatusCreated, "Subscribed successfully, data collection started", []string{q.From, q.To})
+		r.UpdateAllFields(
+			http.StatusCreated, "Subscribed successfully, data collection started", []string{q.From, q.To},
+		)
 		return
 	}
 }
@@ -133,7 +133,9 @@ func Unsubscribe(w clients.WsClient) handlers.HandlerFuncResError {
 			r.UpdateAllFields(http.StatusOK, "Unsubscribe error:", err)
 			return
 		}
-		r.UpdateAllFields(http.StatusOK, "Unsubscribed successfully, data collection stopped ", []string{q.From, q.To})
+		r.UpdateAllFields(
+			http.StatusOK, "Unsubscribed successfully, data collection stopped ", []string{q.From, q.To},
+		)
 		return
 	}
 }

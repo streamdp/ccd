@@ -16,5 +16,5 @@ jobs:
     - name: Upload Go test results
       uses: actions/upload-artifact@v4
       with:
-        name: unit_testing_results
-        path: test-results-${{ github.sha }}.json
+        name: unit-testing-results-${{ github.sha }}
+        path: test-results.json

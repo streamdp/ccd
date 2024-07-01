@@ -1,41 +1,41 @@
 name: releaser
 on:
   push:
-    tags:
-      - '*'
+    tags: ['*']
 jobs:
   goreleaser:
     runs-on: ubuntu-22.04
     steps:
     - name: Checkout
-      uses: actions/checkout@v4.1.1
+      uses: actions/checkout@v4.1.7
       with:
         fetch-depth: 0
     - name: Set up Go
-      uses: actions/setup-go@v5.0.0
+      uses: actions/setup-go@v5.0.1
       with:
         go-version: 1.22.1
     - name: Run GoReleaser
-      uses: goreleaser/goreleaser-action@v5
+      uses: goreleaser/goreleaser-action@v6.0.0
       with:
         # either 'goreleaser' (default) or 'goreleaser-pro'
         distribution: goreleaser
-        version: latest
+        version: v2
         args: release --clean
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   push_to_the_registry:
+    needs: [goreleaser]
     runs-on: ubuntu-22.04
     steps:
     - name: Check out the repo
-      uses: actions/checkout@v4.1.1
+      uses: actions/checkout@v4.1.7
     - name: Log in to Docker Hub
-      uses: docker/login-action@v3.1.0
+      uses: docker/login-action@v3.2.0
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
     - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3.1.0
+      uses: docker/login-action@v3.2.0
       with:
         registry: ghcr.io
         username: ${{ github.repository_owner }}
@@ -48,7 +48,7 @@ jobs:
           streamdp/ccd
           ghcr.io/streamdp/ccd
     - name: Build and push Docker image
-      uses: docker/build-push-action@v5.3.0
+      uses: docker/build-push-action@v6.2.0
       with:
         context: .
         push: true

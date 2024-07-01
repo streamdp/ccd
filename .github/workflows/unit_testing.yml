@@ -1,5 +1,8 @@
 name: unit_testing
-on: [push]
+on:
+  push:
+    branches: ['*']
+    tags-ignore: ['*']
 jobs:
   unit_testing:
     runs-on: ubuntu-22.04
@@ -15,7 +18,7 @@ jobs:
     - name: Test with the Go CLI
       run: go test ./... -json > test-results.json
     - name: Upload Go test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v4.3.3
       with:
         name: test-results-${{ github.sha }}
         path: test-results.json

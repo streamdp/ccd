@@ -54,16 +54,16 @@ func PullingStatus(p clients.RestApiPuller, w clients.WsClient) handlers.Handler
 	return func(c *gin.Context) (r handlers.Result, err error) {
 		r.UpdateAllFields(http.StatusOK, "Information about running tasks", nil)
 		var (
-			tasks      clients.Tasks
-			subscribes domain.Subscribes
+			tasks         clients.Tasks
+			subscriptions domain.Subscriptions
 		)
 		if p != nil {
 			tasks = p.ListTasks()
 		}
 		if w != nil {
-			subscribes = w.ListSubscribes()
+			subscriptions = w.ListSubscriptions()
 		}
-		if len(tasks) == 0 && len(subscribes) == 0 {
+		if len(tasks) == 0 && len(subscriptions) == 0 {
 			return
 		}
 		list := map[string]map[string]interface{}{}
@@ -75,7 +75,7 @@ func PullingStatus(p clients.RestApiPuller, w clients.WsClient) handlers.Handler
 			list[v.From] = make(map[string]interface{})
 			list[v.From][v.To] = v
 		}
-		for _, v := range subscribes {
+		for _, v := range subscriptions {
 			if list[v.From] != nil {
 				list[v.From][v.To] = v
 				continue

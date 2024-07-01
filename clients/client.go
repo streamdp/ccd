@@ -13,5 +13,5 @@ type RestClient interface {
 type WsClient interface {
 	Subscribe(from string, to string) error
 	Unsubscribe(from string, to string) error
-	ListSubscribes() domain.Subscribes
+	ListSubscriptions() domain.Subscriptions
 }

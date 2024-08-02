@@ -8,7 +8,7 @@ import (
 
 	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/db/mysql"
-	"github.com/streamdp/ccd/db/postgres"
+	"github.com/streamdp/ccd/db/postgresql"
 	"github.com/streamdp/ccd/domain"
 )
 
@@ -51,25 +51,23 @@ func Connect(l *log.Logger) (d Database, err error) {
 		driverName, connectionString = connectionParameters[0], connectionParameters[1]
 	}
 	switch driverName {
-	case postgres.Postgres:
-		d, err = postgres.Connect(dataBaseUrl)
+	case postgresql.Postgres, "postgresql":
+		d, err = postgresql.Connect(dataBaseUrl)
 	case mysql.Mysql:
 		fallthrough
 	default:
 		d, err = mysql.Connect(connectionString)
 	}
 	if err == nil {
-		serve(d, l)
+		go serve(d, l)
 	}
 	return
 }
 
 func serve(d Database, l *log.Logger) {
-	go func() {
-		for data := range d.DataPipe() {
-			if _, err := d.Insert(data); err != nil {
-				l.Println(err)
-			}
+	for data := range d.DataPipe() {
+		if _, err := d.Insert(data); err != nil {
+			l.Println(err)
 		}
-	}()
+	}
 }

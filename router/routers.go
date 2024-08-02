@@ -11,8 +11,8 @@ import (
 	"github.com/streamdp/ccd/repos"
 	"github.com/streamdp/ccd/router/handlers"
 	v1 "github.com/streamdp/ccd/router/v1"
-	"github.com/streamdp/ccd/router/v1/validators"
 	"github.com/streamdp/ccd/router/v1/ws"
+	"github.com/streamdp/ccd/router/validators"
 )
 
 // InitRouter basic work on setting up the application, declare endpoints, register our custom validation functions

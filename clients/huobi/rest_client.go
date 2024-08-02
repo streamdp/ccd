@@ -21,10 +21,13 @@ const (
 	// This endpoint retrieves the latest ticker with some important 24h aggregated market data.
 	// Request Parameters "symbol" (all supported trading symbol, e.g. btcusdt, bccbtc. Refer to /v1/common/symbols)
 	latestAggregatedTicker = "/market/detail/merged"
+
+	rateLimit = 500 * time.Millisecond // make max two api calls per second
 )
 
 type huobiRest struct {
-	client *http.Client
+	client  *http.Client
+	limiter *time.Timer
 }
 
 func Init() (clients.RestClient, error) {
@@ -32,10 +35,18 @@ func Init() (clients.RestClient, error) {
 		client: &http.Client{
 			Timeout: time.Duration(config.HttpClientTimeout) * time.Millisecond,
 		},
+		limiter: time.NewTimer(rateLimit),
 	}, nil
 }
 
+func (h *huobiRest) limitRate() {
+	<-h.limiter.C
+	h.limiter.Reset(rateLimit)
+}
+
 func (h *huobiRest) Get(fSym string, tSym string) (ds *domain.Data, err error) {
+	h.limitRate()
+
 	var (
 		u        *url.URL
 		response *http.Response

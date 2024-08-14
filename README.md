@@ -10,7 +10,7 @@ It is a microservice that collect data from several crypto data providers using 
 This microservice uses:
 
 * gin-gonic/gin package to start and serve HTTP server
-* nhooyr.io/websocket package to manage websocket connection
+* coder/websocket package to manage websocket connection
 * go-sql-driver/mysql package to work with mysql database
 * lib/pq package to work with postgresql database
 * go-redis/redis package for saving the active session and restoring it when the puller is restarted

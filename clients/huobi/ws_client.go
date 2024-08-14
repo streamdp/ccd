@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/streamdp/ccd/domain"
-	"nhooyr.io/websocket"
 
 	"github.com/streamdp/ccd/clients"
 )

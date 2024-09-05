@@ -32,3 +32,7 @@ func (sr *SessionRepo) RemoveTask(n string) (err error) {
 	_, err = sr.db.RemoveTask(n)
 	return
 }
+
+func (sr *SessionRepo) Close() error {
+	return nil
+}

@@ -26,8 +26,18 @@ func main() {
 	if err != nil {
 		l.Fatalln(err)
 	}
+	defer func() {
+		if err = d.Close(); err != nil {
+			l.Println(fmt.Errorf("failed to close database connection: %w", err))
+		}
+	}()
 
 	s := newSessionStore(d, l)
+	defer func() {
+		if err = s.Close(); err != nil {
+			l.Println(fmt.Errorf("failed to close session store: %w", err))
+		}
+	}()
 
 	sr := repos.NewSymbolRepository(d)
 	if err = sr.Load(); err != nil {

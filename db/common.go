@@ -18,6 +18,8 @@ type Session interface {
 	UpdateTask(n string, i int64) (err error)
 	RemoveTask(n string) (err error)
 	GetSession() (map[string]int64, error)
+
+	Close() error
 }
 
 // Database interface makes it possible to expand the list of data storages
@@ -35,6 +37,8 @@ type Database interface {
 	UpdateTask(n string, i int64) (result sql.Result, err error)
 	RemoveTask(n string) (result sql.Result, err error)
 	GetSession() (tasks map[string]int64, err error)
+
+	Close() error
 }
 
 func Connect(l *log.Logger) (d Database, err error) {

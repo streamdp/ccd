@@ -27,6 +27,7 @@ func InitRouter(
 ) (err error) {
 	// health checks
 	e.GET("/healthz", SendOK)
+	e.HEAD("/healthz", SendOK)
 
 	// serve web page
 	e.LoadHTMLFiles("site/index.tmpl")

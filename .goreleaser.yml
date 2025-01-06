@@ -16,8 +16,7 @@ builds:
     ldflags:
       - -s -w -X github.com/streamdp/ccd/config.Version={{.Version}}
 archives:
-  - rlcp: true
-    name_template: >-
+  - name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64

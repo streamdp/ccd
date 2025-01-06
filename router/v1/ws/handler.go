@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
 	"github.com/streamdp/ccd/db"
 	"github.com/streamdp/ccd/domain"
 	"github.com/streamdp/ccd/router/handlers"
-	"nhooyr.io/websocket"
 
 	"github.com/streamdp/ccd/clients"
 	v1 "github.com/streamdp/ccd/router/v1"

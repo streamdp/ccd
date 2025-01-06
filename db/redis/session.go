@@ -18,7 +18,7 @@ type KeysStore struct {
 func NewRedisKeysStore() (*KeysStore, error) {
 	opt, err := getRedisOptions()
 	if err != nil {
-		return nil, fmt.Errorf("filed to parse redis os environment variables: %w", err)
+		return nil, fmt.Errorf("failed to parse redis os environment variables: %w", err)
 	}
 	client := redis.NewClient(opt)
 	if _, err = client.Ping().Result(); err != nil {
@@ -65,7 +65,7 @@ func getSeparatedOptions() (*redis.Options, error) {
 
 func getRedisOptions() (*redis.Options, error) {
 	if redisUrl := config.GetEnv("REDIS_URL"); redisUrl != "" {
-		return redis.ParseURL(config.GetEnv("REDIS_URL"))
+		return redis.ParseURL(redisUrl)
 	}
 	return getSeparatedOptions()
 }

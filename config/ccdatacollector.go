@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -62,11 +61,5 @@ func ParseFlags() {
 
 // GetEnv values for selected name or return null
 func GetEnv(name string) (result string) {
-	for _, e := range os.Environ() {
-		pair := strings.SplitN(e, "=", 2)
-		if pair[0] == name {
-			return pair[1]
-		}
-	}
-	return
+	return localEnvs.get(name)
 }

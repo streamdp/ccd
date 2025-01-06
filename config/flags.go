@@ -15,7 +15,7 @@ var (
 	// Port - set default port for gin-gonic engine init
 	Port              = ":8080"
 	RunMode           = gin.DebugMode
-	HttpClientTimeout = 1000
+	HttpClientTimeout = 5000 // milliseconds
 	Version           = "1.0.0"
 	DataProvider      = "cryptocompare" // "huobi"
 	SessionStore      = "db"            // "redis"

@@ -1,4 +1,4 @@
-package postgres
+package postgresql
 
 import (
 	"database/sql"
@@ -32,7 +32,7 @@ func (d *Db) GetLast(from string, to string) (result *domain.Data, err error) {
 		  and toSym=(select _id from symbols where symbol=$2)
 		ORDER BY lastupdate DESC limit 1;
 `
-	err = d.QueryRow(query, from, to).Scan(
+	if err = d.QueryRow(query, from, to).Scan(
 		&result.Id,
 		&result.Change24Hour,
 		&result.ChangePct24Hour,
@@ -45,8 +45,7 @@ func (d *Db) GetLast(from string, to string) (result *domain.Data, err error) {
 		&result.MktCap,
 		&result.LastUpdate,
 		&result.DisplayDataRaw,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, err
 	}
 	return result, nil

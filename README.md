@@ -29,6 +29,7 @@ You should previously export some environment variables:
 export CCDC_DATAPROVIDER=cryptocompare
 export CCDC_DATASOURCE=postgres://username:password@127.0.0.1:5432/dbname?sslmode=disable
 export CCDC_APIKEY=put you api key here
+export CCDC_SYMBOLS="BTC,XRP,ETH,LTC,USD,EUR,GBP,JPY,USDT"
 export REDIS_URL=redis://:redis_password@127.0.0.1:6379/0
 ```
 
@@ -65,10 +66,8 @@ $ ./ccd -h
 ccd is a microservice that collect data from several crypto data providers cryprocompare using its API.
 
 Usage of ccd:
-  -common string
-        specify list possible common currencies (default "USD,EUR,GBP,JPY,RUR")
-  -crypto string
-        specify list possible crypto currencies (default "BTC,XRP,ETH,BCH,EOS,LTC,XMR,DASH")
+  -symbols string
+        specify list possible currencies (default "BTC,XRP,ETH,LTC,USD,EUR,GBP,JPY,USDT")
   -dataprovider string
         use selected data provider ("cryptocompare", "huobi") (default "cryptocompare")
   -debug
@@ -82,14 +81,19 @@ Usage of ccd:
 
 List of the implemented endpoints:
 * **/healthz** [GET]   _check node status_
-* **/v1/collect/add** [POST, GET] _add new worker to collect data for the selected pair_
-* **/v1/collect/remove** [POST, GET] _stop and remove worker and collecting data for the selected pair_
+* **/v1/collect/add** [GET] _add new worker to collect data for the selected pair_
+* **/v1/collect/remove** [GET] _stop and remove worker and collecting data for the selected pair_
 * **/v1/collect/status** [GET] _show info about running workers_
-* **/v1/collect/update** [POST, GET]  _update pulling interval for the selected pair_
+* **/v1/collect/update** [GET]  _update pulling interval for the selected pair_
+* **/v1/symbols/add** [GET] _add new currency symbol to the db_
+* **/v1/symbols/update** [GET]  _update currency symbol in the db_
+* **/v1/symbols/remove** [GET] _remove currency symbol in the db_
 * **/v1/price** [POST, GET] _get actual (or cached if dataprovider is unavailable) info for the selected pair_
 * **/v1/ws** [GET] _websocket connection url, when you connected, try to send request like {"fsym":"BTC","tsym":"USD"}_
 * **/v1/ws/subscribe** [POST, GET] _subscribe to collect data for the selected pair_
 * **/v1/ws/unsubscribe** [POST, GET] _unsubscribe to stop collect data for the selected pair_
+* **/v1/symbols [POST, PUT, DELETE] _add, update, delete currency symbol_
+* **/v1/collect [POST, PUT, DELETE] _add, update, delete worker to collect data_
 
 Example getting a GET request for getting actual info about selected pair:
 
@@ -100,7 +104,7 @@ $ curl "http://localhost:8080/v1/price?fsym=ETH&tsym=JPY"
 Example of sending a POST request to add a new worker:
 
 ```bash
-$ curl -X POST -H "Content-Type: application/json" -d '{ "fsym": "BTC", "tsym": "USD", "interval": 60}' "http://localhost:8080/v1/collect/add"
+$ curl -X POST -H "Content-Type: application/json" -d '{ "fsym": "BTC", "tsym": "USD", "interval": 60}' "http://localhost:8080/v1/collect"
 ```
 
 Example of sending a GET request to remove worker:

@@ -42,6 +42,8 @@ func (c *cryptoCompareWs) reconnect() (err error) {
 	if c.conn != nil {
 		if err := c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 			handlers.SystemHandler(err)
+			// reducing logs and CPU load when API key expired
+			time.Sleep(10 * time.Second)
 		}
 	}
 	var u *url.URL

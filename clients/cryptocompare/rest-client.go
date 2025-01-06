@@ -75,11 +75,13 @@ func (cc *cryptoCompareRest) Get(fSym string, tSym string) (ds *domain.Data, err
 	if err = json.Unmarshal(body, rawData); err != nil {
 		return
 	}
-	ds = convertToDomain(fSym, tSym, rawData)
-	return
+	return convertToDomain(fSym, tSym, rawData), nil
 }
 
 func convertToDomain(from, to string, d *cryptoCompareData) *domain.Data {
+	if d == nil || d.Raw == nil || d.Raw[from] == nil {
+		return nil
+	}
 	r := d.Raw[from][to]
 	b, _ := json.Marshal(&domain.Raw{
 		FromSymbol:     from,

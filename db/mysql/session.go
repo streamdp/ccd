@@ -30,9 +30,9 @@ func (d *Db) RemoveTask(n string) (result sql.Result, err error) {
 }
 
 func (d *Db) GetSession() (tasks map[string]int64, err error) {
-	rows, err := d.Query("select task_name,`interval` from session")
-	if err != nil {
-		return nil, err
+	rows, errQuery := d.Query("select task_name,`interval` from session")
+	if errQuery != nil {
+		return nil, errQuery
 	}
 	tasks = make(map[string]int64)
 	for rows.Next() {

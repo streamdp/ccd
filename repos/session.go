@@ -15,9 +15,7 @@ func NewSessionRepo(db db.Database) (db.Session, error) {
 }
 
 func (sr *SessionRepo) UpdateTask(n string, i int64) (err error) {
-	if _, err = sr.db.UpdateTask(n, i); err != nil {
-		return
-	}
+	_, err = sr.db.UpdateTask(n, i)
 	return
 }
 
@@ -26,15 +24,11 @@ func (sr *SessionRepo) GetSession() (map[string]int64, error) {
 }
 
 func (sr *SessionRepo) AddTask(n string, i int64) (err error) {
-	if _, err = sr.db.AddTask(n, i); err != nil {
-		return
-	}
+	_, err = sr.db.AddTask(n, i)
 	return
 }
 
 func (sr *SessionRepo) RemoveTask(n string) (err error) {
-	if _, err = sr.db.RemoveTask(n); err != nil {
-		return
-	}
+	_, err = sr.db.RemoveTask(n)
 	return
 }

@@ -31,9 +31,9 @@ func (d *Db) RemoveSymbol(s string) (result sql.Result, err error) {
 }
 
 func (d *Db) Symbols() (symbols []*domain.Symbol, err error) {
-	rows, err := d.Query(`select symbol, unicode from symbols`)
-	if err != nil {
-		return nil, err
+	rows, errQuery := d.Query(`select symbol, unicode from symbols`)
+	if errQuery != nil {
+		return nil, errQuery
 	}
 	for rows.Next() {
 		var (

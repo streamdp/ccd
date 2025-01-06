@@ -11,8 +11,8 @@ import (
 
 // CollectQuery structure for easily json serialization/validation/binding GET and POST query data
 type CollectQuery struct {
-	From     string `json:"fsym" form:"fsym" binding:"required,crypto"`
-	To       string `json:"tsym" form:"tsym" binding:"required,common"`
+	From     string `json:"fsym" form:"fsym" binding:"required,symbols"`
+	To       string `json:"tsym" form:"tsym" binding:"required,symbols"`
 	Interval int64  `json:"interval" form:"interval,default=60"`
 }
 

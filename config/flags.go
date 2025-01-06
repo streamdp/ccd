@@ -14,8 +14,7 @@ var (
 	// Port - set default port for gin-gonic engine init
 	Port              = ":8080"
 	RunMode           = gin.DebugMode
-	Crypto            = "BTC,XRP,ETH,BCH,EOS,LTC,XMR,DASH"
-	Common            = "USD,EUR,GBP,JPY,RUR"
+	Symbols           = "BTC,XRP,ETH,LTC,USD,EUR,GBP,JPY,USDT"
 	HttpClientTimeout = 1000
 	Version           = "1.0.0"
 	DataProvider      = "cryptocompare" // "huobi"
@@ -34,8 +33,7 @@ func ParseFlags() {
 	flag.StringVar(&Port, "port", ":8080", "set specify port")
 	flag.IntVar(&HttpClientTimeout, "timeout", HttpClientTimeout, "how long to wait for a response from the"+
 		" api server before sending data from the cache")
-	flag.StringVar(&Common, "common", Common, "specify list possible common currencies")
-	flag.StringVar(&Crypto, "crypto", Crypto, "specify list possible crypto currencies")
+	flag.StringVar(&Symbols, "symbols", Symbols, "specify list possible currencies")
 	flag.StringVar(&DataProvider, "dataprovider", DataProvider, "use selected data provider"+
 		" (\"cryptocompare\", \"huobi\")")
 	flag.Parse()
@@ -45,11 +43,8 @@ func ParseFlags() {
 	if dataProvider := GetEnv("CCDC_DATAPROVIDER"); dataProvider != "" {
 		DataProvider = dataProvider
 	}
-	if common := GetEnv("CCDC_COMMON"); common != "" {
-		Common = common
-	}
-	if crypto := GetEnv("CCDC_CRYPTO"); crypto != "" {
-		Crypto = crypto
+	if symbols := GetEnv("CCDC_SYMBOLS"); symbols != "" {
+		Symbols = symbols
 	}
 	if showHelp {
 		fmt.Println("ccd is a microservice that collect data from several crypto data providers using its API.")

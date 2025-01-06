@@ -16,6 +16,9 @@ import (
 type Database interface {
 	Insert(data *clients.Data) (result sql.Result, err error)
 	GetLast(from string, to string) (result *clients.Data, err error)
+	AddSymbol(s string, u string) (result sql.Result, err error)
+	UpdateSymbol(s string, u string) (result sql.Result, err error)
+	RemoveSymbol(s string) (result sql.Result, err error)
 	DataPipe() chan *clients.Data
 }
 

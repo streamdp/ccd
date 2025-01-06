@@ -23,12 +23,8 @@ create table data
 drop table if exists symbols;
 create table symbols
 (
-    _id bigint default unique_rowid() not null
-        constraint symbols_pk
-        primary key,
-    symbol varchar(64) default ''::STRING not null
-        constraint symbols_symbol_uindex
-        unique,
+    _id serial not null constraint symbols_pk primary key,
+    symbol varchar(64) default '' not null constraint symbols_symbol_uindex unique,
     unicode char
 );
 

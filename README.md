@@ -1,7 +1,7 @@
 # ccd
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/streamdp/ccd)](https://goreportcard.com/report/github.com/streamdp/ccd)
-[![Website ccd.run.place](https://img.shields.io/website-up-down-green-red/https/ccd.run.place/healthz.svg)](https://ccd.run.place/)
+[![Website ccd.oncook.top](https://img.shields.io/website-up-down-green-red/https/ccd.oncook.top/healthz.svg)](https://ccd.oncook.top/)
 [![GitHub release](https://img.shields.io/github/release/streamdp/ccd.svg)](https://github.com/streamdp/ccd/releases/)
 [![GitHub license](https://img.shields.io/github/license/streamdp/ccd.svg)](https://github.com/streamdp/ccd/blob/main/LICENSE)
 
@@ -120,6 +120,6 @@ $ curl "http://localhost:8080/v1/ws/subscribe?fsym=BTC&tsym=USD"
 ```
 
 
-Working example URL: https://ccd.run.place/healthz
+Working example URL: https://ccd.oncook.top/healthz
 
-Web UI: https://ccd.run.place
+Web UI: https://ccd.oncook.top

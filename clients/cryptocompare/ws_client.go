@@ -20,12 +20,12 @@ import (
 const wssUrl = "wss://streamer.cryptocompare.com/v2"
 
 type cryptoCompareWs struct {
-	ctx        context.Context
-	l          *log.Logger
-	conn       *websocket.Conn
-	apiKey     string
-	subscribes domain.Subscribes
-	subMu      sync.RWMutex
+	ctx           context.Context
+	l             *log.Logger
+	conn          *websocket.Conn
+	apiKey        string
+	subscriptions domain.Subscriptions
+	subMu         sync.RWMutex
 }
 
 func InitWs(pipe chan *domain.Data, l *log.Logger) (_ clients.WsClient, err error) {
@@ -34,10 +34,10 @@ func InitWs(pipe chan *domain.Data, l *log.Logger) (_ clients.WsClient, err erro
 		return nil, err
 	}
 	h := &cryptoCompareWs{
-		ctx:        context.Background(),
-		l:          l,
-		apiKey:     apiKey,
-		subscribes: domain.Subscribes{},
+		ctx:           context.Background(),
+		l:             l,
+		apiKey:        apiKey,
+		subscriptions: domain.Subscriptions{},
 	}
 	if err = h.reconnect(); err != nil {
 		return nil, err
@@ -66,16 +66,16 @@ func (c *cryptoCompareWs) buildURL() (u *url.URL, err error) {
 	if u, err = url.Parse(wssUrl); err != nil {
 		return
 	}
-	query := u.Query()
-	query.Set("api_key", c.apiKey)
-	u.RawQuery = query.Encode()
+	q := u.Query()
+	q.Set("api_key", c.apiKey)
+	u.RawQuery = q.Encode()
 	return
 }
 
 func (c *cryptoCompareWs) resubscribe() (err error) {
 	c.subMu.RLock()
 	defer c.subMu.RUnlock()
-	for k := range c.subscribes {
+	for k := range c.subscriptions {
 		if err = c.sendSubscribeMsg(k); err != nil {
 			return
 		}
@@ -166,11 +166,11 @@ func (c *cryptoCompareWs) Unsubscribe(from, to string) (err error) {
 	c.subMu.Lock()
 	defer c.subMu.Unlock()
 	var ch = buildChannelName(from, to)
-	if _, ok := c.subscribes[ch]; ok {
+	if _, ok := c.subscriptions[ch]; ok {
 		if err = c.sendUnsubscribeMsg(ch); err != nil {
 			return
 		}
-		delete(c.subscribes, ch)
+		delete(c.subscriptions, ch)
 	}
 	return
 }
@@ -188,7 +188,7 @@ func (c *cryptoCompareWs) Subscribe(from, to string) (err error) {
 	if err = c.sendSubscribeMsg(ch); err != nil {
 		return
 	}
-	c.subscribes[ch] = domain.NewSubscribe(from, to, 0)
+	c.subscriptions[ch] = domain.NewSubscription(from, to, 0)
 	return
 }
 
@@ -198,11 +198,11 @@ func (c *cryptoCompareWs) sendSubscribeMsg(ch string) error {
 	)
 }
 
-func (c *cryptoCompareWs) ListSubscribes() domain.Subscribes {
-	s := make(domain.Subscribes, len(c.subscribes))
+func (c *cryptoCompareWs) ListSubscriptions() domain.Subscriptions {
+	s := make(domain.Subscriptions, len(c.subscriptions))
 	c.subMu.RLock()
 	defer c.subMu.RUnlock()
-	for k, v := range c.subscribes {
+	for k, v := range c.subscriptions {
 		s[k] = v
 	}
 	return s

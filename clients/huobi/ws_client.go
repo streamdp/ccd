@@ -25,7 +25,7 @@ type huobiWs struct {
 	ctx        context.Context
 	l          *log.Logger
 	conn       *websocket.Conn
-	subscribes domain.Subscribes
+	subscribes domain.Subscriptions
 	subMu      sync.RWMutex
 }
 
@@ -33,7 +33,7 @@ func InitWs(pipe chan *domain.Data, l *log.Logger) (clients.WsClient, error) {
 	h := &huobiWs{
 		ctx:        context.Background(),
 		l:          l,
-		subscribes: domain.Subscribes{},
+		subscribes: domain.Subscriptions{},
 	}
 	if err := h.reconnect(); err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (h *huobiWs) Subscribe(from, to string) (err error) {
 	if err = h.sendSubscribeMsg(ch, id); err != nil {
 		return
 	}
-	h.subscribes[ch] = domain.NewSubscribe(from, to, id)
+	h.subscribes[ch] = domain.NewSubscription(from, to, id)
 	return
 }
 
@@ -199,8 +199,8 @@ func (h *huobiWs) sendSubscribeMsg(ch string, id int64) error {
 	)
 }
 
-func (h *huobiWs) ListSubscribes() domain.Subscribes {
-	s := make(domain.Subscribes, len(h.subscribes))
+func (h *huobiWs) ListSubscriptions() domain.Subscriptions {
+	s := make(domain.Subscriptions, len(h.subscribes))
 	h.subMu.RLock()
 	defer h.subMu.RUnlock()
 	for k, v := range h.subscribes {

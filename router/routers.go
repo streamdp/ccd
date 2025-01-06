@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -49,7 +50,7 @@ func InitRouter(e *gin.Engine, s *session.KeysStore) (err error) {
 	p := clients.NewPuller(r, s, d.DataPipe())
 
 	if err = p.RestoreLastSession(); err != nil {
-		log.Println("error restoring last session")
+		log.Println(fmt.Errorf("error restoring last session: %w", err))
 	}
 
 	// health checks

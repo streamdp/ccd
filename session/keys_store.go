@@ -2,7 +2,6 @@ package session
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/go-redis/redis"
@@ -15,66 +14,63 @@ type KeysStore struct {
 	c *redis.Client
 }
 
-type redisConfig struct {
-	host     string
-	port     int
-	password string
-	db       int
-}
-
-var c = redisConfig{
-	host:     "127.0.0.1",
-	port:     6379,
-	password: "",
-	db:       0,
-}
-
-func init() {
+func getSeparatedOptions() (*redis.Options, error) {
+	var (
+		host     = "127.0.0.1"
+		port     = 6379
+		password = ""
+		db       = 0
+	)
 	if h := config.GetEnv("REDIS_HOSTNAME"); h != "" {
-		c.host = h
+		host = h
 	}
 	if p := config.GetEnv("REDIS_PORT"); p != "" {
-		if n, err := strconv.Atoi(p); err == nil {
-			c.port = n
+		n, err := strconv.Atoi(p)
+		if err != nil {
+			return nil, err
 		}
+		port = n
 	}
 	if pass := config.GetEnv("REDIS_PASSWORD"); pass != "" {
-		c.password = pass
+		password = pass
 	}
 	if d := config.GetEnv("REDIS_DB"); d != "" {
-		if n, err := strconv.Atoi(d); err == nil {
-			c.db = n
+		n, err := strconv.Atoi(d)
+		if err != nil {
+			return nil, err
 		}
+		db = n
 	}
+	return &redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", host, port),
+		Password: password,
+		DB:       db,
+	}, nil
 }
 
-func NewKeysStore() *KeysStore {
-	client := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", c.host, c.port),
-		Password: c.password,
-		DB:       c.db,
-	})
-	if _, err := client.Ping().Result(); err != nil {
-		log.Println(fmt.Sprintf("failed to connect redis on %s:%d", c.host, c.port))
-		return nil
+func getRedisOptions() (*redis.Options, error) {
+	if redisUrl := config.GetEnv("REDIS_URL"); redisUrl != "" {
+		return redis.ParseURL(config.GetEnv("REDIS_URL"))
+	}
+	return getSeparatedOptions()
+}
+
+// NewKeysStore initialize new session store
+func NewKeysStore() (*KeysStore, error) {
+	opt, err := getRedisOptions()
+	if err != nil {
+		return nil, fmt.Errorf("filed to parse redis os environment variables: %w", err)
+	}
+	client := redis.NewClient(opt)
+	if _, err = client.Ping().Result(); err != nil {
+		return nil, err
 	}
 	return &KeysStore{
 		c: client,
-	}
+	}, nil
 }
 
-func (s *KeysStore) SaveSession(session map[string]string) (err error) {
-	if s == nil {
-		return
-	}
-	for k, v := range session {
-		if err = s.c.HSet(sessionName, k, v).Err(); err != nil {
-			return
-		}
-	}
-	return
-}
-
+// GetSession get previously saved session
 func (s *KeysStore) GetSession() map[string]string {
 	if s == nil {
 		return nil
@@ -82,7 +78,8 @@ func (s *KeysStore) GetSession() map[string]string {
 	return s.c.HGetAll(sessionName).Val()
 }
 
-func (s *KeysStore) AppendTaskToSession(name string, interval int64) {
+// AddTaskToSession add a new task or update an already saved task in the current session
+func (s *KeysStore) AddTaskToSession(name string, interval int64) {
 	if s == nil {
 		return
 	}
@@ -90,6 +87,7 @@ func (s *KeysStore) AppendTaskToSession(name string, interval int64) {
 	return
 }
 
+// RemoveTaskFromSession remove a task from the current session
 func (s *KeysStore) RemoveTaskFromSession(name string) {
 	if s == nil {
 		return

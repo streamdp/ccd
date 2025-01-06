@@ -22,16 +22,22 @@ const wssUrl = "wss://streamer.cryptocompare.com/v2"
 type cryptoCompareWs struct {
 	ctx        context.Context
 	conn       *websocket.Conn
+	apiKey     string
 	subscribes clients.Subscribes
 	subMu      sync.RWMutex
 }
 
-func InitWs(pipe chan *clients.Data) (clients.WsClient, error) {
+func InitWs(pipe chan *clients.Data) (_ clients.WsClient, err error) {
+	var apiKey string
+	if apiKey, err = getApiKey(); err != nil {
+		return nil, err
+	}
 	h := &cryptoCompareWs{
 		ctx:        context.Background(),
+		apiKey:     apiKey,
 		subscribes: clients.Subscribes{},
 	}
-	if err := h.reconnect(); err != nil {
+	if err = h.reconnect(); err != nil {
 		return nil, err
 	}
 	h.handleWsMessages(pipe)
@@ -40,7 +46,7 @@ func InitWs(pipe chan *clients.Data) (clients.WsClient, error) {
 
 func (c *cryptoCompareWs) reconnect() (err error) {
 	if c.conn != nil {
-		if err := c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
+		if err = c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 			handlers.SystemHandler(err)
 			// reducing logs and CPU load when API key expired
 			time.Sleep(10 * time.Second)
@@ -55,15 +61,11 @@ func (c *cryptoCompareWs) reconnect() (err error) {
 }
 
 func (c *cryptoCompareWs) buildURL() (u *url.URL, err error) {
-	var apiKey string
-	if apiKey, err = getApiKey(); err != nil {
-		return
-	}
 	if u, err = url.Parse(wssUrl); err != nil {
 		return
 	}
 	query := u.Query()
-	query.Set("api_key", apiKey)
+	query.Set("api_key", c.apiKey)
 	u.RawQuery = query.Encode()
 	return
 }

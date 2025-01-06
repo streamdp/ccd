@@ -29,8 +29,7 @@ You should previously export some environment variables:
 export CCDC_DATAPROVIDER=cryptocompare
 export CCDC_DATASOURCE=postgres://username:password@127.0.0.1:5432/dbname?sslmode=disable
 export CCDC_APIKEY=put you api key here
-export REDIS_HOSTNAME=redis hostname
-export REDIS_PASSWORD=redis password
+export REDIS_URL=redis://:redis_password@127.0.0.1:6379/0
 ```
 
 if you want use **huobi** as data provider export this:

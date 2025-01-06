@@ -24,6 +24,7 @@ const (
 
 type cryptoCompareRest struct {
 	apiKey string
+	client *http.Client
 }
 
 // Init apiKey, apiUrl, wsURL variables with environment values and return CryptoCompareData structure
@@ -34,6 +35,9 @@ func Init() (rc clients.RestClient, err error) {
 	}
 	return &cryptoCompareRest{
 		apiKey: apiKey,
+		client: &http.Client{
+			Timeout: time.Duration(config.HttpClientTimeout) * time.Millisecond,
+		},
 	}, nil
 }
 
@@ -54,10 +58,7 @@ func (cc *cryptoCompareRest) Get(fSym string, tSym string) (ds *clients.Data, er
 	if u, err = cc.buildURL(fSym, tSym); err != nil {
 		return nil, err
 	}
-	client := http.Client{
-		Timeout: time.Duration(config.HttpClientTimeout) * time.Millisecond,
-	}
-	if response, err = client.Get(u.String()); err != nil {
+	if response, err = cc.client.Get(u.String()); err != nil {
 		return nil, err
 	}
 	defer func(Body io.ReadCloser) {

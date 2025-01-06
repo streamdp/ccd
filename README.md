@@ -85,10 +85,8 @@ List of the implemented endpoints:
 * **/v1/collect/update** [POST, GET]  _update pulling interval for the selected pair_
 * **/v1/price** [POST, GET] _get actual (or cached if dataprovider is unavailable) info for the selected pair_
 * **/v1/ws** [GET] _websocket connection url, when you connected, try to send request like {"fsym":"BTC","tsym":"USD"}_
-
-Next work only for huobi just now:
-* **/v1/ws/subscribe** [POST, GET] _subscribe to collect data for the selected pair (if implemented)_
-* **/v1/ws/unsubscribe** [POST, GET] _unsubscribe to stop collect data for the selected pair (if implemented)_
+* **/v1/ws/subscribe** [POST, GET] _subscribe to collect data for the selected pair_
+* **/v1/ws/unsubscribe** [POST, GET] _unsubscribe to stop collect data for the selected pair_
 
 Example getting a GET request for getting actual info about selected pair:
 

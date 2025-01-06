@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
 	"github.com/streamdp/ccd/clients"
-	"github.com/streamdp/ccd/handlers"
+	"github.com/streamdp/ccd/domain"
+	"github.com/streamdp/ccd/router/handlers"
 )
 
 // CollectQuery structure for easily json serialization/validation/binding GET and POST query data
@@ -57,7 +57,7 @@ func PullingStatus(p clients.RestApiPuller, w clients.WsClient) handlers.Handler
 		r.UpdateAllFields(http.StatusOK, "Information about running tasks", nil)
 		var (
 			tasks      clients.Tasks
-			subscribes clients.Subscribes
+			subscribes domain.Subscribes
 		)
 		if p != nil {
 			tasks = p.ListTasks()

@@ -10,6 +10,7 @@ import (
 
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/config"
+	"github.com/streamdp/ccd/domain"
 )
 
 const (
@@ -49,7 +50,7 @@ func getApiKey() (apiKey string, err error) {
 }
 
 // Get filled CryptoCompareData structure for the selected pair currencies over http/https
-func (cc *cryptoCompareRest) Get(fSym string, tSym string) (ds *clients.Data, err error) {
+func (cc *cryptoCompareRest) Get(fSym string, tSym string) (ds *domain.Data, err error) {
 	var (
 		u        *url.URL
 		response *http.Response
@@ -78,12 +79,34 @@ func (cc *cryptoCompareRest) Get(fSym string, tSym string) (ds *clients.Data, er
 	return
 }
 
-func convertToDomain(from, to string, d *cryptoCompareData) *clients.Data {
-	return &clients.Data{
-		From:    from,
-		To:      to,
-		Raw:     d.Raw[from][to],
-		Display: d.Display[from][to],
+func convertToDomain(from, to string, d *cryptoCompareData) *domain.Data {
+	r := d.Raw[from][to]
+	b, _ := json.Marshal(&domain.Raw{
+		FromSymbol:     from,
+		ToSymbol:       to,
+		Open24Hour:     r.Open24Hour,
+		Volume24Hour:   r.Volume24Hour,
+		Volume24HourTo: r.Volume24Hourto,
+		High24Hour:     r.High24Hour,
+		Price:          r.Price,
+		LastUpdate:     r.LastUpdate,
+		Supply:         r.Supply,
+		MktCap:         r.MktCap,
+	})
+	return &domain.Data{
+		FromSymbol:      from,
+		ToSymbol:        to,
+		Change24Hour:    r.Change24Hour,
+		ChangePct24Hour: r.Changepct24Hour,
+		Open24Hour:      r.Open24Hour,
+		Volume24Hour:    r.Volume24Hour,
+		Low24Hour:       r.Low24Hour,
+		High24Hour:      r.High24Hour,
+		Price:           r.Price,
+		Supply:          r.Supply,
+		MktCap:          r.MktCap,
+		LastUpdate:      r.LastUpdate,
+		DisplayDataRaw:  string(b),
 	}
 }
 

@@ -4,15 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/streamdp/ccd/db"
+	"github.com/streamdp/ccd/domain"
+	"github.com/streamdp/ccd/router/handlers"
 	"nhooyr.io/websocket"
 
 	"github.com/streamdp/ccd/clients"
-	"github.com/streamdp/ccd/db"
-	"github.com/streamdp/ccd/handlers"
 	v1 "github.com/streamdp/ccd/router/v1"
 )
 
@@ -23,6 +25,7 @@ const (
 
 type wsHandler struct {
 	ctx         context.Context
+	l           *log.Logger
 	cancel      context.CancelFunc
 	conn        *websocket.Conn
 	messagePipe chan []byte
@@ -32,7 +35,7 @@ type wsHandler struct {
 }
 
 // HandleWs - handles websocket requests from the peer.
-func HandleWs(r clients.RestClient, db db.Database) gin.HandlerFunc {
+func HandleWs(r clients.RestClient, l *log.Logger, db db.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithCancel(context.Background())
 		conn, err := websocket.Accept(c.Writer, c.Request, &websocket.AcceptOptions{
@@ -40,11 +43,12 @@ func HandleWs(r clients.RestClient, db db.Database) gin.HandlerFunc {
 		})
 		if err != nil {
 			cancel()
-			handlers.SystemHandler(err)
+			l.Println(err)
 			return
 		}
 		h := &wsHandler{
 			ctx:         ctx,
+			l:           l,
 			cancel:      cancel,
 			conn:        conn,
 			messagePipe: make(chan []byte, 256),
@@ -73,7 +77,7 @@ func (w *wsHandler) handleClientRequests() {
 				query = v1.PriceQuery{}
 			)
 			if _, data, err = w.conn.Read(w.ctx); err != nil {
-				handlers.SystemHandler(err)
+				w.l.Println(err)
 				if errors.As(err, &websocket.CloseError{}) {
 					return
 				}
@@ -86,7 +90,7 @@ func (w *wsHandler) handleClientRequests() {
 				continue
 			}
 			if data, err = w.getLastPrice(&query); err != nil {
-				handlers.SystemHandler(err)
+				w.l.Println(err)
 				continue
 			}
 			w.messagePipe <- data
@@ -95,7 +99,7 @@ func (w *wsHandler) handleClientRequests() {
 }
 
 func (w *wsHandler) getLastPrice(q *v1.PriceQuery) (result []byte, err error) {
-	var data *clients.Data
+	var data *domain.Data
 	if data, err = v1.LastPrice(w.rc, w.db, q); err != nil {
 		return
 	}
@@ -110,14 +114,14 @@ func (w *wsHandler) handleMessagePipe() {
 	for message := range w.messagePipe {
 		ctx, cancel := context.WithTimeout(w.ctx, writeWait)
 		if err := w.conn.Write(ctx, websocket.MessageText, message); err != nil {
-			handlers.SystemHandler(err)
+			w.l.Println(err)
 			cancel()
 			return
 		}
 		cancel()
 	}
 	if err := w.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
-		handlers.SystemHandler(err)
+		w.l.Println(err)
 		return
 	}
 }
@@ -127,7 +131,7 @@ func (w *wsHandler) returnAnErrorToTheClient(err error) {
 	r := handlers.Result{}
 	r.UpdateAllFields(http.StatusBadRequest, err.Error(), nil)
 	if binaryString, err = json.Marshal(&r); err != nil {
-		handlers.SystemHandler(err)
+		w.l.Println(err)
 		return
 	}
 	w.messagePipe <- binaryString

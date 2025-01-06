@@ -2,28 +2,41 @@ package clients
 
 import (
 	"fmt"
-	"strconv"
+	"log"
 	"strings"
 	"sync"
 	"sync/atomic"
 
 	"github.com/streamdp/ccd/config"
-	"github.com/streamdp/ccd/session"
+	"github.com/streamdp/ccd/db"
+	"github.com/streamdp/ccd/domain"
 )
+
+// RestApiPuller interface makes it possible to expand the list of rest api pullers
+type RestApiPuller interface {
+	Task(from string, to string) *Task
+	AddTask(from string, to string, interval int64) *Task
+	RemoveTask(from string, to string)
+	ListTasks() Tasks
+	UpdateTask(t *Task, interval int64) *Task
+	RestoreLastSession() error
+}
 
 // RestPuller puller base struct
 type RestPuller struct {
 	t        Tasks
-	s        *session.KeysStore
-	dataPipe chan *Data
+	l        *log.Logger
+	s        db.Session
+	dataPipe chan *domain.Data
 	client   RestClient
 	pullerMu sync.RWMutex
 }
 
 // NewPuller init rest puller
-func NewPuller(r RestClient, s *session.KeysStore, dataPipe chan *Data) RestApiPuller {
+func NewPuller(r RestClient, l *log.Logger, s db.Session, dataPipe chan *domain.Data) RestApiPuller {
 	return &RestPuller{
 		t:        Tasks{},
+		l:        l,
 		s:        s,
 		dataPipe: dataPipe,
 		client:   r,
@@ -71,12 +84,14 @@ func buildTaskName(from, to string) string {
 // AddTask to collect data for the selected currency pair to the puller
 func (p *RestPuller) AddTask(from string, to string, interval int64) *Task {
 	t := p.newTask(from, to, interval)
-	t.run(p.client, p.dataPipe)
+	t.run(p.client, p.l, p.dataPipe)
 	name := buildTaskName(from, to)
 	p.pullerMu.Lock()
 	p.t[name] = t
 	p.pullerMu.Unlock()
-	p.s.AddTaskToSession(name, interval)
+	if err := p.s.AddTask(name, interval); err != nil {
+		p.l.Println(err)
+	}
 	return t
 }
 
@@ -88,7 +103,9 @@ func (p *RestPuller) RemoveTask(from string, to string) {
 	p.pullerMu.Lock()
 	defer p.pullerMu.Unlock()
 	delete(p.t, name)
-	p.s.RemoveTaskFromSession(name)
+	if err := p.s.RemoveTask(name); err != nil {
+		p.l.Print(err)
+	}
 }
 
 // RestoreLastSession get the last session from the session store and restore it
@@ -96,14 +113,14 @@ func (p *RestPuller) RestoreLastSession() (err error) {
 	if p.s == nil {
 		return
 	}
-	for k, v := range p.s.GetSession() {
+	ses, err := p.s.GetSession()
+	if err != nil {
+		return
+	}
+	for k, v := range ses {
 		if pair := strings.Split(k, ":"); len(pair) == 2 {
-			var i int64
 			from, to := pair[0], pair[1]
-			if i, err = strconv.ParseInt(v, 10, 64); err != nil {
-				continue
-			}
-			p.AddTask(from, to, i)
+			p.AddTask(from, to, v)
 		}
 	}
 	return
@@ -111,6 +128,8 @@ func (p *RestPuller) RestoreLastSession() (err error) {
 
 func (p *RestPuller) UpdateTask(t *Task, interval int64) *Task {
 	atomic.StoreInt64(&t.Interval, interval)
-	p.s.AddTaskToSession(buildTaskName(t.From, t.To), interval)
+	if err := p.s.UpdateTask(buildTaskName(t.From, t.To), interval); err != nil {
+		p.l.Println(err)
+	}
 	return t
 }

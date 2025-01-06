@@ -1,6 +1,24 @@
-package clients
+package cryptocompare
 
-import "strings"
+type cryptoCompareData struct {
+	Raw     map[string]map[string]*Response `json:"RAW"`
+	Display map[string]map[string]*Display  `json:"DISPLAY"`
+}
+
+type cryptoCompareWsData struct {
+	Type                string  `json:"TYPE"`
+	FromSymbol          string  `json:"FROMSYMBOL"`
+	ToSymbol            string  `json:"TOSYMBOL"`
+	Price               float64 `json:"PRICE"`
+	LastUpdate          int64   `json:"LASTUPDATE"`
+	Volume24Hour        float64 `json:"VOLUME24HOUR"`
+	Volume24HourTo      float64 `json:"VOLUME24HOURTO"`
+	Open24Hour          float64 `json:"OPEN24HOUR"`
+	High24Hour          float64 `json:"HIGH24HOUR"`
+	Low24Hour           float64 `json:"LOW24HOUR"`
+	CurrentSupply       float64 `json:"CURRENTSUPPLY"`
+	CurrentSupplyMktCap float64 `json:"CURRENTSUPPLYMKTCAP"`
+}
 
 // Response structure for easily json serialization
 type Response struct {
@@ -39,33 +57,4 @@ type Data struct {
 	To      string
 	Raw     *Response `json:"RAW"`
 	Display *Display  `json:"DISPLAY"`
-}
-
-// EmptyData returns empty Data
-func EmptyData(from string, to string) *Data {
-	return &Data{
-		From:    from,
-		To:      to,
-		Raw:     &Response{},
-		Display: &Display{},
-	}
-}
-
-type Subscribe struct {
-	From string `json:"from"`
-	To   string `json:"to"`
-	id   int64
-}
-type Subscribes map[string]*Subscribe
-
-func NewSubscribe(from, to string, id int64) *Subscribe {
-	return &Subscribe{
-		From: strings.ToUpper(from),
-		To:   strings.ToUpper(to),
-		id:   id,
-	}
-}
-
-func (s *Subscribe) Id() int64 {
-	return s.id
 }

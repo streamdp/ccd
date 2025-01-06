@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,10 +15,10 @@ var (
 	// Port - set default port for gin-gonic engine init
 	Port              = ":8080"
 	RunMode           = gin.DebugMode
-	Symbols           = "BTC,XRP,ETH,LTC,USD,EUR,GBP,JPY,USDT"
 	HttpClientTimeout = 1000
 	Version           = "1.0.0"
 	DataProvider      = "cryptocompare" // "huobi"
+	SessionStore      = "db"            // "redis"
 )
 
 // ParseFlags and update config variables
@@ -31,9 +32,9 @@ func ParseFlags() {
 	flag.BoolVar(&showVersion, "v", false, "display version")
 	flag.BoolVar(&debug, "debug", false, "run the program in debug mode")
 	flag.StringVar(&Port, "port", ":8080", "set specify port")
+	flag.StringVar(&SessionStore, "session", "db", "set session store \"db\" or \"redis\"")
 	flag.IntVar(&HttpClientTimeout, "timeout", HttpClientTimeout, "how long to wait for a response from the"+
 		" api server before sending data from the cache")
-	flag.StringVar(&Symbols, "symbols", Symbols, "specify list possible currencies")
 	flag.StringVar(&DataProvider, "dataprovider", DataProvider, "use selected data provider"+
 		" (\"cryptocompare\", \"huobi\")")
 	flag.Parse()
@@ -41,10 +42,10 @@ func ParseFlags() {
 		debug = true
 	}
 	if dataProvider := GetEnv("CCDC_DATAPROVIDER"); dataProvider != "" {
-		DataProvider = dataProvider
+		DataProvider = strings.ToLower(dataProvider)
 	}
-	if symbols := GetEnv("CCDC_SYMBOLS"); symbols != "" {
-		Symbols = symbols
+	if sessionStore := GetEnv("CCDC_SESSIONSTORE"); sessionStore != "" {
+		SessionStore = strings.ToLower(sessionStore)
 	}
 	if showHelp {
 		fmt.Println("ccd is a microservice that collect data from several crypto data providers using its API.")

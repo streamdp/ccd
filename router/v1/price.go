@@ -1,14 +1,15 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/db"
-	"github.com/streamdp/ccd/handlers"
+	"github.com/streamdp/ccd/domain"
+	"github.com/streamdp/ccd/router/handlers"
 )
 
 // PriceQuery structure for easily json serialization/validation/binding GET and POST query data
@@ -18,13 +19,10 @@ type PriceQuery struct {
 }
 
 // LastPrice return up-to-date data for the selected currencies pair
-func LastPrice(r clients.RestClient, db db.Database, query *PriceQuery) (d *clients.Data, err error) {
+func LastPrice(r clients.RestClient, db db.Database, query *PriceQuery) (d *domain.Data, err error) {
 	from, to := strings.ToUpper(query.From), strings.ToUpper(query.To)
-	d, err = r.Get(from, to)
-	if err != nil {
-		if d, err = db.GetLast(from, to); err != nil {
-			return
-		}
+	if d, err = r.Get(from, to); err != nil {
+		return db.GetLast(from, to)
 	}
 	db.DataPipe() <- d
 	return
@@ -41,7 +39,7 @@ func Price(rc clients.RestClient, db db.Database) handlers.HandlerFuncResError {
 		if err != nil {
 			return
 		}
-		r.UpdateAllFields(http.StatusOK, "Most recent price, updated at "+p.Display.LastUpdate, p)
+		r.UpdateAllFields(http.StatusOK, fmt.Sprintf("Most recent price, updated at %d", p.LastUpdate), p)
 		return
 	}
 }

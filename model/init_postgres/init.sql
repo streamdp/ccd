@@ -1,11 +1,11 @@
-create database if not exists cryptocompare;
+create database cryptocompare;
 
 drop table if exists data;
 create table data
 (
-    _id             bigint default unique_rowid() not null primary key,
-    fromsym         bigint                        not null,
-    tosym           bigint                        not null,
+    _id             serial not null primary key,
+    fromsym         bigint not null,
+    tosym           bigint not null,
     change24hour    double precision,
     changepct24hour double precision,
     open24hour      double precision,
@@ -15,10 +15,9 @@ create table data
     price           double precision,
     supply          double precision,
     mktcap          double precision,
-    lastupdate      text                          not null,
+    lastupdate      text   not null,
     displaydataraw  text
 );
-
 
 drop table if exists symbols;
 create table symbols
@@ -38,3 +37,14 @@ values ('USDT','₮'),
        ('EUR','€'),
        ('GBP','£'),
        ('JPY','¥');
+
+drop table if exists session cascade;
+create table session
+(
+    _id serial not null primary key,
+    task_name varchar(64) not null,
+    interval integer default 60 not null
+);
+
+create unique index session_task_name_uindex
+    on session (task_name);

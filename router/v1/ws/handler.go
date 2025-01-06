@@ -74,7 +74,7 @@ func (w *wsHandler) handleClientRequests() {
 			)
 			if _, data, err = w.conn.Read(w.ctx); err != nil {
 				handlers.SystemHandler(err)
-				if isWebsocketCloseError(err) {
+				if errors.As(err, &websocket.CloseError{}) {
 					return
 				}
 				continue
@@ -92,16 +92,6 @@ func (w *wsHandler) handleClientRequests() {
 			w.messagePipe <- data
 		}
 	}
-}
-
-func isWebsocketCloseError(err error) bool {
-	if e, ok := errors.Unwrap(errors.Unwrap(err)).(websocket.CloseError); ok {
-		switch e.Code {
-		case websocket.StatusAbnormalClosure, websocket.StatusNormalClosure, websocket.StatusNoStatusRcvd:
-			return true
-		}
-	}
-	return false
 }
 
 func (w *wsHandler) getLastPrice(q *v1.PriceQuery) (result []byte, err error) {

@@ -92,8 +92,8 @@ List of the implemented endpoints:
 * **/v1/ws** [GET] _websocket connection url, when you connected, try to send request like {"fsym":"BTC","tsym":"USD"}_
 * **/v1/ws/subscribe** [POST, GET] _subscribe to collect data for the selected pair_
 * **/v1/ws/unsubscribe** [POST, GET] _unsubscribe to stop collect data for the selected pair_
-* **/v1/symbols [POST, PUT, DELETE] _add, update, delete currency symbol_
-* **/v1/collect [POST, PUT, DELETE] _add, update, delete worker to collect data_
+* **/v1/symbols** [POST, PUT, DELETE] _add, update, delete currency symbol_
+* **/v1/collect** [POST, PUT, DELETE] _add, update, delete worker to collect data_
 
 Example getting a GET request for getting actual info about selected pair:
 

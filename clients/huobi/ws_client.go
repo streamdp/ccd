@@ -22,18 +22,18 @@ import (
 const wssUrl = "wss://api.huobi.pro/ws"
 
 type huobiWs struct {
-	ctx        context.Context
-	l          *log.Logger
-	conn       *websocket.Conn
-	subscribes domain.Subscriptions
-	subMu      sync.RWMutex
+	ctx           context.Context
+	l             *log.Logger
+	conn          *websocket.Conn
+	subscriptions domain.Subscriptions
+	subMu         sync.RWMutex
 }
 
 func InitWs(pipe chan *domain.Data, l *log.Logger) (clients.WsClient, error) {
 	h := &huobiWs{
-		ctx:        context.Background(),
-		l:          l,
-		subscribes: domain.Subscriptions{},
+		ctx:           context.Background(),
+		l:             l,
+		subscriptions: domain.Subscriptions{},
 	}
 	if err := h.reconnect(); err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func InitWs(pipe chan *domain.Data, l *log.Logger) (clients.WsClient, error) {
 
 func (h *huobiWs) reconnect() (err error) {
 	if h.conn != nil {
-		if err := h.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
+		if err = h.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 			h.l.Println(err)
 			// reducing logs and CPU load when API key expired
 			time.Sleep(10 * time.Second)
@@ -57,7 +57,7 @@ func (h *huobiWs) reconnect() (err error) {
 func (h *huobiWs) resubscribe() (err error) {
 	h.subMu.RLock()
 	defer h.subMu.RUnlock()
-	for k, v := range h.subscribes {
+	for k, v := range h.subscriptions {
 		if err = h.sendSubscribeMsg(k, v.Id()); err != nil {
 			return
 		}
@@ -147,7 +147,7 @@ func (h *huobiWs) pingHandler(m []byte) (err error) {
 func (h *huobiWs) pairFromChannelName(ch string) (from, to string) {
 	h.subMu.RLock()
 	defer h.subMu.RUnlock()
-	if c, ok := h.subscribes[ch]; ok {
+	if c, ok := h.subscriptions[ch]; ok {
 		return c.From, c.To
 	}
 	return
@@ -164,11 +164,11 @@ func (h *huobiWs) Unsubscribe(from, to string) (err error) {
 	h.subMu.Lock()
 	defer h.subMu.Unlock()
 	var ch = buildChannelName(from, to)
-	if c, ok := h.subscribes[ch]; ok {
+	if c, ok := h.subscriptions[ch]; ok {
 		if err = h.sendUnsubscribeMsg(ch, c.Id()); err != nil {
 			return
 		}
-		delete(h.subscribes, ch)
+		delete(h.subscriptions, ch)
 	}
 	return
 }
@@ -189,7 +189,7 @@ func (h *huobiWs) Subscribe(from, to string) (err error) {
 	if err = h.sendSubscribeMsg(ch, id); err != nil {
 		return
 	}
-	h.subscribes[ch] = domain.NewSubscription(from, to, id)
+	h.subscriptions[ch] = domain.NewSubscription(from, to, id)
 	return
 }
 
@@ -200,10 +200,10 @@ func (h *huobiWs) sendSubscribeMsg(ch string, id int64) error {
 }
 
 func (h *huobiWs) ListSubscriptions() domain.Subscriptions {
-	s := make(domain.Subscriptions, len(h.subscribes))
+	s := make(domain.Subscriptions, len(h.subscriptions))
 	h.subMu.RLock()
 	defer h.subMu.RUnlock()
-	for k, v := range h.subscribes {
+	for k, v := range h.subscriptions {
 		s[k] = v
 	}
 	return s

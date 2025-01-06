@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/streamdp/ccd/handlers"
@@ -10,19 +11,21 @@ import (
 type Task struct {
 	From     string `json:"from"`
 	To       string `json:"to"`
-	Interval int    `json:"interval"`
+	Interval int64  `json:"interval"`
 	done     chan struct{}
 }
 type Tasks map[string]*Task
 
 func (t *Task) run(r RestClient, dataPipe chan *Data) {
+	timer := time.NewTimer(time.Duration(atomic.LoadInt64(&t.Interval)) * time.Second)
 	go func() {
 		defer close(t.done)
 		for {
+			timer.Reset(time.Duration(atomic.LoadInt64(&t.Interval)) * time.Second)
 			select {
 			case <-t.done:
 				return
-			case <-time.After(time.Duration(t.Interval) * time.Second):
+			case <-timer.C:
 				data, err := r.Get(t.From, t.To)
 				if err != nil {
 					handlers.SystemHandler(err)

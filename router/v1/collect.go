@@ -13,7 +13,7 @@ import (
 type CollectQuery struct {
 	From     string `json:"fsym" form:"fsym" binding:"required,crypto"`
 	To       string `json:"tsym" form:"tsym" binding:"required,common"`
-	Interval int    `json:"interval" form:"interval,default=60"`
+	Interval int64  `json:"interval" form:"interval,default=60"`
 }
 
 // AddWorker that will collect data for the selected currency pair to the management service
@@ -102,7 +102,7 @@ func UpdateWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 			r.UpdateAllFields(http.StatusOK, "No data is collected for this pair", t)
 			return
 		}
-		t.Interval = q.Interval
+		p.UpdateTask(t, q.Interval)
 		r.UpdateAllFields(http.StatusOK, "Task updated successfully", t)
 		return
 	}

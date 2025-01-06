@@ -17,4 +17,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: unit-testing-results-${{ github.sha }}
-        path: test-result.json
+        path: test-results.json

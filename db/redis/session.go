@@ -108,3 +108,10 @@ func (s *KeysStore) RemoveTask(n string) (err error) {
 	s.c.HDel(sessionName, n)
 	return
 }
+
+func (s *KeysStore) Close() (err error) {
+	if s.c == nil {
+		return
+	}
+	return s.c.Close()
+}

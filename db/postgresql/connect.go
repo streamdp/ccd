@@ -34,5 +34,8 @@ func Connect(dataSource string) (d *Db, err error) {
 // Close Db connection
 func (d *Db) Close() (err error) {
 	defer close(d.pipe)
-	return d.Close()
+	if d.DB == nil {
+		return
+	}
+	return d.DB.Close()
 }

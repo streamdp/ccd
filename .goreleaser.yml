@@ -23,7 +23,7 @@ archives:
     files:
       - README.md
       - LICENSE
-      - db/redis/REDIS-LICENSE
+      - db/redis/LICENSE
       - site/*
       - model/init/*
 checksum:

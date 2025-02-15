@@ -118,7 +118,12 @@ Example of sending a GET request to subscribe wss channel:
 $ curl "http://localhost:8080/v1/ws/subscribe?fsym=BTC&tsym=USD"
 ```
 
-
 Working example URL: https://ccd.oncook.top/healthz
 
 Web UI: https://ccd.oncook.top
+
+## Contributing
+Contributions are welcome! If you encounter any issues, have suggestions for new features, or want to improve **ccd**, please feel free to open an issue or submit a pull request on the project's GitHub repository.
+
+## License
+**ccd** is released under the _MIT_ License. See the LICENSE file for complete license details.

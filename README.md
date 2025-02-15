@@ -1,4 +1,4 @@
-## ccd
+## CCD
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/streamdp/ccd)](https://goreportcard.com/report/github.com/streamdp/ccd)
 [![Website ccd.oncook.top](https://img.shields.io/website-up-down-green-red/https/ccd.oncook.top/healthz.svg)](https://ccd.oncook.top/)
@@ -123,7 +123,7 @@ Working example URL: https://ccd.oncook.top/healthz
 Web UI: https://ccd.oncook.top
 
 ### Contributing
-Contributions are welcome! If you encounter any issues, have suggestions for new features, or want to improve **ccd**, please feel free to open an issue or submit a pull request on the project's GitHub repository.
+Contributions are welcome! If you encounter any issues, have suggestions for new features, or want to improve **CCD**, please feel free to open an issue or submit a pull request on the project's GitHub repository.
 
 ### License
-**ccd** is released under the _MIT_ License. See the [LICENSE](https://github.com/streamdp/ccd/blob/main/LICENSE) file for complete license details.
+**CCD** is released under the _MIT_ License. See the [LICENSE](https://github.com/streamdp/ccd/blob/main/LICENSE) file for complete license details.

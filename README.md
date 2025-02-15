@@ -126,4 +126,4 @@ Web UI: https://ccd.oncook.top
 Contributions are welcome! If you encounter any issues, have suggestions for new features, or want to improve **ccd**, please feel free to open an issue or submit a pull request on the project's GitHub repository.
 
 ## License
-**ccd** is released under the _MIT_ License. See the [LICENSE](https://github.com/streamdp/ccd/raw/refs/heads/main/LICENSE) file for complete license details.
+**ccd** is released under the _MIT_ License. See the [LICENSE](https://github.com/streamdp/ccd/blob/main/LICENSE) file for complete license details.

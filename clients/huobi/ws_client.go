@@ -88,8 +88,8 @@ func (h *huobiWs) handleWsError(err error) error {
 func (h *huobiWs) handleWsMessages(pipe chan *domain.Data) {
 	go func() {
 		defer func(conn *websocket.Conn, code websocket.StatusCode, reason string) {
-			if err := conn.Close(code, reason); err != nil {
-				h.l.Println(err)
+			if errClose := conn.Close(code, reason); errClose != nil {
+				h.l.Println(errClose)
 			}
 		}(h.conn, websocket.StatusNormalClosure, "")
 		for {

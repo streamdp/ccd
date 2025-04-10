@@ -106,8 +106,8 @@ func (c *cryptoCompareWs) handleWssError(err error) error {
 func (c *cryptoCompareWs) handleWsMessages(pipe chan *domain.Data) {
 	go func() {
 		defer func(conn *websocket.Conn, code websocket.StatusCode, reason string) {
-			if err := conn.Close(code, reason); err != nil {
-				c.l.Println(err)
+			if errClose := conn.Close(code, reason); errClose != nil {
+				c.l.Println(errClose)
 			}
 		}(c.conn, websocket.StatusNormalClosure, "")
 		var (

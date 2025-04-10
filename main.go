@@ -27,15 +27,15 @@ func main() {
 		l.Fatalln(err)
 	}
 	defer func() {
-		if err = d.Close(); err != nil {
-			l.Println(fmt.Errorf("failed to close database connection: %w", err))
+		if errClose := d.Close(); errClose != nil {
+			l.Println(fmt.Errorf("failed to close database connection: %w", errClose))
 		}
 	}()
 
 	s := newSessionStore(d, l)
 	defer func() {
-		if err = s.Close(); err != nil {
-			l.Println(fmt.Errorf("failed to close session store: %w", err))
+		if errClose := s.Close(); errClose != nil {
+			l.Println(fmt.Errorf("failed to close session store: %w", errClose))
 		}
 	}()
 

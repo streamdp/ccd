@@ -63,27 +63,7 @@ func PullingStatus(p clients.RestApiPuller, w clients.WsClient) handlers.Handler
 		if w != nil {
 			subscriptions = w.ListSubscriptions()
 		}
-		if len(tasks) == 0 && len(subscriptions) == 0 {
-			return
-		}
-		list := map[string]map[string]interface{}{}
-		for _, v := range tasks {
-			if list[v.From] != nil {
-				list[v.From][v.To] = v
-				continue
-			}
-			list[v.From] = make(map[string]interface{})
-			list[v.From][v.To] = v
-		}
-		for _, v := range subscriptions {
-			if list[v.From] != nil {
-				list[v.From][v.To] = v
-				continue
-			}
-			list[v.From] = make(map[string]interface{})
-			list[v.From][v.To] = v
-		}
-		r.UpdateDataField(list)
+		r.UpdateDataField(mergeTasks(tasks, subscriptions))
 		return
 	}
 }
@@ -138,4 +118,36 @@ func Unsubscribe(w clients.WsClient) handlers.HandlerFuncResError {
 		)
 		return
 	}
+}
+
+func mergeTasks(tasks clients.Tasks, subscriptions domain.Subscriptions) any { // map[string]map[string]interface{} {
+	if len(tasks) == 0 && len(subscriptions) == 0 {
+		return nil
+	}
+
+	list := map[string]map[string]interface{}{}
+
+	if len(tasks) != 0 {
+		for _, v := range tasks {
+			if list[v.From] != nil {
+				list[v.From][v.To] = v
+				continue
+			}
+			list[v.From] = make(map[string]interface{})
+			list[v.From][v.To] = v
+		}
+	}
+
+	if len(subscriptions) != 0 {
+		for _, v := range subscriptions {
+			if list[v.From] != nil {
+				list[v.From][v.To] = v
+				continue
+			}
+			list[v.From] = make(map[string]interface{})
+			list[v.From][v.To] = v
+		}
+	}
+
+	return list
 }

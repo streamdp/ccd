@@ -59,10 +59,10 @@ func (p *RestPuller) newTask(from string, to string, interval int64) *Task {
 func (p *RestPuller) ListTasks() Tasks {
 	var t = make(Tasks, len(p.t))
 	p.pullerMu.RLock()
-	defer p.pullerMu.RUnlock()
 	for k, v := range p.t {
 		t[k] = v
 	}
+	p.pullerMu.RUnlock()
 	return t
 }
 
@@ -101,8 +101,8 @@ func (p *RestPuller) RemoveTask(from string, to string) {
 	t := p.task(name)
 	t.close()
 	p.pullerMu.Lock()
-	defer p.pullerMu.Unlock()
 	delete(p.t, name)
+	p.pullerMu.Unlock()
 	if err := p.s.RemoveTask(name); err != nil {
 		p.l.Print(err)
 	}

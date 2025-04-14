@@ -2,11 +2,14 @@ package clients
 
 import (
 	"log"
+	"math/rand"
 	"sync/atomic"
 	"time"
 
 	"github.com/streamdp/ccd/domain"
 )
+
+const defaultRunTaskGap = 30
 
 // Task does all the data mining run
 type Task struct {
@@ -18,16 +21,16 @@ type Task struct {
 type Tasks map[string]*Task
 
 func (t *Task) run(r RestClient, l *log.Logger, dataPipe chan *domain.Data) {
-	timer := time.NewTimer(time.Duration(atomic.LoadInt64(&t.Interval)) * time.Second)
+	timer := time.NewTimer(time.Duration(rand.Intn(defaultRunTaskGap)) * time.Second)
 	go func() {
 		defer close(t.done)
 		for {
-			timer.Reset(time.Duration(atomic.LoadInt64(&t.Interval)) * time.Second)
 			select {
 			case <-t.done:
 				timer.Stop()
 				return
 			case <-timer.C:
+				timer.Reset(time.Duration(atomic.LoadInt64(&t.Interval)) * time.Second)
 				data, err := r.Get(t.From, t.To)
 				if err != nil {
 					l.Println(err)

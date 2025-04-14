@@ -15,7 +15,7 @@ function toggleTheme() {
 
 function get_list_with_active_nodes() {
     var xmlhttp = new XMLHttpRequest();
-    xmlhttp.open('GET', "v1/collect/status", true);
+    xmlhttp.open('GET', "v2/collect", true);
     xmlhttp.onreadystatechange = function() {
         if (xmlhttp.readyState === 4) {
             if(xmlhttp.status === 200) {

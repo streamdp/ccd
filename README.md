@@ -50,7 +50,7 @@ $ ./ccd -debug
 The default port is 8080, you can test the application in a browser or with curl:
 
 ```bash
-$ curl 127.0.0.1:8080/v1/service/ping
+$ curl 127.0.0.1:8080/healthz
 ```
 
 You can choose a different port and run more than one copy of **ccd** on your local host. For example:
@@ -77,45 +77,44 @@ Usage of ccd:
   -timeout int
         how long to wait for a response from the api server before sending data from the cache (default 1000)
 ```
-
-List of the implemented endpoints:
+Since the release of v2.3.0, the ccd service has moved to API v2, all v1 endpoints have been deprecated and 
+are not recommended for use. List of the implemented endpoints v2 API:
 * **/healthz** [GET]   _check node status_
-* **/v1/collect/add** [GET] _add new worker to collect data for the selected pair_
-* **/v1/collect/remove** [GET] _stop and remove worker and collecting data for the selected pair_
-* **/v1/collect/status** [GET] _show info about running workers_
-* **/v1/collect/update** [GET]  _update pulling interval for the selected pair_
-* **/v1/symbols/add** [GET] _add new currency symbol to the db_
-* **/v1/symbols/update** [GET]  _update currency symbol in the db_
-* **/v1/symbols/remove** [GET] _remove currency symbol in the db_
-* **/v1/price** [POST, GET] _get actual (or cached if dataprovider is unavailable) info for the selected pair_
-* **/v1/ws** [GET] _websocket connection url, when you connected, try to send request like {"fsym":"BTC","tsym":"USD"}_
-* **/v1/ws/subscribe** [POST, GET] _subscribe to collect data for the selected pair_
-* **/v1/ws/unsubscribe** [POST, GET] _unsubscribe to stop collect data for the selected pair_
-* **/v1/symbols** [POST, PUT, DELETE] _add, update, delete currency symbol_
-* **/v1/collect** [POST, PUT, DELETE] _add, update, delete worker to collect data_
+* **/v2/collect** [GET] _list of all running workers_
+* **/v2/collect** [POST] _add new worker to collect data for the selected pair_
+* **/v2/collect** [PUT]  _update pulling interval for the selected pair_
+* **/v2/collect** [DELETE] _stop and remove worker and collecting data for the selected pair_
+* **/v2/symbols** [GET] _list of all symbols presented_
+* **/v2/symbols** [POST] _add currency symbol_
+* **/v2/symbols** [PUT] _update currency symbol_
+* **/v2/symbols** [DELETE] _delete currency symbol_
+* **/v2/price** [GET] _get actual (or cached when dataprovider is unavailable) info for the selected pair_
+* **/v2/ws** [GET] _websocket connection url, when you connected, try to send request like {"fsym":"BTC","tsym":"USD"}_
+* **/v2/ws/subscribe** [GET] _subscribe to collect data for the selected pair_
+* **/v2/ws/unsubscribe** [GET] _unsubscribe to stop collect data for the selected pair_
 
 Example getting a GET request for getting actual info about selected pair:
 
 ```bash
-$ curl "http://localhost:8080/v1/price?fsym=ETH&tsym=JPY"
+$ curl "http://localhost:8080/v2/price?fsym=ETH&tsym=USDT"
 ```
 
 Example of sending a POST request to add a new worker:
 
 ```bash
-$ curl -X POST -H "Content-Type: application/json" -d '{ "fsym": "BTC", "tsym": "USD", "interval": 60}' "http://localhost:8080/v1/collect"
+$ curl -X POST -H "Content-Type: application/json" -d '{ "fsym": "BTC", "tsym": "USD", "interval": 60}' "http://localhost:8080/v2/collect"
 ```
 
-Example of sending a GET request to remove worker:
+Example of sending a DELETE request to remove worker:
 
 ```bash
-$ curl "http://localhost:8080/v1/collect/remove?fsym=BTC&tsym=USD&interval=60"
+$ curl -X DELETE "http://localhost:8080/v2/collect?fsym=BTC&tsym=USD&interval=60"
 ```
 
 Example of sending a GET request to subscribe wss channel:
 
 ```bash
-$ curl "http://localhost:8080/v1/ws/subscribe?fsym=BTC&tsym=USD"
+$ curl "http://localhost:8080/v2/ws/subscribe?fsym=BTC&tsym=USD"
 ```
 
 Working example URL: https://ccd.oncook.top/healthz

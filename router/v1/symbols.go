@@ -15,6 +15,14 @@ type SymbolQuery struct {
 	Unicode string `json:"unicode" form:"unicode" binding:"required"`
 }
 
+// AllSymbols return all symbols
+func AllSymbols(sr *repos.SymbolRepo) handlers.HandlerFuncResError {
+	return func(c *gin.Context) (r handlers.Result, err error) {
+		r.UpdateAllFields(http.StatusOK, "list of all symbols presented", sr.GetAll())
+		return
+	}
+}
+
 // AddSymbol to the symbols table
 func AddSymbol(sr *repos.SymbolRepo) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (r handlers.Result, err error) {

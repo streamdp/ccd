@@ -36,7 +36,14 @@ func (sc *SymbolRepo) Load() error {
 	return nil
 }
 
+func (sc *SymbolRepo) GetAll() []string {
+	return sc.c.GetAll()
+}
+
 func (sc *SymbolRepo) Add(s, u string) (err error) {
+	if sc.IsPresent(s) {
+		return nil
+	}
 	if _, err = sc.db.AddSymbol(s, u); err != nil {
 		return
 	}
@@ -45,6 +52,9 @@ func (sc *SymbolRepo) Add(s, u string) (err error) {
 }
 
 func (sc *SymbolRepo) Remove(s string) (err error) {
+	if !sc.IsPresent(s) {
+		return nil
+	}
 	if _, err = sc.db.RemoveSymbol(s); err != nil {
 		return
 	}

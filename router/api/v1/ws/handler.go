@@ -12,10 +12,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/streamdp/ccd/db"
 	"github.com/streamdp/ccd/domain"
+	v1 "github.com/streamdp/ccd/router/api/v1"
 	"github.com/streamdp/ccd/router/handlers"
 
 	"github.com/streamdp/ccd/clients"
-	v1 "github.com/streamdp/ccd/router/v1"
 )
 
 const (

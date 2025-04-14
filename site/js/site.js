@@ -27,13 +27,13 @@ function get_list_with_active_nodes() {
                 }
                 let result = "<strong>Data is currently being collected for:</strong><ul>";
                 for (let fsym in data){
-                    let nodes = data[fsym];
                     let litag = "<li>" + fsym + " to: "
-                    for (let tsym in nodes){
-                        if (nodes[tsym]["interval"] === undefined) {
-                            nodes[tsym]["interval"] = "interval not set (wss)"
+                    for (let tsym in data[fsym]){
+                        let interval = data[fsym][tsym]["interval"]
+                        if (interval === undefined) {
+                            interval = "interval not set (wss)"
                         }
-                        litag += tsym+ ":" + nodes[tsym]["interval"] + ", ";
+                        litag += tsym+ ":" + interval + ", ";
                     }
                     result += litag.slice(0, -2) + "</li>";
                 }

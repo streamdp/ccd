@@ -4,7 +4,7 @@
 [![Website ccd.oncook.top](https://img.shields.io/website-up-down-green-red/https/ccd.oncook.top/healthz.svg)](https://ccd.oncook.top/)
 [![GitHub release](https://img.shields.io/github/release/streamdp/ccd.svg)](https://github.com/streamdp/ccd/releases/)
 
-It is a microservice that collect data from several crypto data providers using its API.
+Service for collecting data from several crypto data providers using its API.
 
 This microservice uses:
 

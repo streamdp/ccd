@@ -17,6 +17,15 @@ func NewSymbolCache() *SymbolCache {
 	}
 }
 
+func (sc *SymbolCache) GetAll() (ret []string) {
+	sc.m.RLock()
+	defer sc.m.RUnlock()
+	for k := range sc.c {
+		ret = append(ret, k)
+	}
+	return ret
+}
+
 func (sc *SymbolCache) Add(s string) {
 	sc.m.Lock()
 	defer sc.m.Unlock()

@@ -1,47 +1,31 @@
-## CCD
-
-[![Go Report Card](https://goreportcard.com/badge/github.com/streamdp/ccd)](https://goreportcard.com/report/github.com/streamdp/ccd)
+# CCD
 [![Website ccd.oncook.top](https://img.shields.io/website-up-down-green-red/https/ccd.oncook.top/healthz.svg)](https://ccd.oncook.top/)
 [![GitHub release](https://img.shields.io/github/release/streamdp/ccd.svg)](https://github.com/streamdp/ccd/releases/)
 
-Service for collecting data from several crypto data providers using its API.
-
-This microservice uses:
-
-* gin-gonic/gin package to start and serve HTTP server
-* coder/websocket package to manage websocket connection
-* go-sql-driver/mysql package to work with mysql database
-* lib/pq package to work with postgresql database
-* go-redis/redis package for saving the active session and restoring it when the puller is restarted
-
-
-### Build app
+This microservice is designed to manage real-time and historical cryptocurrency data collection. It provides both RESTful and WebSocket endpoints for flexible interaction with currency pair data. The service supports the following key functionalities:
+* **Worker Management**: You can add, update, list, or remove background workers responsible for collecting data for specific currency pairs. These workers handle data pulling at defined intervals.
+* **Symbol Management**: Add, update, list, or delete currency symbols that are tracked by the system.
+* **Price Retrieval**: Fetch the most recent price data for a selected currency pair, including cached data when the data provider is unavailable.
+* **WebSocket Integration**: Provides a WebSocket connection for real-time updates. Clients can subscribe or unsubscribe to specific currency pairs using JSON messages like {"fsym":"BTC","tsym":"USD"}.
+## Build app
 
 ```bash
 $ go build -o ccd .
 ````
 
-### Run app
-You should previously export some environment variables:
-
+## Run app
+To configure app, export some environment variables:
 ```bash
-export CCDC_DATAPROVIDER=cryptocompare
+export CCDC_DATAPROVIDER=cryptocompare #huobi
 export CCDC_DATABASEURL=postgres://username:password@127.0.0.1:5432/dbname?sslmode=disable
 export CCDC_APIKEY=put you api key here
 export CCDC_SESSIONSTORE=redis // or "db", default value is "db"
 export REDIS_URL=redis://:redis_password@127.0.0.1:6379/0 // only when "redis" session store selected
 ```
-
-if you want use **huobi** as data provider export this:
-```bash
-export CCDC_DATAPROVIDER=huobi
-```
-
-If you use **mysql** db, you should export something like this:
+To use **mysql** db, just export something like this instead:
 ```bash
 export CCDC_DATABASEURL=mysql://username:password@tcp(localhost:3306)/dbname
 ``` 
-
 And run application:
 ```bash
 $ ./ccd -debug
@@ -121,9 +105,9 @@ Working example URL: https://ccd.oncook.top/healthz
 
 Web UI: https://ccd.oncook.top
 
-### Contributing
+## Contributing
 Contributions are welcome! If you encounter any issues, have suggestions for new features, or want to improve **CCD**, please feel free to open an issue or submit a pull request on the project's GitHub repository.
-### License
+## License
 **CCD** is released under the _MIT_ License. See the [LICENSE](https://github.com/streamdp/ccd/blob/main/LICENSE) file for complete license details.
-### Support project
+## Support project
 [DigitalOcean](https://www.digitalocean.com/?refcode=253bf19488bd&utm_campaign=Referral_Invite&utm_medium=Referral_Program) referral link.

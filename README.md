@@ -8,11 +8,9 @@ This microservice is designed to manage real-time and historical cryptocurrency 
 * **Price Retrieval**: Fetch the most recent price data for a selected currency pair, including cached data when the data provider is unavailable.
 * **WebSocket Integration**: Provides a WebSocket connection for real-time updates. Clients can subscribe or unsubscribe to specific currency pairs using JSON messages like _{"fsym":"BTC","tsym":"USD"}_.
 ## Build app
-
 ```bash
 $ go build -o ccd .
 ````
-
 ## Run app
 To configure app, export some environment variables:
 ```bash
@@ -22,28 +20,19 @@ export CCDC_APIKEY=put you api key here
 export CCDC_SESSIONSTORE=redis // or "db", default value is "db"
 export REDIS_URL=redis://:redis_password@127.0.0.1:6379/0 // only when "redis" session store selected
 ```
-To use **mysql** db, just export something like this instead:
-```bash
-export CCDC_DATABASEURL=mysql://username:password@tcp(localhost:3306)/dbname
-``` 
 And run application:
 ```bash
 $ ./ccd -debug
 ```
-
-The default port is 8080, you can test the application in a browser or with curl:
-
+The default port is 8080, test the application in a browser or with curl:
 ```bash
 $ curl 127.0.0.1:8080/healthz
 ```
-
-You can choose a different port and run more than one copy of **ccd** on your local host. For example:
-
+Choose a different port and run more than one copy of **ccd** on the local host. For example:
 ```bash
 $ ./ccd -port 8081
 ``` 
-
-You also can specify some setting before run application: 
+Specify some setting before run application: 
 ```bash
 $ ./ccd -h
 ccd is a microservice that collect data from several crypto data providers cryprocompare using its API.
@@ -76,35 +65,24 @@ are not recommended for use. List of the implemented endpoints v2 API:
 * **/v2/ws** [GET] _websocket connection url, when you connected, try to send request like {"fsym":"BTC","tsym":"USD"}_
 * **/v2/ws/subscribe** [GET] _subscribe to collect data for the selected pair_
 * **/v2/ws/unsubscribe** [GET] _unsubscribe to stop collect data for the selected pair_
-
-Example getting a GET request for getting actual info about selected pair:
-
+## Usage examples
+Get actual info about selected pair:
 ```bash
 $ curl "http://localhost:8080/v2/price?fsym=ETH&tsym=USDT"
 ```
-
-Example of sending a POST request to add a new worker:
-
+Add a new worker:
 ```bash
 $ curl -X POST -H "Content-Type: application/json" -d '{ "fsym": "BTC", "tsym": "USD", "interval": 60}' "http://localhost:8080/v2/collect"
 ```
-
-Example of sending a DELETE request to remove worker:
-
+Remove worker:
 ```bash
 $ curl -X DELETE "http://localhost:8080/v2/collect?fsym=BTC&tsym=USD&interval=60"
 ```
-
-Example of sending a GET request to subscribe wss channel:
-
+Subscribe wss channel:
 ```bash
 $ curl "http://localhost:8080/v2/ws/subscribe?fsym=BTC&tsym=USD"
 ```
-
-Working example URL: https://ccd.oncook.top/healthz
-
 Web UI: https://ccd.oncook.top
-
 ## Contributing
 Contributions are welcome! If you encounter any issues, have suggestions for new features, or want to improve **CCD**, please feel free to open an issue or submit a pull request on the project's GitHub repository.
 ## License

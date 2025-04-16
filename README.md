@@ -6,7 +6,7 @@ This microservice is designed to manage real-time and historical cryptocurrency 
 * **Worker Management**: You can add, update, list, or remove background workers responsible for collecting data for specific currency pairs. These workers handle data pulling at defined intervals.
 * **Symbol Management**: Add, update, list, or delete currency symbols that are tracked by the system.
 * **Price Retrieval**: Fetch the most recent price data for a selected currency pair, including cached data when the data provider is unavailable.
-* **WebSocket Integration**: Provides a WebSocket connection for real-time updates. Clients can subscribe or unsubscribe to specific currency pairs using JSON messages like {"fsym":"BTC","tsym":"USD"}.
+* **WebSocket Integration**: Provides a WebSocket connection for real-time updates. Clients can subscribe or unsubscribe to specific currency pairs using JSON messages like _{"fsym":"BTC","tsym":"USD"}_.
 ## Build app
 
 ```bash

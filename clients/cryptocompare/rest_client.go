@@ -3,12 +3,12 @@ package cryptocompare
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"time"
 
-	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/domain"
 )
@@ -28,12 +28,19 @@ type cryptoCompareRest struct {
 	client *http.Client
 }
 
+var (
+	errApiKeyNotDefined = errors.New("you should specify \"CCDC_APIKEY\" in you OS environment")
+	errServerError      = errors.New("server error")
+	errUnmarshalData    = errors.New("failed to unmarshal data")
+)
+
 // Init apiKey, apiUrl, wsURL variables with environment values and return CryptoCompareData structure
-func Init() (rc clients.RestClient, err error) {
-	var apiKey string
-	if apiKey, err = getApiKey(); err != nil {
-		return
+func Init() (*cryptoCompareRest, error) {
+	apiKey, err := getApiKey()
+	if err != nil {
+		return nil, fmt.Errorf("faile to init rest client: %w", err)
 	}
+
 	return &cryptoCompareRest{
 		apiKey: apiKey,
 		client: &http.Client{
@@ -42,40 +49,55 @@ func Init() (rc clients.RestClient, err error) {
 	}, nil
 }
 
-func getApiKey() (apiKey string, err error) {
-	if apiKey = config.GetEnv("CCDC_APIKEY"); apiKey == "" {
-		return "", errors.New("you should specify \"CCDC_APIKEY\" in you OS environment")
-	}
-	return
-}
-
 // Get filled CryptoCompareData structure for the selected pair currencies over http/https
-func (cc *cryptoCompareRest) Get(fSym string, tSym string) (ds *domain.Data, err error) {
+func (cc *cryptoCompareRest) Get(fSym string, tSym string) (*domain.Data, error) {
 	var (
-		u        *url.URL
 		response *http.Response
 		body     []byte
 	)
-	if u, err = cc.buildURL(fSym, tSym); err != nil {
+	u, err := cc.buildURL(fSym, tSym)
+	if err != nil {
 		return nil, err
 	}
-	if response, err = cc.client.Get(u.String()); err != nil {
+	response, err = cc.client.Get(u.String())
+	if err != nil {
 		return nil, err
 	}
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(response.Body)
-	if body, err = io.ReadAll(response.Body); err != nil {
-		return
+	body, err = io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
 	}
-	if response.StatusCode != 200 {
-		return
+	if response.StatusCode != http.StatusOK {
+		return nil, errServerError
 	}
 	rawData := &cryptoCompareData{}
 	if err = json.Unmarshal(body, rawData); err != nil {
-		return
+		return nil, errUnmarshalData
 	}
+
 	return convertToDomain(fSym, tSym, rawData), nil
+}
+
+func getApiKey() (string, error) {
+	apiKey := config.GetEnv("CCDC_APIKEY")
+	if apiKey == "" {
+		return "", errApiKeyNotDefined
+	}
+
+	return apiKey, nil
+}
+
+func (cc *cryptoCompareRest) buildURL(fSym string, tSym string) (u *url.URL, err error) {
+	if u, err = url.Parse(apiUrl + multipleSymbolsFullData); err != nil {
+		return nil, err
+	}
+	query := u.Query()
+	query.Set("fsyms", fSym)
+	query.Set("tsyms", tSym)
+	query.Set("api_key", cc.apiKey)
+	u.RawQuery = query.Encode()
+
+	return u, nil
 }
 
 func convertToDomain(from, to string, d *cryptoCompareData) *domain.Data {
@@ -95,6 +117,7 @@ func convertToDomain(from, to string, d *cryptoCompareData) *domain.Data {
 		Supply:         r.Supply,
 		MktCap:         r.MktCap,
 	})
+
 	return &domain.Data{
 		FromSymbol:      from,
 		ToSymbol:        to,
@@ -110,16 +133,4 @@ func convertToDomain(from, to string, d *cryptoCompareData) *domain.Data {
 		LastUpdate:      r.LastUpdate,
 		DisplayDataRaw:  string(b),
 	}
-}
-
-func (cc *cryptoCompareRest) buildURL(fSym string, tSym string) (u *url.URL, err error) {
-	if u, err = url.Parse(apiUrl + multipleSymbolsFullData); err != nil {
-		return nil, err
-	}
-	query := u.Query()
-	query.Set("fsyms", fSym)
-	query.Set("tsyms", tSym)
-	query.Set("api_key", cc.apiKey)
-	u.RawQuery = query.Encode()
-	return u, nil
 }

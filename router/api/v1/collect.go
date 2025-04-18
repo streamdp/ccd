@@ -11,9 +11,9 @@ import (
 
 // CollectQuery structure for easily json serialization/validation/binding GET and POST query data
 type CollectQuery struct {
-	From     string `json:"fsym" form:"fsym" binding:"required,symbols"`
-	To       string `json:"tsym" form:"tsym" binding:"required,symbols"`
-	Interval int64  `json:"interval" form:"interval,default=60"`
+	From     string `binding:"required,symbols" form:"fsym"     json:"fsym"`
+	To       string `binding:"required,symbols" form:"tsym"     json:"tsym"`
+	Interval int64  `form:"interval,default=60" json:"interval"`
 }
 
 // AddWorker that will collect data for the selected currency pair to the management service
@@ -25,9 +25,11 @@ func AddWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 		}
 		if t := p.Task(q.From, q.To); t != nil {
 			r.UpdateAllFields(http.StatusOK, "Data for this pair is already being collected", t)
+
 			return
 		}
 		r.UpdateAllFields(http.StatusCreated, "Data collection started", p.AddTask(q.From, q.To, q.Interval))
+
 		return
 	}
 }
@@ -41,10 +43,12 @@ func RemoveWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 		}
 		if p.Task(q.From, q.To) == nil {
 			r.UpdateAllFields(http.StatusOK, "No data is collected for this pair", nil)
+
 			return
 		}
 		p.RemoveTask(q.From, q.To)
 		r.UpdateAllFields(http.StatusOK, "Task stopped successfully", nil)
+
 		return
 	}
 }
@@ -64,6 +68,7 @@ func PullingStatus(p clients.RestApiPuller, w clients.WsClient) handlers.Handler
 			subscriptions = w.ListSubscriptions()
 		}
 		r.UpdateDataField(mergeTasks(tasks, subscriptions))
+
 		return
 	}
 }
@@ -78,10 +83,12 @@ func UpdateWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 		}
 		if t = p.Task(q.From, q.To); t == nil {
 			r.UpdateAllFields(http.StatusOK, "No data is collected for this pair", t)
+
 			return
 		}
 		p.UpdateTask(t, q.Interval)
 		r.UpdateAllFields(http.StatusOK, "Task updated successfully", t)
+
 		return
 	}
 }
@@ -94,11 +101,13 @@ func Subscribe(w clients.WsClient) handlers.HandlerFuncResError {
 		}
 		if err = w.Subscribe(q.From, q.To); err != nil {
 			r.UpdateAllFields(http.StatusOK, "subscribe error:", err)
+
 			return
 		}
 		r.UpdateAllFields(
 			http.StatusCreated, "Subscribed successfully, data collection started", []string{q.From, q.To},
 		)
+
 		return
 	}
 }
@@ -111,16 +120,18 @@ func Unsubscribe(w clients.WsClient) handlers.HandlerFuncResError {
 		}
 		if err = w.Unsubscribe(q.From, q.To); err != nil {
 			r.UpdateAllFields(http.StatusOK, "Unsubscribe error:", err)
+
 			return
 		}
 		r.UpdateAllFields(
 			http.StatusOK, "Unsubscribed successfully, data collection stopped ", []string{q.From, q.To},
 		)
+
 		return
 	}
 }
 
-func mergeTasks(tasks clients.Tasks, subscriptions domain.Subscriptions) any { // map[string]map[string]interface{} {
+func mergeTasks(tasks clients.Tasks, subscriptions domain.Subscriptions) any {
 	if len(tasks) == 0 && len(subscriptions) == 0 {
 		return nil
 	}
@@ -131,6 +142,7 @@ func mergeTasks(tasks clients.Tasks, subscriptions domain.Subscriptions) any { /
 		for _, v := range tasks {
 			if list[v.From] != nil {
 				list[v.From][v.To] = v
+
 				continue
 			}
 			list[v.From] = make(map[string]interface{})
@@ -142,6 +154,7 @@ func mergeTasks(tasks clients.Tasks, subscriptions domain.Subscriptions) any { /
 		for _, v := range subscriptions {
 			if list[v.From] != nil {
 				list[v.From][v.To] = v
+
 				continue
 			}
 			list[v.From] = make(map[string]interface{})

@@ -63,6 +63,6 @@ func ParseFlags() {
 }
 
 // GetEnv values for selected name or return null
-func GetEnv(name string) (result string) {
+func GetEnv(name string) string {
 	return localEnvs.get(name)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
 	"github.com/streamdp/ccd/db"
-	"github.com/streamdp/ccd/domain"
 	v1 "github.com/streamdp/ccd/router/api/v1"
 	"github.com/streamdp/ccd/router/handlers"
 
@@ -34,6 +34,10 @@ type wsHandler struct {
 	db db.Database
 }
 
+var errInvalidRequest = errors.New(
+	`invalid request: the request should look like {"fsym":"CRYPTO","tsym":"COMMON"}`,
+)
+
 // HandleWs - handles websocket requests from the peer.
 func HandleWs(r clients.RestClient, l *log.Logger, db db.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -44,6 +48,7 @@ func HandleWs(r clients.RestClient, l *log.Logger, db db.Database) gin.HandlerFu
 		if err != nil {
 			cancel()
 			l.Println(err)
+
 			return
 		}
 		h := &wsHandler{
@@ -81,16 +86,17 @@ func (w *wsHandler) handleClientRequests() {
 				if errors.As(err, &websocket.CloseError{}) {
 					return
 				}
+
 				continue
 			}
 			if err = json.Unmarshal(data, &query); err != nil {
-				w.returnAnErrorToTheClient(errors.New(
-					"invalid request: the request should look like {\"fsym\":\"CRYPTO\",\"tsym\":\"COMMON\"}",
-				))
+				w.returnAnErrorToTheClient(errInvalidRequest)
+
 				continue
 			}
 			if data, err = w.getLastPrice(&query); err != nil {
 				w.l.Println(err)
+
 				continue
 			}
 			w.messagePipe <- data
@@ -98,15 +104,18 @@ func (w *wsHandler) handleClientRequests() {
 	}
 }
 
-func (w *wsHandler) getLastPrice(q *v1.PriceQuery) (result []byte, err error) {
-	var data *domain.Data
-	if data, err = v1.LastPrice(w.rc, w.db, q); err != nil {
-		return
+func (w *wsHandler) getLastPrice(q *v1.PriceQuery) ([]byte, error) {
+	data, err := v1.LastPrice(w.rc, w.db, q)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get last price: %w", err)
 	}
-	if result, err = json.Marshal(&data); err != nil {
-		return
+
+	result, errMarshal := json.Marshal(&data)
+	if errMarshal != nil {
+		return nil, fmt.Errorf("failed to unmarshal data: %w", errMarshal)
 	}
-	return
+
+	return result, nil
 }
 
 func (w *wsHandler) handleMessagePipe() {
@@ -116,12 +125,14 @@ func (w *wsHandler) handleMessagePipe() {
 		if err := w.conn.Write(ctx, websocket.MessageText, message); err != nil {
 			w.l.Println(err)
 			cancel()
+
 			return
 		}
 		cancel()
 	}
 	if err := w.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 		w.l.Println(err)
+
 		return
 	}
 }
@@ -132,6 +143,7 @@ func (w *wsHandler) returnAnErrorToTheClient(err error) {
 	r.UpdateAllFields(http.StatusBadRequest, err.Error(), nil)
 	if binaryString, err = json.Marshal(&r); err != nil {
 		w.l.Println(err)
+
 		return
 	}
 	w.messagePipe <- binaryString

@@ -135,6 +135,7 @@ func Test_cryptoCompareRest_buildURL(t *testing.T) {
 					"https://min-api.cryptocompare.com/data/pricemultifull?" +
 						"api_key=jHQuBvBisp3UFKzqvmWpH4elAqNv%2BJQT&fsyms=BTC&tsyms=USTD",
 				)
+
 				return u
 			}(),
 			wantErr: false,
@@ -149,6 +150,7 @@ func Test_cryptoCompareRest_buildURL(t *testing.T) {
 			gotU, err := cc.buildURL(tt.args.fSym, tt.args.tSym)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildURL() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
 			if !reflect.DeepEqual(gotU, tt.wantU) {

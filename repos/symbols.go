@@ -1,6 +1,8 @@
 package repos
 
 import (
+	"fmt"
+
 	"github.com/streamdp/ccd/caches"
 	"github.com/streamdp/ccd/db"
 )
@@ -22,17 +24,19 @@ func (sc *SymbolRepo) Update(s, u string) (err error) {
 		return
 	}
 	sc.c.Add(s)
+
 	return
 }
 
 func (sc *SymbolRepo) Load() error {
 	s, err := sc.db.Symbols()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load symbols: %w", err)
 	}
 	for i := range s {
 		sc.c.Add(s[i].Symbol)
 	}
+
 	return nil
 }
 
@@ -48,6 +52,7 @@ func (sc *SymbolRepo) Add(s, u string) (err error) {
 		return
 	}
 	sc.c.Add(s)
+
 	return
 }
 
@@ -59,6 +64,7 @@ func (sc *SymbolRepo) Remove(s string) (err error) {
 		return
 	}
 	sc.c.Remove(s)
+
 	return
 }
 

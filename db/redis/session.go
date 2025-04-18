@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -14,6 +15,8 @@ type KeysStore struct {
 	c *redis.Client
 }
 
+var errKeyStoreNotInitialized = errors.New("key store not initialised")
+
 // NewRedisKeysStore initialize new redis session store
 func NewRedisKeysStore() (*KeysStore, error) {
 	opt, err := getRedisOptions()
@@ -24,6 +27,7 @@ func NewRedisKeysStore() (*KeysStore, error) {
 	if _, err = client.Ping().Result(); err != nil {
 		return nil, err
 	}
+
 	return &KeysStore{
 		c: client,
 	}, nil
@@ -56,6 +60,7 @@ func getSeparatedOptions() (*redis.Options, error) {
 		}
 		db = n
 	}
+
 	return &redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", host, port),
 		Password: password,
@@ -67,13 +72,14 @@ func getRedisOptions() (*redis.Options, error) {
 	if redisUrl := config.GetEnv("REDIS_URL"); redisUrl != "" {
 		return redis.ParseURL(redisUrl)
 	}
+
 	return getSeparatedOptions()
 }
 
 // GetSession get previously saved session
 func (s *KeysStore) GetSession() (map[string]int64, error) {
 	if s == nil {
-		return nil, nil
+		return nil, errKeyStoreNotInitialized
 	}
 	session := make(map[string]int64)
 	for k, v := range s.c.HGetAll(sessionName).Val() {
@@ -83,35 +89,41 @@ func (s *KeysStore) GetSession() (map[string]int64, error) {
 		}
 		session[k] = i
 	}
+
 	return session, nil
 }
 
 // AddTask add a new task or update an already saved task in the current session
-func (s *KeysStore) AddTask(n string, i int64) (err error) {
+func (s *KeysStore) AddTask(n string, i int64) error {
 	if s == nil {
-		return
+		return errKeyStoreNotInitialized
 	}
+
 	s.c.HSet(sessionName, n, strconv.FormatInt(i, 10))
-	return
+
+	return nil
 }
 
 // UpdateTask add a new task or update an already saved task in the current session
-func (s *KeysStore) UpdateTask(n string, i int64) (err error) {
+func (s *KeysStore) UpdateTask(n string, i int64) error {
 	return s.AddTask(n, i)
 }
 
 // RemoveTask remove a task from the current session
-func (s *KeysStore) RemoveTask(n string) (err error) {
+func (s *KeysStore) RemoveTask(n string) error {
 	if s == nil {
-		return
+		return errKeyStoreNotInitialized
 	}
+
 	s.c.HDel(sessionName, n)
-	return
+
+	return nil
 }
 
-func (s *KeysStore) Close() (err error) {
+func (s *KeysStore) Close() error {
 	if s.c == nil {
-		return
+		return errKeyStoreNotInitialized
 	}
+
 	return s.c.Close()
 }

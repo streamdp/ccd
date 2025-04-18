@@ -21,6 +21,7 @@ func newEnvs() *envs {
 	e := &envs{
 		m: new(sync.RWMutex),
 	}
+
 	return e.init()
 }
 
@@ -35,6 +36,7 @@ func (e *envs) init() *envs {
 			e.e[pair[0]] = pair[1]
 		}
 	}
+
 	return e
 }
 
@@ -44,5 +46,6 @@ func (e *envs) get(name string) string {
 	if env, ok := e.e[name]; ok {
 		return env
 	}
+
 	return ""
 }

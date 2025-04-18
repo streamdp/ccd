@@ -23,6 +23,7 @@ func (sc *SymbolCache) GetAll() (ret []string) {
 	for k := range sc.c {
 		ret = append(ret, k)
 	}
+
 	return ret
 }
 
@@ -36,9 +37,7 @@ func (sc *SymbolCache) Remove(s string) {
 	s = strings.ToUpper(s)
 	sc.m.Lock()
 	defer sc.m.Unlock()
-	if _, ok := sc.c[s]; ok {
-		delete(sc.c, s)
-	}
+	delete(sc.c, s)
 }
 
 func (sc *SymbolCache) IsPresent(s string) bool {
@@ -47,5 +46,6 @@ func (sc *SymbolCache) IsPresent(s string) bool {
 	if _, ok := sc.c[strings.ToUpper(s)]; ok {
 		return true
 	}
+
 	return false
 }

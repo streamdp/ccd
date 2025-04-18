@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +25,7 @@ func InitRouter(
 	r clients.RestClient,
 	w clients.WsClient,
 	p clients.RestApiPuller,
-) (err error) {
+) error {
 	// health checks
 	e.GET("/healthz", SendOK)
 	e.HEAD("/healthz", SendOK)
@@ -91,8 +92,8 @@ func InitRouter(
 	}
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		if err = v.RegisterValidation("symbols", validators.Symbols(sr)); err != nil {
-			return err
+		if err := v.RegisterValidation("symbols", validators.Symbols(sr)); err != nil {
+			return fmt.Errorf("failed to register validator: %w", err)
 		}
 	}
 

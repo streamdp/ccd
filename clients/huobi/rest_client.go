@@ -2,14 +2,13 @@ package huobi
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/domain"
 )
@@ -30,7 +29,7 @@ type huobiRest struct {
 	limiter *time.Timer
 }
 
-func Init() (clients.RestClient, error) {
+func Init() (*huobiRest, error) {
 	return &huobiRest{
 		client: &http.Client{
 			Timeout: time.Duration(config.HttpClientTimeout) * time.Millisecond,
@@ -39,33 +38,25 @@ func Init() (clients.RestClient, error) {
 	}, nil
 }
 
-func (h *huobiRest) limitRate() {
-	<-h.limiter.C
-	h.limiter.Reset(rateLimit)
-}
-
-func (h *huobiRest) Get(fSym string, tSym string) (ds *domain.Data, err error) {
+func (h *huobiRest) Get(fSym string, tSym string) (*domain.Data, error) {
 	h.limitRate()
 
 	var (
-		u        *url.URL
 		response *http.Response
 		body     []byte
 	)
-	if u, err = h.buildURL(fSym, tSym); err != nil {
+	u, err := h.buildURL(fSym, tSym)
+	if err != nil {
 		return nil, err
 	}
 
 	if response, err = h.client.Get(u.String()); err != nil {
 		return nil, err
 	}
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(response.Body)
 	if body, err = io.ReadAll(response.Body); err != nil {
 		return nil, err
 	}
-	if response.StatusCode != 200 {
+	if response.StatusCode != http.StatusOK {
 		return nil, err
 	}
 	rawData := &huobiRestData{}
@@ -73,9 +64,30 @@ func (h *huobiRest) Get(fSym string, tSym string) (ds *domain.Data, err error) {
 		return nil, err
 	}
 	if rawData.Status == "error" {
-		return nil, errors.New(rawData.ErrMsg)
+		return nil, fmt.Errorf("server error: %v", rawData.ErrMsg)
 	}
+
 	return convertHuobiRestDataToDomain(fSym, tSym, rawData), nil
+}
+
+func (h *huobiRest) limitRate() {
+	<-h.limiter.C
+	h.limiter.Reset(rateLimit)
+}
+
+func (h *huobiRest) buildURL(fSym string, tSym string) (*url.URL, error) {
+	u, err := url.Parse(apiUrl + latestAggregatedTicker)
+	if err != nil {
+		return nil, err
+	}
+	if strings.ToLower(tSym) == "usd" {
+		tSym = "usdt"
+	}
+	query := u.Query()
+	query.Set("symbol", strings.ToLower(fSym+tSym))
+	u.RawQuery = query.Encode()
+
+	return u, nil
 }
 
 func convertHuobiRestDataToDomain(from, to string, d *huobiRestData) *domain.Data {
@@ -97,6 +109,7 @@ func convertHuobiRestDataToDomain(from, to string, d *huobiRestData) *domain.Dat
 		LastUpdate:     d.Ts,
 		Supply:         float64(d.Tick.Count),
 	})
+
 	return &domain.Data{
 		FromSymbol:     from,
 		ToSymbol:       to,
@@ -109,17 +122,4 @@ func convertHuobiRestDataToDomain(from, to string, d *huobiRestData) *domain.Dat
 		LastUpdate:     d.Ts,
 		DisplayDataRaw: string(b),
 	}
-}
-
-func (h *huobiRest) buildURL(fSym string, tSym string) (u *url.URL, err error) {
-	if u, err = url.Parse(apiUrl + latestAggregatedTicker); err != nil {
-		return nil, err
-	}
-	if strings.ToLower(tSym) == "usd" {
-		tSym = "usdt"
-	}
-	query := u.Query()
-	query.Set("symbol", strings.ToLower(fSym+tSym))
-	u.RawQuery = query.Encode()
-	return u, nil
 }

@@ -97,5 +97,6 @@ func newSessionStore(d db.Database, l *log.Logger) (s db.Session) {
 	if err != nil {
 		l.Println(fmt.Errorf("failed to init session store: %w", err))
 	}
+
 	return
 }

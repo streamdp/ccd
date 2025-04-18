@@ -41,6 +41,8 @@ type Database interface {
 	Close() error
 }
 
+var errDatabaseUrl = errors.New("please set OS environment \"CCDC_DATABASEURL\" with database connection string")
+
 func Connect(l *log.Logger) (d Database, err error) {
 	var (
 		driverName       = mysql.Mysql
@@ -48,7 +50,7 @@ func Connect(l *log.Logger) (d Database, err error) {
 		connectionString string
 	)
 	if dataBaseUrl == "" {
-		return nil, errors.New("please set OS environment \"CCDC_DATABASEURL\" with database connection string")
+		return nil, errDatabaseUrl
 	}
 	connectionParameters := strings.Split(dataBaseUrl, "://")
 	if len(connectionParameters) == 2 {
@@ -65,6 +67,7 @@ func Connect(l *log.Logger) (d Database, err error) {
 	if err == nil {
 		go serve(d, l)
 	}
+
 	return
 }
 

@@ -7,9 +7,11 @@ import (
 	"github.com/streamdp/ccd/domain"
 )
 
+var errEmptyData = errors.New("cant insert empty data")
+
 // GetLast row with the most recent data for the selected currencies pair
-func (d *Db) GetLast(from string, to string) (result *domain.Data, err error) {
-	result = &domain.Data{
+func (d *Db) GetLast(from string, to string) (*domain.Data, error) {
+	result := &domain.Data{
 		FromSymbol: from,
 		ToSymbol:   to,
 	}
@@ -32,7 +34,7 @@ func (d *Db) GetLast(from string, to string) (result *domain.Data, err error) {
 		  and toSym=(select _id from symbols where symbol=?) 
 		ORDER BY lastupdate DESC limit 1;
 `
-	if err = d.QueryRow(query, from, to).Scan(
+	if err := d.QueryRow(query, from, to).Scan(
 		&result.Id,
 		&result.Change24Hour,
 		&result.ChangePct24Hour,
@@ -48,13 +50,14 @@ func (d *Db) GetLast(from string, to string) (result *domain.Data, err error) {
 	); err != nil {
 		return nil, err
 	}
+
 	return result, nil
 }
 
 // Insert clients.Data from the clients.DataPipe to the Db
-func (d *Db) Insert(data *domain.Data) (result sql.Result, err error) {
+func (d *Db) Insert(data *domain.Data) (sql.Result, error) {
 	if data == nil {
-		return nil, errors.New("cant insert empty data")
+		return nil, errEmptyData
 	}
 	query := `insert into data (
 		                  fromSym,
@@ -77,6 +80,7 @@ func (d *Db) Insert(data *domain.Data) (result sql.Result, err error) {
 		        ?,?,?,?,?,?,?,?,?,?,?
 		)
 `
+
 	return d.Exec(
 		query,
 		&data.FromSymbol,

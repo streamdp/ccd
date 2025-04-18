@@ -11,14 +11,15 @@ import (
 
 // SymbolQuery structure for easily json serialization/validation/binding GET and POST query data
 type SymbolQuery struct {
-	Symbol  string `json:"symbol" form:"symbol" binding:"required"`
-	Unicode string `json:"unicode" form:"unicode" binding:"required"`
+	Symbol  string `binding:"required" form:"symbol"  json:"symbol"`
+	Unicode string `binding:"required" form:"unicode" json:"unicode"`
 }
 
 // AllSymbols return all symbols
 func AllSymbols(sr *repos.SymbolRepo) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (r handlers.Result, err error) {
 		r.UpdateAllFields(http.StatusOK, "list of all symbols presented", sr.GetAll())
+
 		return
 	}
 }
@@ -36,6 +37,7 @@ func AddSymbol(sr *repos.SymbolRepo) handlers.HandlerFuncResError {
 		r.UpdateAllFields(
 			http.StatusOK, fmt.Sprintf("symbol %s successfully added to the db", q.Symbol), nil,
 		)
+
 		return
 	}
 }
@@ -51,6 +53,7 @@ func UpdateSymbol(sr *repos.SymbolRepo) handlers.HandlerFuncResError {
 			return
 		}
 		r.UpdateAllFields(http.StatusOK, fmt.Sprintf("symbol %s successfully updated", q.Symbol), nil)
+
 		return
 	}
 }
@@ -66,6 +69,7 @@ func RemoveSymbol(sr *repos.SymbolRepo) handlers.HandlerFuncResError {
 			return
 		}
 		r.UpdateAllFields(http.StatusOK, fmt.Sprintf("symbol %s successfully removed", q.Symbol), nil)
+
 		return
 	}
 }

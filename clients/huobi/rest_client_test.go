@@ -108,6 +108,7 @@ func Test_huobiRest_buildURL(t *testing.T) {
 			},
 			wantU: func() *url.URL {
 				u, _ := url.Parse("https://api.huobi.pro/market/detail/merged?symbol=btcusdt")
+
 				return u
 			}(),
 			wantErr: false,
@@ -120,6 +121,7 @@ func Test_huobiRest_buildURL(t *testing.T) {
 			},
 			wantU: func() *url.URL {
 				u, _ := url.Parse("https://api.huobi.pro/market/detail/merged?symbol=ethusdt")
+
 				return u
 			}(),
 			wantErr: false,
@@ -131,6 +133,7 @@ func Test_huobiRest_buildURL(t *testing.T) {
 			gotU, err := h.buildURL(tt.args.fSym, tt.args.tSym)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildURL() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
 			if !reflect.DeepEqual(gotU, tt.wantU) {

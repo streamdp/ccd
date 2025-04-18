@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -49,7 +50,9 @@ func main() {
 		l.Fatalln(err)
 	}
 
-	w, err := initWsClient(d, l)
+	ctx := context.Background()
+
+	w, err := initWsClient(ctx, d, l)
 	if err != nil {
 		l.Fatalln(err)
 	}
@@ -60,12 +63,14 @@ func main() {
 	}
 
 	e := gin.Default()
-	if err = router.InitRouter(e, d, l, sr, r, w, p); err != nil {
+	if err = router.InitRouter(ctx, e, d, l, sr, r, w, p); err != nil {
 		l.Fatalln(err)
 	}
 	if err = e.Run(config.Port); err != nil {
 		l.Fatalln(err)
 	}
+
+	<-ctx.Done()
 }
 
 func initRestClient() (r clients.RestClient, err error) {
@@ -77,12 +82,12 @@ func initRestClient() (r clients.RestClient, err error) {
 	}
 }
 
-func initWsClient(d db.Database, l *log.Logger) (w clients.WsClient, err error) {
+func initWsClient(ctx context.Context, d db.Database, l *log.Logger) (w clients.WsClient, err error) {
 	switch config.DataProvider {
 	case "huobi":
-		return huobi.InitWs(d.DataPipe(), l)
+		return huobi.InitWs(ctx, d.DataPipe(), l)
 	default:
-		return cryptocompare.InitWs(d.DataPipe(), l)
+		return cryptocompare.InitWs(ctx, d.DataPipe(), l)
 	}
 }
 

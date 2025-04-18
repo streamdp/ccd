@@ -24,7 +24,6 @@ const (
 )
 
 type wsHandler struct {
-	ctx         context.Context
 	l           *log.Logger
 	cancel      context.CancelFunc
 	conn        *websocket.Conn
@@ -39,41 +38,38 @@ var errInvalidRequest = errors.New(
 )
 
 // HandleWs - handles websocket requests from the peer.
-func HandleWs(r clients.RestClient, l *log.Logger, db db.Database) gin.HandlerFunc {
+func HandleWs(ctx context.Context, r clients.RestClient, l *log.Logger, db db.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx, cancel := context.WithCancel(context.Background())
 		conn, err := websocket.Accept(c.Writer, c.Request, &websocket.AcceptOptions{
 			InsecureSkipVerify: true,
 		})
 		if err != nil {
-			cancel()
 			l.Println(err)
 
 			return
 		}
+
 		h := &wsHandler{
-			ctx:         ctx,
 			l:           l,
-			cancel:      cancel,
 			conn:        conn,
 			messagePipe: make(chan []byte, 256),
 			rc:          r,
 			db:          db,
 		}
 		h.conn.SetReadLimit(maxMessageSize)
-		go h.handleMessagePipe()
-		go h.handleClientRequests()
+
+		go h.handleMessagePipe(ctx)
+		go h.handleClientRequests(ctx)
 	}
 }
 
-func (w *wsHandler) handleClientRequests() {
+func (w *wsHandler) handleClientRequests(ctx context.Context) {
 	defer func() {
-		w.cancel()
 		close(w.messagePipe)
 	}()
 	for {
 		select {
-		case <-w.ctx.Done():
+		case <-ctx.Done():
 			return
 		default:
 			var (
@@ -81,11 +77,11 @@ func (w *wsHandler) handleClientRequests() {
 				err   error
 				query = v1.PriceQuery{}
 			)
-			if _, data, err = w.conn.Read(w.ctx); err != nil {
-				w.l.Println(err)
+			if _, data, err = w.conn.Read(ctx); err != nil {
 				if errors.As(err, &websocket.CloseError{}) {
 					return
 				}
+				w.l.Println(err)
 
 				continue
 			}
@@ -118,10 +114,9 @@ func (w *wsHandler) getLastPrice(q *v1.PriceQuery) ([]byte, error) {
 	return result, nil
 }
 
-func (w *wsHandler) handleMessagePipe() {
-	defer w.cancel()
+func (w *wsHandler) handleMessagePipe(ctx context.Context) {
 	for message := range w.messagePipe {
-		ctx, cancel := context.WithTimeout(w.ctx, writeWait)
+		ctx, cancel := context.WithTimeout(ctx, writeWait)
 		if err := w.conn.Write(ctx, websocket.MessageText, message); err != nil {
 			w.l.Println(err)
 			cancel()
@@ -129,11 +124,6 @@ func (w *wsHandler) handleMessagePipe() {
 			return
 		}
 		cancel()
-	}
-	if err := w.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
-		w.l.Println(err)
-
-		return
 	}
 }
 

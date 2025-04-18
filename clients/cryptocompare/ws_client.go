@@ -18,7 +18,6 @@ import (
 const wssUrl = "wss://streamer.cryptocompare.com/v2"
 
 type cryptoCompareWs struct {
-	ctx           context.Context
 	l             *log.Logger
 	conn          *websocket.Conn
 	apiKey        string
@@ -31,30 +30,29 @@ var (
 	errHeartbeat = errors.New("heartbeat loss")
 )
 
-func InitWs(pipe chan *domain.Data, l *log.Logger) (*cryptoCompareWs, error) {
+func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger) (*cryptoCompareWs, error) {
 	apiKey, err := getApiKey()
 	if err != nil {
 		return nil, err
 	}
 	h := &cryptoCompareWs{
-		ctx:           context.Background(),
 		l:             l,
 		apiKey:        apiKey,
 		subscriptions: domain.Subscriptions{},
 	}
-	if err = h.reconnect(); err != nil {
+	if err = h.reconnect(ctx); err != nil {
 		return nil, err
 	}
-	h.handleWsMessages(pipe)
+	h.handleWsMessages(ctx, pipe)
 
 	return h, nil
 }
 
-func (c *cryptoCompareWs) Subscribe(from, to string) (err error) {
+func (c *cryptoCompareWs) Subscribe(ctx context.Context, from, to string) (err error) {
 	c.subMu.Lock()
 	defer c.subMu.Unlock()
 	var ch = buildChannelName(from, to)
-	if err = c.sendSubscribeMsg(ch); err != nil {
+	if err = c.sendSubscribeMsg(ctx, ch); err != nil {
 		return
 	}
 	c.subscriptions[ch] = domain.NewSubscription(from, to, 0)
@@ -73,12 +71,12 @@ func (c *cryptoCompareWs) ListSubscriptions() domain.Subscriptions {
 	return s
 }
 
-func (c *cryptoCompareWs) Unsubscribe(from, to string) error {
+func (c *cryptoCompareWs) Unsubscribe(ctx context.Context, from, to string) error {
 	c.subMu.Lock()
 	defer c.subMu.Unlock()
 	var ch = buildChannelName(from, to)
 	if _, ok := c.subscriptions[ch]; ok {
-		if err := c.sendUnsubscribeMsg(ch); err != nil {
+		if err := c.sendUnsubscribeMsg(ctx, ch); err != nil {
 			return err
 		}
 		delete(c.subscriptions, ch)
@@ -87,7 +85,7 @@ func (c *cryptoCompareWs) Unsubscribe(from, to string) error {
 	return nil
 }
 
-func (c *cryptoCompareWs) reconnect() error {
+func (c *cryptoCompareWs) reconnect(ctx context.Context) error {
 	if c.conn != nil {
 		if err := c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 			c.l.Println(err)
@@ -99,7 +97,7 @@ func (c *cryptoCompareWs) reconnect() error {
 	if err != nil {
 		return err
 	}
-	if c.conn, _, err = websocket.Dial(c.ctx, u.String(), nil); err != nil {
+	if c.conn, _, err = websocket.Dial(ctx, u.String(), nil); err != nil {
 		return fmt.Errorf("failed to dial ws server: %w", err)
 	}
 
@@ -122,23 +120,23 @@ func buildChannelName(from, to string) string {
 	return fmt.Sprintf("5~CCCAGG~%s~%s", strings.ToUpper(from), strings.ToUpper(to))
 }
 
-func (c *cryptoCompareWs) sendSubscribeMsg(ch string) error {
-	return c.conn.Write(c.ctx, websocket.MessageText, []byte(
+func (c *cryptoCompareWs) sendSubscribeMsg(ctx context.Context, ch string) error {
+	return c.conn.Write(ctx, websocket.MessageText, []byte(
 		fmt.Sprintf("{\"action\":\"SubAdd\",\"subs\":[\"%s\"]}", ch)),
 	)
 }
 
-func (c *cryptoCompareWs) sendUnsubscribeMsg(ch string) error {
-	return c.conn.Write(c.ctx, websocket.MessageText, []byte(
+func (c *cryptoCompareWs) sendUnsubscribeMsg(ctx context.Context, ch string) error {
+	return c.conn.Write(ctx, websocket.MessageText, []byte(
 		fmt.Sprintf("{\"action\":\"SubRemove\",\"subs\":[\"%s\"]}", ch)),
 	)
 }
 
-func (c *cryptoCompareWs) resubscribe() (err error) {
+func (c *cryptoCompareWs) resubscribe(ctx context.Context) (err error) {
 	c.subMu.RLock()
 	defer c.subMu.RUnlock()
 	for k := range c.subscriptions {
-		if err = c.sendSubscribeMsg(k); err != nil {
+		if err = c.sendSubscribeMsg(ctx, k); err != nil {
 			return
 		}
 	}
@@ -146,19 +144,19 @@ func (c *cryptoCompareWs) resubscribe() (err error) {
 	return
 }
 
-func (c *cryptoCompareWs) handleWssError(err error) error {
+func (c *cryptoCompareWs) handleWssError(ctx context.Context, err error) error {
 	c.l.Println(err)
 	for {
 		select {
 		case <-time.After(time.Minute):
 			return errReconnect
 		default:
-			if err = c.reconnect(); err != nil {
+			if err = c.reconnect(ctx); err != nil {
 				time.Sleep(time.Second)
 
 				continue
 			}
-			if err = c.resubscribe(); err != nil {
+			if err = c.resubscribe(ctx); err != nil {
 				time.Sleep(time.Second)
 
 				continue
@@ -169,7 +167,7 @@ func (c *cryptoCompareWs) handleWssError(err error) error {
 	}
 }
 
-func (c *cryptoCompareWs) handleWsMessages(pipe chan *domain.Data) {
+func (c *cryptoCompareWs) handleWsMessages(ctx context.Context, pipe chan *domain.Data) {
 	go func() {
 		defer func(conn *websocket.Conn, code websocket.StatusCode, reason string) {
 			if errClose := conn.Close(code, reason); errClose != nil {
@@ -186,11 +184,11 @@ func (c *cryptoCompareWs) handleWsMessages(pipe chan *domain.Data) {
 		defer tick.Stop()
 		for {
 			select {
-			case <-c.ctx.Done():
+			case <-ctx.Done():
 				return
 			case <-tick.C:
 				if hb <= 0 {
-					if err := c.handleWssError(errHeartbeat); err != nil {
+					if err := c.handleWssError(ctx, errHeartbeat); err != nil {
 						c.l.Println(err)
 
 						return
@@ -202,8 +200,8 @@ func (c *cryptoCompareWs) handleWsMessages(pipe chan *domain.Data) {
 					body []byte
 					err  error
 				)
-				if _, body, err = c.conn.Read(c.ctx); err != nil {
-					if err = c.handleWssError(err); err != nil {
+				if _, body, err = c.conn.Read(ctx); err != nil {
+					if err = c.handleWssError(ctx, err); err != nil {
 						c.l.Println(err)
 
 						return

@@ -1,6 +1,8 @@
 package clients
 
 import (
+	"context"
+
 	"github.com/streamdp/ccd/domain"
 )
 
@@ -11,7 +13,7 @@ type RestClient interface {
 
 // WsClient interface makes it possible to expand the list of wss data providers
 type WsClient interface {
-	Subscribe(from string, to string) error
-	Unsubscribe(from string, to string) error
+	Subscribe(ctx context.Context, from string, to string) error
+	Unsubscribe(ctx context.Context, from string, to string) error
 	ListSubscriptions() domain.Subscriptions
 }

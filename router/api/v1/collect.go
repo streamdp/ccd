@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -93,13 +94,13 @@ func UpdateWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 	}
 }
 
-func Subscribe(w clients.WsClient) handlers.HandlerFuncResError {
+func Subscribe(ctx context.Context, w clients.WsClient) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (r handlers.Result, err error) {
 		q := CollectQuery{}
 		if err = c.Bind(&q); err != nil {
 			return
 		}
-		if err = w.Subscribe(q.From, q.To); err != nil {
+		if err = w.Subscribe(ctx, q.From, q.To); err != nil {
 			r.UpdateAllFields(http.StatusOK, "subscribe error:", err)
 
 			return
@@ -112,13 +113,13 @@ func Subscribe(w clients.WsClient) handlers.HandlerFuncResError {
 	}
 }
 
-func Unsubscribe(w clients.WsClient) handlers.HandlerFuncResError {
+func Unsubscribe(ctx context.Context, w clients.WsClient) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (r handlers.Result, err error) {
 		q := CollectQuery{}
 		if err = c.Bind(&q); err != nil {
 			return
 		}
-		if err = w.Unsubscribe(q.From, q.To); err != nil {
+		if err = w.Unsubscribe(ctx, q.From, q.To); err != nil {
 			r.UpdateAllFields(http.StatusOK, "Unsubscribe error:", err)
 
 			return

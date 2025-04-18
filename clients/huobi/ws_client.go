@@ -20,7 +20,6 @@ import (
 const wssUrl = "wss://api.huobi.pro/ws"
 
 type huobiWs struct {
-	ctx           context.Context
 	l             *log.Logger
 	conn          *websocket.Conn
 	subscriptions domain.Subscriptions
@@ -29,28 +28,27 @@ type huobiWs struct {
 
 var errReconnect = errors.New("reconnect failed")
 
-func InitWs(pipe chan *domain.Data, l *log.Logger) (*huobiWs, error) {
+func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger) (*huobiWs, error) {
 	h := &huobiWs{
-		ctx:           context.Background(),
 		l:             l,
 		subscriptions: domain.Subscriptions{},
 	}
-	if err := h.reconnect(); err != nil {
+	if err := h.reconnect(ctx); err != nil {
 		return nil, err
 	}
-	h.handleWsMessages(pipe)
+	h.handleWsMessages(ctx, pipe)
 
 	return h, nil
 }
 
-func (h *huobiWs) Subscribe(from, to string) (err error) {
+func (h *huobiWs) Subscribe(ctx context.Context, from, to string) (err error) {
 	h.subMu.Lock()
 	defer h.subMu.Unlock()
 	var (
 		id = time.Now().UnixMilli()
 		ch = buildChannelName(from, to)
 	)
-	if err = h.sendSubscribeMsg(ch, id); err != nil {
+	if err = h.sendSubscribeMsg(ctx, ch, id); err != nil {
 		return
 	}
 	h.subscriptions[ch] = domain.NewSubscription(from, to, id)
@@ -69,12 +67,12 @@ func (h *huobiWs) ListSubscriptions() domain.Subscriptions {
 	return s
 }
 
-func (h *huobiWs) Unsubscribe(from, to string) (err error) {
+func (h *huobiWs) Unsubscribe(ctx context.Context, from, to string) (err error) {
 	h.subMu.Lock()
 	defer h.subMu.Unlock()
 	var ch = buildChannelName(from, to)
 	if c, ok := h.subscriptions[ch]; ok {
-		if err = h.sendUnsubscribeMsg(ch, c.Id()); err != nil {
+		if err = h.sendUnsubscribeMsg(ctx, ch, c.Id()); err != nil {
 			return
 		}
 		delete(h.subscriptions, ch)
@@ -83,7 +81,7 @@ func (h *huobiWs) Unsubscribe(from, to string) (err error) {
 	return
 }
 
-func (h *huobiWs) reconnect() error {
+func (h *huobiWs) reconnect(ctx context.Context) error {
 	if h.conn != nil {
 		if err := h.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 			h.l.Println(err)
@@ -93,18 +91,18 @@ func (h *huobiWs) reconnect() error {
 	}
 
 	var err error
-	if h.conn, _, err = websocket.Dial(h.ctx, wssUrl, nil); err != nil {
+	if h.conn, _, err = websocket.Dial(ctx, wssUrl, nil); err != nil {
 		return fmt.Errorf("failed to dial ws server: %w", err)
 	}
 
 	return nil
 }
 
-func (h *huobiWs) resubscribe() (err error) {
+func (h *huobiWs) resubscribe(ctx context.Context) (err error) {
 	h.subMu.RLock()
 	defer h.subMu.RUnlock()
 	for k, v := range h.subscriptions {
-		if err = h.sendSubscribeMsg(k, v.Id()); err != nil {
+		if err = h.sendSubscribeMsg(ctx, k, v.Id()); err != nil {
 			return
 		}
 	}
@@ -112,19 +110,19 @@ func (h *huobiWs) resubscribe() (err error) {
 	return
 }
 
-func (h *huobiWs) handleWsError(err error) error {
+func (h *huobiWs) handleWsError(ctx context.Context, err error) error {
 	h.l.Println(err)
 	for {
 		select {
 		case <-time.After(time.Minute):
 			return errReconnect
 		default:
-			if err = h.reconnect(); err != nil {
+			if err = h.reconnect(ctx); err != nil {
 				time.Sleep(time.Second)
 
 				continue
 			}
-			if err = h.resubscribe(); err != nil {
+			if err = h.resubscribe(ctx); err != nil {
 				time.Sleep(time.Second)
 
 				continue
@@ -135,7 +133,7 @@ func (h *huobiWs) handleWsError(err error) error {
 	}
 }
 
-func (h *huobiWs) handleWsMessages(pipe chan *domain.Data) {
+func (h *huobiWs) handleWsMessages(ctx context.Context, pipe chan *domain.Data) {
 	go func() {
 		defer func(conn *websocket.Conn, code websocket.StatusCode, reason string) {
 			if errClose := conn.Close(code, reason); errClose != nil {
@@ -144,7 +142,7 @@ func (h *huobiWs) handleWsMessages(pipe chan *domain.Data) {
 		}(h.conn, websocket.StatusNormalClosure, "")
 		for {
 			select {
-			case <-h.ctx.Done():
+			case <-ctx.Done():
 				return
 			default:
 				var (
@@ -152,8 +150,8 @@ func (h *huobiWs) handleWsMessages(pipe chan *domain.Data) {
 					body []byte
 					err  error
 				)
-				if _, r, err = h.conn.Reader(h.ctx); err != nil {
-					if err = h.handleWsError(err); err != nil {
+				if _, r, err = h.conn.Reader(ctx); err != nil {
+					if err = h.handleWsError(ctx, err); err != nil {
 						h.l.Println(err)
 
 						return
@@ -167,8 +165,8 @@ func (h *huobiWs) handleWsMessages(pipe chan *domain.Data) {
 					continue
 				}
 				if bytes.Contains(body, []byte("ping")) {
-					if err = h.pingHandler(body); err != nil {
-						if err = h.handleWsError(err); err != nil {
+					if err = h.pingHandler(ctx, body); err != nil {
+						if err = h.handleWsError(ctx, err); err != nil {
 							h.l.Println(err)
 
 							return
@@ -195,10 +193,10 @@ func (h *huobiWs) handleWsMessages(pipe chan *domain.Data) {
 	}()
 }
 
-func (h *huobiWs) pingHandler(m []byte) (err error) {
+func (h *huobiWs) pingHandler(ctx context.Context, m []byte) (err error) {
 	m = bytes.ReplaceAll(m, []byte("ping"), []byte("pong"))
 
-	return h.conn.Write(h.ctx, websocket.MessageText, m)
+	return h.conn.Write(ctx, websocket.MessageText, m)
 }
 
 func (h *huobiWs) pairFromChannelName(ch string) (string, string) {
@@ -219,14 +217,14 @@ func buildChannelName(from, to string) string {
 	return fmt.Sprintf("market.%s.ticker", strings.ToLower(from+to))
 }
 
-func (h *huobiWs) sendUnsubscribeMsg(ch string, id int64) error {
-	return h.conn.Write(h.ctx, websocket.MessageText, []byte(
+func (h *huobiWs) sendUnsubscribeMsg(ctx context.Context, ch string, id int64) error {
+	return h.conn.Write(ctx, websocket.MessageText, []byte(
 		fmt.Sprintf("{\"unsub\": \"%s\", \"id\":\"%d\"}", ch, id)),
 	)
 }
 
-func (h *huobiWs) sendSubscribeMsg(ch string, id int64) error {
-	return h.conn.Write(h.ctx, websocket.MessageText, []byte(
+func (h *huobiWs) sendSubscribeMsg(ctx context.Context, ch string, id int64) error {
+	return h.conn.Write(ctx, websocket.MessageText, []byte(
 		fmt.Sprintf("{\"sub\": \"%s\", \"id\":\"%d\"}", ch, id)),
 	)
 }

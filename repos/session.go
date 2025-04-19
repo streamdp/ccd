@@ -40,8 +40,7 @@ func (sr *sessionRepo) GetSession() (map[string]int64, error) {
 }
 
 func (sr *sessionRepo) AddTask(n string, i int64) error {
-	_, err := sr.r.AddTask(n, i)
-	if err != nil {
+	if _, err := sr.r.AddTask(n, i); err != nil {
 		return fmt.Errorf("failed to add task: %w", err)
 	}
 
@@ -49,8 +48,7 @@ func (sr *sessionRepo) AddTask(n string, i int64) error {
 }
 
 func (sr *sessionRepo) RemoveTask(n string) error {
-	_, err := sr.r.RemoveTask(n)
-	if err != nil {
+	if _, err := sr.r.RemoveTask(n); err != nil {
 		return fmt.Errorf("failed to remove task: %w", err)
 	}
 

@@ -15,7 +15,7 @@ func (d *Db) AddTask(n string, i int64) (sql.Result, error) {
 	}
 
 	result, err := d.Exec(
-		`insert ignore into session (task_name,"interval") values (?,?);`, strings.ToUpper(n), i,
+		"insert ignore into session (task_name,session.interval) values (?,?);", strings.ToUpper(n), i,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errExecuteQuery, err)
@@ -29,7 +29,7 @@ func (d *Db) UpdateTask(n string, i int64) (sql.Result, error) {
 		return nil, errEmptyTaskName
 	}
 
-	result, err := d.Exec(`update session set "interval"=? where task_name=?;`, i, strings.ToUpper(n))
+	result, err := d.Exec("update session set session.interval=? where task_name=?;", i, strings.ToUpper(n))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errExecuteQuery, err)
 	}
@@ -51,7 +51,7 @@ func (d *Db) RemoveTask(n string) (sql.Result, error) {
 }
 
 func (d *Db) GetSession() (map[string]int64, error) {
-	rows, errQuery := d.Query(`select task_name,"interval" from session`)
+	rows, errQuery := d.Query(`select task_name,session.interval from session`)
 	if errQuery != nil {
 		return nil, fmt.Errorf("%w: %w", errExecuteQuery, errQuery)
 	}

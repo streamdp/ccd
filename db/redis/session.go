@@ -11,14 +11,14 @@ import (
 
 const sessionName = "lastSession"
 
-type KeysStore struct {
+type keysStore struct {
 	c *redis.Client
 }
 
 var errKeyStoreNotInitialized = errors.New("key store not initialised")
 
 // NewRedisKeysStore initialize new redis session store
-func NewRedisKeysStore(cfg *config.App) (*KeysStore, error) {
+func NewRedisKeysStore(cfg *config.App) (*keysStore, error) {
 	opt, err := cfg.Redis.Options()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse redis os environment variables: %w", err)
@@ -29,13 +29,13 @@ func NewRedisKeysStore(cfg *config.App) (*KeysStore, error) {
 		return nil, fmt.Errorf("failed to connect to redis: %w", err)
 	}
 
-	return &KeysStore{
+	return &keysStore{
 		c: client,
 	}, nil
 }
 
 // GetSession get previously saved session
-func (s *KeysStore) GetSession() (map[string]int64, error) {
+func (s *keysStore) GetSession() (map[string]int64, error) {
 	if s == nil {
 		return nil, errKeyStoreNotInitialized
 	}
@@ -52,7 +52,7 @@ func (s *KeysStore) GetSession() (map[string]int64, error) {
 }
 
 // AddTask add a new task or update an already saved task in the current session
-func (s *KeysStore) AddTask(n string, i int64) error {
+func (s *keysStore) AddTask(n string, i int64) error {
 	if s == nil {
 		return errKeyStoreNotInitialized
 	}
@@ -63,12 +63,12 @@ func (s *KeysStore) AddTask(n string, i int64) error {
 }
 
 // UpdateTask add a new task or update an already saved task in the current session
-func (s *KeysStore) UpdateTask(n string, i int64) error {
+func (s *keysStore) UpdateTask(n string, i int64) error {
 	return s.AddTask(n, i)
 }
 
 // RemoveTask remove a task from the current session
-func (s *KeysStore) RemoveTask(n string) error {
+func (s *keysStore) RemoveTask(n string) error {
 	if s == nil {
 		return errKeyStoreNotInitialized
 	}
@@ -78,7 +78,7 @@ func (s *KeysStore) RemoveTask(n string) error {
 	return nil
 }
 
-func (s *KeysStore) Close() error {
+func (s *keysStore) Close() error {
 	if s.c == nil {
 		return errKeyStoreNotInitialized
 	}

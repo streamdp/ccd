@@ -11,13 +11,13 @@ func TestResult_UpdateDataField(t *testing.T) {
 	}
 	tests := []struct {
 		name string
-		res  *Result
+		res  Result
 		args args
-		want *Result
+		want Result
 	}{
 		{
 			name: "update data filed",
-			res: &Result{
+			res: Result{
 				Code:    200,
 				Message: "test_message",
 				Data:    "test_data",
@@ -25,7 +25,7 @@ func TestResult_UpdateDataField(t *testing.T) {
 			args: args{
 				data: "321",
 			},
-			want: &Result{
+			want: Result{
 				Code:    200,
 				Message: "test_message",
 				Data:    "321",
@@ -33,13 +33,13 @@ func TestResult_UpdateDataField(t *testing.T) {
 		},
 		{
 			name: "update data filed with nil value",
-			res: &Result{
+			res: Result{
 				Code:    200,
 				Message: "test_message",
 				Data:    "test_data",
 			},
 			args: args{},
-			want: &Result{
+			want: Result{
 				Code:    200,
 				Message: "test_message",
 				Data:    nil,
@@ -63,19 +63,19 @@ func TestResult_UpdateAllFields(t *testing.T) {
 	}
 	tests := []struct {
 		name string
-		res  *Result
+		res  Result
 		args args
-		want *Result
+		want Result
 	}{
 		{
 			name: "update empty result fields",
-			res:  &Result{},
+			res:  Result{},
 			args: args{
 				code: 200,
 				msg:  "test_message",
 				data: "test_data",
 			},
-			want: &Result{
+			want: Result{
 				Code:    200,
 				Message: "test_message",
 				Data:    "test_data",
@@ -83,7 +83,7 @@ func TestResult_UpdateAllFields(t *testing.T) {
 		},
 		{
 			name: "update not empty result fields",
-			res: &Result{
+			res: Result{
 				Code:    400,
 				Message: "test_message",
 				Data:    "test_data",
@@ -93,7 +93,7 @@ func TestResult_UpdateAllFields(t *testing.T) {
 				msg:  "new_test_message",
 				data: "new_test_data",
 			},
-			want: &Result{
+			want: Result{
 				Code:    200,
 				Message: "new_test_message",
 				Data:    "new_test_data",

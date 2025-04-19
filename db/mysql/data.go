@@ -8,7 +8,7 @@ import (
 	"github.com/streamdp/ccd/domain"
 )
 
-var errEmptyData = errors.New("cant insert empty data")
+var errEmptyData = errors.New("empty data")
 
 // GetLast row with the most recent data for the selected currencies pair
 func (d *Db) GetLast(from string, to string) (*domain.Data, error) {

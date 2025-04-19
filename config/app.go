@@ -25,8 +25,13 @@ type App struct {
 
 func NewAppConfig() *App {
 	return &App{
-		Http:  &Http{},
-		Redis: &Redis{},
+		Http: &Http{},
+		Redis: &Redis{
+			Host:     redisDefaultHost,
+			Port:     redisDefaultPort,
+			Password: "",
+			Db:       redisDefaultDb,
+		},
 	}
 }
 
@@ -34,10 +39,8 @@ func (c *App) Validate() error {
 	if err := c.Http.Validate(); err != nil {
 		return err
 	}
-	if c.SessionStore == "redis" {
-		if err := c.Redis.Validate(); err != nil {
-			return err
-		}
+	if err := c.Redis.Validate(); err != nil {
+		return err
 	}
 	if c.DatabaseUrl == "" {
 		return errEmptyDatabaseUrl

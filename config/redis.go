@@ -9,6 +9,12 @@ import (
 	"github.com/go-redis/redis"
 )
 
+const (
+	redisDefaultHost = "127.0.0.1"
+	redisDefaultPort = 6379
+	redisDefaultDb   = 0
+)
+
 var (
 	errConfigNotInitialized = errors.New("config not initialized")
 	errRedisHost            = errors.New("redis host couldn't be blank")

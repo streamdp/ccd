@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/streamdp/ccd/caches"
 	"github.com/streamdp/ccd/domain"
 )
 
@@ -17,12 +16,12 @@ type SymbolsStore interface {
 
 type symbolRepo struct {
 	s SymbolsStore
-	c *caches.SymbolCache
+	c *SymbolCache
 }
 
 func NewSymbolRepository(s SymbolsStore) *symbolRepo {
 	return &symbolRepo{
-		c: caches.NewSymbolCache(),
+		c: NewSymbolCache(),
 		s: s,
 	}
 }

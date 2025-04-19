@@ -32,7 +32,7 @@ var (
 )
 
 func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger, cfg *config.App) (*cryptoCompareWs, error) {
-	if cfg.ApiKey != "" {
+	if cfg.ApiKey == "" {
 		return nil, errApiKeyNotDefined
 	}
 

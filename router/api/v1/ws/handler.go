@@ -32,7 +32,7 @@ type wsHandler struct {
 }
 
 var errInvalidRequest = errors.New(
-	`invalid request: the request should look like {"fsym":"CRYPTO","tsym":"COMMON"}`,
+	`invalid request: request should look like {"fsym":"CRYPTO","tsym":"COMMON"}`,
 )
 
 // HandleWs - handles websocket requests from the peer.

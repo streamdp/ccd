@@ -76,10 +76,8 @@ func getDatabaseUrl() (string, error) {
 }
 
 func getDataSource(dataBaseUrl string) (string, string) {
-	var (
-		driverName       = mysql.Mysql
-		connectionString string
-	)
+	driverName := mysql.Mysql
+	connectionString := dataBaseUrl
 
 	if parameters := strings.Split(dataBaseUrl, "://"); len(parameters) == 2 {
 		driverName, connectionString = parameters[0], parameters[1]

@@ -19,6 +19,8 @@ var (
 	Version           = "1.0.0"
 	DataProvider      = "cryptocompare" // "huobi"
 	SessionStore      = "db"            // "redis"
+
+	localEnvs *envs
 )
 
 // ParseFlags and update config variables
@@ -38,6 +40,9 @@ func ParseFlags() {
 	flag.StringVar(&DataProvider, "dataprovider", DataProvider, "use selected data provider"+
 		" (\"cryptocompare\", \"huobi\")")
 	flag.Parse()
+
+	localEnvs = newEnvs()
+
 	if GetEnv("CCDC_DEBUG") != "" {
 		debug = true
 	}

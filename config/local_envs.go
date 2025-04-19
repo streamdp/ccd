@@ -6,12 +6,6 @@ import (
 	"sync"
 )
 
-var localEnvs *envs
-
-func init() {
-	localEnvs = newEnvs()
-}
-
 type envs struct {
 	e map[string]string
 	m *sync.RWMutex

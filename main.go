@@ -24,10 +24,16 @@ var (
 )
 
 func main() {
-	l := log.New(gin.DefaultWriter, "CCD:", log.LstdFlags)
+	l := log.New(gin.DefaultWriter, "[CCD] ", log.LstdFlags)
 
 	config.ParseFlags()
 	gin.SetMode(config.RunMode)
+
+	l.Printf("Run mode:\n")
+	l.Printf("\tVersion=%v\n", config.Version)
+	l.Printf("\tRun mode=%v\n", config.RunMode)
+	l.Printf("\tData provider=%v\n", config.DataProvider)
+	l.Printf("\tSession store=%v\n", config.SessionStore)
 
 	d, err := db.Connect()
 	if err != nil {

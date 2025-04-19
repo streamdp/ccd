@@ -11,11 +11,10 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
-	"github.com/streamdp/ccd/db"
-	v1 "github.com/streamdp/ccd/router/api/v1"
-	"github.com/streamdp/ccd/router/handlers"
-
 	"github.com/streamdp/ccd/clients"
+	"github.com/streamdp/ccd/db"
+	"github.com/streamdp/ccd/domain"
+	v1 "github.com/streamdp/ccd/router/api/v1"
 )
 
 const (
@@ -128,8 +127,7 @@ func (w *wsHandler) handleMessagePipe(ctx context.Context) {
 
 func (w *wsHandler) returnAnErrorToTheClient(err error) {
 	var binaryString []byte
-	r := handlers.Result{}
-	r.UpdateAllFields(http.StatusBadRequest, err.Error(), nil)
+	r := domain.NewResult(http.StatusBadRequest, err.Error(), nil)
 	if binaryString, err = json.Marshal(&r); err != nil {
 		w.l.Println(err)
 

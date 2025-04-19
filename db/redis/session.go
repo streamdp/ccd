@@ -18,8 +18,8 @@ type KeysStore struct {
 var errKeyStoreNotInitialized = errors.New("key store not initialised")
 
 // NewRedisKeysStore initialize new redis session store
-func NewRedisKeysStore() (*KeysStore, error) {
-	opt, err := getRedisOptions()
+func NewRedisKeysStore(cfg *config.App) (*KeysStore, error) {
+	opt, err := cfg.Redis.Options()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse redis os environment variables: %w", err)
 	}
@@ -32,59 +32,6 @@ func NewRedisKeysStore() (*KeysStore, error) {
 	return &KeysStore{
 		c: client,
 	}, nil
-}
-
-func getSeparatedOptions() (*redis.Options, error) {
-	var (
-		host     = "127.0.0.1"
-		port     = 6379
-		password = ""
-		db       = 0
-	)
-	if h := config.GetEnv("REDIS_HOSTNAME"); h != "" {
-		host = h
-	}
-	if p := config.GetEnv("REDIS_PORT"); p != "" {
-		n, err := strconv.Atoi(p)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse redis port: %w", err)
-		}
-		port = n
-	}
-	if pass := config.GetEnv("REDIS_PASSWORD"); pass != "" {
-		password = pass
-	}
-	if d := config.GetEnv("REDIS_DB"); d != "" {
-		n, err := strconv.Atoi(d)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse redis db: %w", err)
-		}
-		db = n
-	}
-
-	return &redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", host, port),
-		Password: password,
-		DB:       db,
-	}, nil
-}
-
-func getRedisOptions() (*redis.Options, error) {
-	if redisUrl := config.GetEnv("REDIS_URL"); redisUrl != "" {
-		options, err := redis.ParseURL(redisUrl)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse redis url: %w", err)
-		}
-
-		return options, nil
-	}
-
-	options, err := getSeparatedOptions()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get redis options: %w", err)
-	}
-
-	return options, nil
 }
 
 // GetSession get previously saved session

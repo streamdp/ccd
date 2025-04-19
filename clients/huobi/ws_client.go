@@ -41,19 +41,20 @@ func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger) (*huobiW
 	return h, nil
 }
 
-func (h *huobiWs) Subscribe(ctx context.Context, from, to string) (err error) {
-	h.subMu.Lock()
-	defer h.subMu.Unlock()
+func (h *huobiWs) Subscribe(ctx context.Context, from, to string) error {
 	var (
 		id = time.Now().UnixMilli()
 		ch = buildChannelName(from, to)
 	)
-	if err = h.sendSubscribeMsg(ctx, ch, id); err != nil {
-		return
+	if err := h.sendSubscribeMsg(ctx, ch, id); err != nil {
+		return fmt.Errorf("failed to ws subscribe: %w", err)
 	}
-	h.subscriptions[ch] = domain.NewSubscription(from, to, id)
 
-	return
+	h.subMu.Lock()
+	h.subscriptions[ch] = domain.NewSubscription(from, to, id)
+	h.subMu.Unlock()
+
+	return nil
 }
 
 func (h *huobiWs) ListSubscriptions() domain.Subscriptions {
@@ -67,18 +68,18 @@ func (h *huobiWs) ListSubscriptions() domain.Subscriptions {
 	return s
 }
 
-func (h *huobiWs) Unsubscribe(ctx context.Context, from, to string) (err error) {
+func (h *huobiWs) Unsubscribe(ctx context.Context, from, to string) error {
 	h.subMu.Lock()
 	defer h.subMu.Unlock()
 	var ch = buildChannelName(from, to)
 	if c, ok := h.subscriptions[ch]; ok {
-		if err = h.sendUnsubscribeMsg(ctx, ch, c.Id()); err != nil {
-			return
+		if err := h.sendUnsubscribeMsg(ctx, ch, c.Id()); err != nil {
+			return fmt.Errorf("failed to wss unsubscribes: %w", err)
 		}
 		delete(h.subscriptions, ch)
 	}
 
-	return
+	return nil
 }
 
 func (h *huobiWs) reconnect(ctx context.Context) error {
@@ -98,16 +99,16 @@ func (h *huobiWs) reconnect(ctx context.Context) error {
 	return nil
 }
 
-func (h *huobiWs) resubscribe(ctx context.Context) (err error) {
+func (h *huobiWs) resubscribe(ctx context.Context) error {
 	h.subMu.RLock()
 	defer h.subMu.RUnlock()
 	for k, v := range h.subscriptions {
-		if err = h.sendSubscribeMsg(ctx, k, v.Id()); err != nil {
-			return
+		if err := h.sendSubscribeMsg(ctx, k, v.Id()); err != nil {
+			return fmt.Errorf("failed to wss resubscribe: %w", err)
 		}
 	}
 
-	return
+	return nil
 }
 
 func (h *huobiWs) handleWsError(ctx context.Context, err error) error {

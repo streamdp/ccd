@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/streamdp/ccd/domain"
 	"github.com/streamdp/ccd/router/handlers"
 )
 
@@ -26,8 +27,8 @@ type SymbolQuery struct {
 
 // AllSymbols return all symbols
 func AllSymbols(sr SymbolsRepo) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (handlers.Result, error) {
-		return handlers.Result{}.UpdateAllFields(
+	return func(c *gin.Context) (domain.Result, error) {
+		return domain.Result{}.UpdateAllFields(
 			http.StatusOK, "list of all symbols presented", sr.GetAll(),
 		), nil
 	}
@@ -35,16 +36,16 @@ func AllSymbols(sr SymbolsRepo) handlers.HandlerFuncResError {
 
 // AddSymbol to the symbols table
 func AddSymbol(sr SymbolsRepo) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (handlers.Result, error) {
+	return func(c *gin.Context) (domain.Result, error) {
 		q := SymbolQuery{}
 		if err := c.Bind(&q); err != nil {
-			return handlers.Result{}, err
+			return domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
 		if err := sr.Add(q.Symbol, q.Unicode); err != nil {
-			return handlers.Result{}, err
+			return domain.Result{}, fmt.Errorf("failed to add symbol: %w", err)
 		}
 
-		return handlers.Result{}.UpdateAllFields(
+		return domain.Result{}.UpdateAllFields(
 			http.StatusOK, fmt.Sprintf("symbol %s successfully added to the db", q.Symbol), nil,
 		), nil
 	}
@@ -52,16 +53,16 @@ func AddSymbol(sr SymbolsRepo) handlers.HandlerFuncResError {
 
 // UpdateSymbol in the symbols table
 func UpdateSymbol(sr SymbolsRepo) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (handlers.Result, error) {
+	return func(c *gin.Context) (domain.Result, error) {
 		q := SymbolQuery{}
 		if err := c.Bind(&q); err != nil {
-			return handlers.Result{}, err
+			return domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
 		if err := sr.Update(q.Symbol, q.Unicode); err != nil {
-			return handlers.Result{}, err
+			return domain.Result{}, fmt.Errorf("failed to update symbol: %w", err)
 		}
 
-		return handlers.Result{}.UpdateAllFields(
+		return domain.Result{}.UpdateAllFields(
 			http.StatusOK, fmt.Sprintf("symbol %s successfully updated", q.Symbol), nil,
 		), nil
 	}
@@ -69,16 +70,16 @@ func UpdateSymbol(sr SymbolsRepo) handlers.HandlerFuncResError {
 
 // RemoveSymbol from the symbols table
 func RemoveSymbol(sr SymbolsRepo) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (handlers.Result, error) {
+	return func(c *gin.Context) (domain.Result, error) {
 		q := SymbolQuery{}
 		if err := c.Bind(&q); err != nil {
-			return handlers.Result{}, err
+			return domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
 		if err := sr.Remove(q.Symbol); err != nil {
-			return handlers.Result{}, err
+			return domain.Result{}, fmt.Errorf("failed to remove symbol: %w", err)
 		}
 
-		return handlers.Result{}.UpdateAllFields(
+		return domain.Result{}.UpdateAllFields(
 			http.StatusOK, fmt.Sprintf("symbol %s successfully removed", q.Symbol), nil,
 		), nil
 	}

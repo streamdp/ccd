@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/domain"
 )
 
@@ -30,17 +31,17 @@ var (
 	errHeartbeat = errors.New("heartbeat loss")
 )
 
-func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger) (*cryptoCompareWs, error) {
-	apiKey, err := getApiKey()
-	if err != nil {
-		return nil, err
+func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger, cfg *config.App) (*cryptoCompareWs, error) {
+	if cfg.ApiKey != "" {
+		return nil, errApiKeyNotDefined
 	}
+
 	h := &cryptoCompareWs{
 		l:             l,
-		apiKey:        apiKey,
+		apiKey:        cfg.ApiKey,
 		subscriptions: domain.Subscriptions{},
 	}
-	if err = h.reconnect(ctx); err != nil {
+	if err := h.reconnect(ctx); err != nil {
 		return nil, err
 	}
 	h.handleWsMessages(ctx, pipe)
@@ -48,16 +49,17 @@ func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger) (*crypto
 	return h, nil
 }
 
-func (c *cryptoCompareWs) Subscribe(ctx context.Context, from, to string) (err error) {
-	c.subMu.Lock()
-	defer c.subMu.Unlock()
+func (c *cryptoCompareWs) Subscribe(ctx context.Context, from, to string) error {
 	var ch = buildChannelName(from, to)
-	if err = c.sendSubscribeMsg(ctx, ch); err != nil {
-		return
+	if err := c.sendSubscribeMsg(ctx, ch); err != nil {
+		return fmt.Errorf("failed to wss subscribe: %w", err)
 	}
-	c.subscriptions[ch] = domain.NewSubscription(from, to, 0)
 
-	return
+	c.subMu.Lock()
+	c.subscriptions[ch] = domain.NewSubscription(from, to, 0)
+	c.subMu.Unlock()
+
+	return nil
 }
 
 func (c *cryptoCompareWs) ListSubscriptions() domain.Subscriptions {
@@ -77,7 +79,7 @@ func (c *cryptoCompareWs) Unsubscribe(ctx context.Context, from, to string) erro
 	var ch = buildChannelName(from, to)
 	if _, ok := c.subscriptions[ch]; ok {
 		if err := c.sendUnsubscribeMsg(ctx, ch); err != nil {
-			return err
+			return fmt.Errorf("failed to wss unsubscribe: %w", err)
 		}
 		delete(c.subscriptions, ch)
 	}

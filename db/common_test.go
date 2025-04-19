@@ -1,54 +1,8 @@
 package db
 
 import (
-	"errors"
-	"flag"
 	"testing"
-
-	"github.com/streamdp/ccd/config"
 )
-
-func Test_getDatabaseUrl(t *testing.T) {
-	tests := []struct {
-		name    string
-		want    string
-		envs    map[string]string
-		wantErr error
-	}{
-		{
-			name:    "empty url",
-			want:    "",
-			envs:    nil,
-			wantErr: errDatabaseUrl,
-		},
-		{
-			name: "get database url",
-			want: "postgresql://postgres:postgres@127.0.0.1:5432/db?sslmode=disable",
-			envs: map[string]string{
-				"CCDC_DATABASEURL": "postgresql://postgres:postgres@127.0.0.1:5432/db?sslmode=disable",
-			},
-			wantErr: nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			for k, v := range tt.envs {
-				t.Setenv(k, v)
-			}
-			flag.CommandLine = flag.NewFlagSet("", flag.ContinueOnError)
-			config.ParseFlags()
-
-			got, err := getDatabaseUrl()
-			if !errors.Is(err, tt.wantErr) {
-				t.Errorf("getDatabaseUrl() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("getDatabaseUrl() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 func Test_getDataSource(t *testing.T) {
 	type args struct {

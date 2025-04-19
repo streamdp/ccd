@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/domain"
@@ -34,16 +33,15 @@ var (
 )
 
 // Init apiKey, apiUrl, wsURL variables with environment values and return CryptoCompareData structure
-func Init() (*cryptoCompareRest, error) {
-	apiKey, err := getApiKey()
-	if err != nil {
-		return nil, fmt.Errorf("faile to init rest client: %w", err)
+func Init(cfg *config.App) (*cryptoCompareRest, error) {
+	if cfg.ApiKey == "" {
+		return nil, errApiKeyNotDefined
 	}
 
 	return &cryptoCompareRest{
-		apiKey: apiKey,
+		apiKey: cfg.ApiKey,
 		client: &http.Client{
-			Timeout: time.Duration(config.HttpClientTimeout) * time.Millisecond,
+			Timeout: cfg.Http.ClientTimeout(),
 		},
 	}, nil
 }
@@ -75,15 +73,6 @@ func (cc *cryptoCompareRest) Get(fSym string, tSym string) (*domain.Data, error)
 	}
 
 	return convertToDomain(fSym, tSym, rawData), nil
-}
-
-func getApiKey() (string, error) {
-	apiKey := config.GetEnv("CCDC_APIKEY")
-	if apiKey == "" {
-		return "", errApiKeyNotDefined
-	}
-
-	return apiKey, nil
 }
 
 func (cc *cryptoCompareRest) buildURL(fSym string, tSym string) (*url.URL, error) {

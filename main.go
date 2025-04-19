@@ -26,16 +26,19 @@ var (
 func main() {
 	l := log.New(gin.DefaultWriter, "[CCD] ", log.LstdFlags)
 
-	config.ParseFlags()
-	gin.SetMode(config.RunMode)
+	appCfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	gin.SetMode(appCfg.RunMode)
 
 	l.Printf("Run mode:\n")
-	l.Printf("\tVersion=%v\n", config.Version)
-	l.Printf("\tRun mode=%v\n", config.RunMode)
-	l.Printf("\tData provider=%v\n", config.DataProvider)
-	l.Printf("\tSession store=%v\n", config.SessionStore)
+	l.Printf("\tVersion=%v\n", appCfg.Version)
+	l.Printf("\tRun mode=%v\n", appCfg.RunMode)
+	l.Printf("\tData provider=%v\n", appCfg.DataProvider)
+	l.Printf("\tSession store=%v\n", appCfg.SessionStore)
 
-	d, err := db.Connect()
+	d, err := db.Connect(appCfg)
 	if err != nil {
 		l.Fatalln(err)
 	}
@@ -54,7 +57,7 @@ func main() {
 	if !ok {
 		l.Fatalln("task repo type assertion error")
 	}
-	s, err := newSessionStore(taskRepo)
+	s, err := newSessionStore(taskRepo, appCfg)
 	if err != nil {
 		l.Fatal(err)
 	}
@@ -73,14 +76,14 @@ func main() {
 		l.Fatalln(err)
 	}
 
-	r, err := initRestClient()
+	r, err := initRestClient(appCfg)
 	if err != nil {
 		l.Fatalln(err)
 	}
 
 	ctx := context.Background()
 
-	w, err := initWsClient(ctx, database, l)
+	w, err := initWsClient(ctx, database, l, appCfg)
 	if err != nil {
 		l.Fatalln(err)
 	}
@@ -95,24 +98,24 @@ func main() {
 		l.Fatalln(err)
 	}
 
-	if err = e.Run(config.Port); err != nil {
+	if err = e.Run(fmt.Sprintf(":%d", appCfg.Http.Port())); err != nil {
 		l.Fatalln(err)
 	}
 
 	<-ctx.Done()
 }
 
-func initRestClient() (clients.RestClient, error) {
+func initRestClient(cfg *config.App) (clients.RestClient, error) {
 	var (
 		r   clients.RestClient
 		err error
 	)
 
-	switch config.DataProvider {
+	switch cfg.DataProvider {
 	case "huobi":
-		r, err = huobi.Init()
+		r, err = huobi.Init(cfg)
 	default:
-		r, err = cryptocompare.Init()
+		r, err = cryptocompare.Init(cfg)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errInitRestClient, err)
@@ -121,17 +124,17 @@ func initRestClient() (clients.RestClient, error) {
 	return r, nil
 }
 
-func initWsClient(ctx context.Context, d db.Database, l *log.Logger) (clients.WsClient, error) {
+func initWsClient(ctx context.Context, d db.Database, l *log.Logger, cfg *config.App) (clients.WsClient, error) {
 	var (
 		w   clients.WsClient
 		err error
 	)
 
-	switch config.DataProvider {
+	switch cfg.DataProvider {
 	case "huobi":
 		w, err = huobi.InitWs(ctx, d.DataPipe(), l)
 	default:
-		w, err = cryptocompare.InitWs(ctx, d.DataPipe(), l)
+		w, err = cryptocompare.InitWs(ctx, d.DataPipe(), l, cfg)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errInitWsClient, err)
@@ -140,15 +143,15 @@ func initWsClient(ctx context.Context, d db.Database, l *log.Logger) (clients.Ws
 	return w, nil
 }
 
-func newSessionStore(t repos.TaskStore) (db.Session, error) {
+func newSessionStore(t repos.TaskStore, cfg *config.App) (db.Session, error) {
 	var (
 		s   db.Session
 		err error
 	)
 
-	switch config.SessionStore {
+	switch cfg.SessionStore {
 	case "redis":
-		s, err = redis.NewRedisKeysStore()
+		s, err = redis.NewRedisKeysStore(cfg)
 	default:
 		s, err = repos.NewSessionRepo(t)
 	}

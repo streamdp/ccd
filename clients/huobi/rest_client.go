@@ -32,10 +32,10 @@ type huobiRest struct {
 
 var errWrongStatusCode = errors.New("wrong response status code")
 
-func Init() (*huobiRest, error) {
+func Init(cfg *config.App) (*huobiRest, error) {
 	return &huobiRest{
 		client: &http.Client{
-			Timeout: time.Duration(config.HttpClientTimeout) * time.Millisecond,
+			Timeout: cfg.Http.ClientTimeout(),
 		},
 		limiter: time.NewTimer(rateLimit),
 	}, nil

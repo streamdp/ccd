@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -32,20 +31,16 @@ type Database interface {
 	Close() error
 }
 
-var errDatabaseUrl = errors.New("\"CCDC_DATABASEURL\" os environment variable is not set")
+func Connect(cfg *config.App) (any, error) {
+	var (
+		database any
+		err      error
+	)
 
-func Connect() (any, error) {
-	dataBaseUrl, err := getDatabaseUrl()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get database url: %w", err)
-	}
-
-	driverName, connectionString := getDataSource(dataBaseUrl)
-
-	var database any
+	driverName, connectionString := getDataSource(cfg.DatabaseUrl)
 	switch driverName {
 	case postgresql.Postgres, "postgresql":
-		database, err = postgresql.Connect(dataBaseUrl)
+		database, err = postgresql.Connect(cfg.DatabaseUrl)
 	case mysql.Mysql:
 		fallthrough
 	default:
@@ -64,15 +59,6 @@ func Serve(d Database, l *log.Logger) {
 			l.Println(err)
 		}
 	}
-}
-
-func getDatabaseUrl() (string, error) {
-	var dataBaseUrl = config.GetEnv("CCDC_DATABASEURL")
-	if dataBaseUrl == "" {
-		return "", errDatabaseUrl
-	}
-
-	return dataBaseUrl, nil
 }
 
 func getDataSource(dataBaseUrl string) (string, string) {

@@ -17,7 +17,9 @@ func NewSymbolCache() *SymbolCache {
 	}
 }
 
-func (sc *SymbolCache) GetAll() (ret []string) {
+func (sc *SymbolCache) GetAll() []string {
+	var ret = make([]string, 0, len(sc.c))
+
 	sc.m.RLock()
 	defer sc.m.RUnlock()
 	for k := range sc.c {

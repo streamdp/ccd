@@ -28,12 +28,14 @@ func (t *Task) run(r RestClient, l *log.Logger, dataPipe chan *domain.Data) {
 			select {
 			case <-t.done:
 				timer.Stop()
+
 				return
 			case <-timer.C:
 				timer.Reset(time.Duration(atomic.LoadInt64(&t.Interval)) * time.Second)
 				data, err := r.Get(t.From, t.To)
 				if err != nil {
 					l.Println(err)
+
 					continue
 				}
 				dataPipe <- data

@@ -1,67 +1,80 @@
 package repos
 
 import (
-	"github.com/streamdp/ccd/caches"
-	"github.com/streamdp/ccd/db"
+	"database/sql"
+	"fmt"
+
+	"github.com/streamdp/ccd/domain"
 )
 
-type SymbolRepo struct {
-	db db.Database
-	c  *caches.SymbolCache
+type SymbolsStore interface {
+	AddSymbol(s string, u string) (result sql.Result, err error)
+	UpdateSymbol(s string, u string) (result sql.Result, err error)
+	RemoveSymbol(s string) (result sql.Result, err error)
+	Symbols() (symbols []*domain.Symbol, err error)
 }
 
-func NewSymbolRepository(db db.Database) *SymbolRepo {
-	return &SymbolRepo{
-		c:  caches.NewSymbolCache(),
-		db: db,
+type symbolRepo struct {
+	s SymbolsStore
+	c *SymbolCache
+}
+
+func NewSymbolRepository(s SymbolsStore) *symbolRepo {
+	return &symbolRepo{
+		c: NewSymbolCache(),
+		s: s,
 	}
 }
 
-func (sc *SymbolRepo) Update(s, u string) (err error) {
-	if _, err = sc.db.UpdateSymbol(s, u); err != nil {
-		return
+func (r *symbolRepo) Update(s, u string) error {
+	if _, err := r.s.UpdateSymbol(s, u); err != nil {
+		return fmt.Errorf("failed to update symbol: %w", err)
 	}
-	sc.c.Add(s)
-	return
-}
+	r.c.Add(s)
 
-func (sc *SymbolRepo) Load() error {
-	s, err := sc.db.Symbols()
-	if err != nil {
-		return err
-	}
-	for i := range s {
-		sc.c.Add(s[i].Symbol)
-	}
 	return nil
 }
 
-func (sc *SymbolRepo) GetAll() []string {
-	return sc.c.GetAll()
+func (r *symbolRepo) Load() error {
+	s, err := r.s.Symbols()
+	if err != nil {
+		return fmt.Errorf("failed to load symbols: %w", err)
+	}
+	for i := range s {
+		r.c.Add(s[i].Symbol)
+	}
+
+	return nil
 }
 
-func (sc *SymbolRepo) Add(s, u string) (err error) {
-	if sc.IsPresent(s) {
+func (r *symbolRepo) GetAll() []string {
+	return r.c.GetAll()
+}
+
+func (r *symbolRepo) Add(s, u string) error {
+	if r.IsPresent(s) {
 		return nil
 	}
-	if _, err = sc.db.AddSymbol(s, u); err != nil {
-		return
+	if _, err := r.s.AddSymbol(s, u); err != nil {
+		return fmt.Errorf("failed to add symbol: %w", err)
 	}
-	sc.c.Add(s)
-	return
+	r.c.Add(s)
+
+	return nil
 }
 
-func (sc *SymbolRepo) Remove(s string) (err error) {
-	if !sc.IsPresent(s) {
+func (r *symbolRepo) Remove(s string) error {
+	if !r.IsPresent(s) {
 		return nil
 	}
-	if _, err = sc.db.RemoveSymbol(s); err != nil {
-		return
+	if _, err := r.s.RemoveSymbol(s); err != nil {
+		return fmt.Errorf("failed to remove symbol: %w", err)
 	}
-	sc.c.Remove(s)
-	return
+	r.c.Remove(s)
+
+	return nil
 }
 
-func (sc *SymbolRepo) IsPresent(s string) bool {
-	return sc.c.IsPresent(s)
+func (r *symbolRepo) IsPresent(s string) bool {
+	return r.c.IsPresent(s)
 }

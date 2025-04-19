@@ -22,8 +22,8 @@ type RestApiPuller interface {
 	RestoreLastSession() error
 }
 
-// RestPuller puller base struct
-type RestPuller struct {
+// restPuller puller base struct
+type restPuller struct {
 	t        Tasks
 	l        *log.Logger
 	s        db.Session
@@ -33,8 +33,8 @@ type RestPuller struct {
 }
 
 // NewPuller init rest puller
-func NewPuller(r RestClient, l *log.Logger, s db.Session, dataPipe chan *domain.Data) RestApiPuller {
-	return &RestPuller{
+func NewPuller(r RestClient, l *log.Logger, s db.Session, dataPipe chan *domain.Data) *restPuller {
+	return &restPuller{
 		t:        Tasks{},
 		l:        l,
 		s:        s,
@@ -43,46 +43,25 @@ func NewPuller(r RestClient, l *log.Logger, s db.Session, dataPipe chan *domain.
 	}
 }
 
-func (p *RestPuller) newTask(from string, to string, interval int64) *Task {
-	if interval <= 0 {
-		interval = config.DefaultPullingInterval
-	}
-	return &Task{
-		done:     make(chan struct{}),
-		From:     from,
-		To:       to,
-		Interval: interval,
-	}
-}
-
 // ListTasks return all tasks
-func (p *RestPuller) ListTasks() Tasks {
+func (p *restPuller) ListTasks() Tasks {
 	var t = make(Tasks, len(p.t))
 	p.pullerMu.RLock()
 	for k, v := range p.t {
 		t[k] = v
 	}
 	p.pullerMu.RUnlock()
+
 	return t
 }
 
 // Task return task with selected currencies pair, if possible
-func (p *RestPuller) Task(from, to string) *Task {
+func (p *restPuller) Task(from, to string) *Task {
 	return p.task(buildTaskName(from, to))
 }
 
-func (p *RestPuller) task(name string) *Task {
-	p.pullerMu.RLock()
-	defer p.pullerMu.RUnlock()
-	return p.t[name]
-}
-
-func buildTaskName(from, to string) string {
-	return strings.ToUpper(fmt.Sprintf("%s:%s", from, to))
-}
-
 // AddTask to collect data for the selected currency pair to the puller
-func (p *RestPuller) AddTask(from string, to string, interval int64) *Task {
+func (p *restPuller) AddTask(from string, to string, interval int64) *Task {
 	t := p.newTask(from, to, interval)
 	t.run(p.client, p.l, p.dataPipe)
 	name := buildTaskName(from, to)
@@ -92,11 +71,12 @@ func (p *RestPuller) AddTask(from string, to string, interval int64) *Task {
 	if err := p.s.AddTask(name, interval); err != nil {
 		p.l.Println(err)
 	}
+
 	return t
 }
 
 // RemoveTask from the puller by the selected currency pair
-func (p *RestPuller) RemoveTask(from string, to string) {
+func (p *restPuller) RemoveTask(from string, to string) {
 	name := buildTaskName(from, to)
 	t := p.task(name)
 	t.close()
@@ -109,13 +89,13 @@ func (p *RestPuller) RemoveTask(from string, to string) {
 }
 
 // RestoreLastSession get the last session from the session store and restore it
-func (p *RestPuller) RestoreLastSession() (err error) {
+func (p *restPuller) RestoreLastSession() error {
 	if p.s == nil {
-		return
+		return nil
 	}
 	ses, err := p.s.GetSession()
 	if err != nil {
-		return
+		return fmt.Errorf("failed to get session: %w", err)
 	}
 	for k, v := range ses {
 		if pair := strings.Split(k, ":"); len(pair) == 2 {
@@ -123,13 +103,39 @@ func (p *RestPuller) RestoreLastSession() (err error) {
 			p.AddTask(from, to, v)
 		}
 	}
-	return
+
+	return nil
 }
 
-func (p *RestPuller) UpdateTask(t *Task, interval int64) *Task {
+func (p *restPuller) UpdateTask(t *Task, interval int64) *Task {
 	atomic.StoreInt64(&t.Interval, interval)
 	if err := p.s.UpdateTask(buildTaskName(t.From, t.To), interval); err != nil {
 		p.l.Println(err)
 	}
+
 	return t
+}
+
+func buildTaskName(from, to string) string {
+	return strings.ToUpper(fmt.Sprintf("%s:%s", from, to))
+}
+
+func (p *restPuller) newTask(from string, to string, interval int64) *Task {
+	if interval <= 0 {
+		interval = config.DefaultPullingInterval
+	}
+
+	return &Task{
+		done:     make(chan struct{}),
+		From:     from,
+		To:       to,
+		Interval: interval,
+	}
+}
+
+func (p *restPuller) task(name string) *Task {
+	p.pullerMu.RLock()
+	defer p.pullerMu.RUnlock()
+
+	return p.t[name]
 }

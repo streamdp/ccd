@@ -3,47 +3,77 @@ package mysql
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 )
 
-func (d *Db) AddTask(n string, i int64) (result sql.Result, err error) {
+var errEmptyTaskName = errors.New("empty task name")
+
+func (d *Db) AddTask(n string, i int64) (sql.Result, error) {
 	if n == "" {
-		return nil, errors.New("cant insert empty task name")
+		return nil, errEmptyTaskName
 	}
-	return d.Exec(
-		"insert ignore into session (task_name,`interval`) values (?,?);", strings.ToUpper(n), i,
+
+	result, err := d.Exec(
+		"insert ignore into session (task_name,session.interval) values (?,?);", strings.ToUpper(n), i,
 	)
-}
-
-func (d *Db) UpdateTask(n string, i int64) (result sql.Result, err error) {
-	if n == "" {
-		return nil, errors.New("empty task name")
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errExecuteQuery, err)
 	}
-	return d.Exec("update session set `interval`=? where task_name=?;", i, strings.ToUpper(n))
+
+	return result, nil
 }
 
-func (d *Db) RemoveTask(n string) (result sql.Result, err error) {
+func (d *Db) UpdateTask(n string, i int64) (sql.Result, error) {
 	if n == "" {
-		return nil, errors.New("empty symbol")
+		return nil, errEmptyTaskName
 	}
-	return d.Exec(`delete from session where task_name=?;`, strings.ToUpper(n))
+
+	result, err := d.Exec("update session set session.interval=? where task_name=?;", i, strings.ToUpper(n))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errExecuteQuery, err)
+	}
+
+	return result, nil
 }
 
-func (d *Db) GetSession() (tasks map[string]int64, err error) {
-	rows, errQuery := d.Query("select task_name,`interval` from session")
+func (d *Db) RemoveTask(n string) (sql.Result, error) {
+	if n == "" {
+		return nil, errEmptySymbol
+	}
+
+	result, err := d.Exec(`delete from session where task_name=?;`, strings.ToUpper(n))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errExecuteQuery, err)
+	}
+
+	return result, nil
+}
+
+func (d *Db) GetSession() (map[string]int64, error) {
+	rows, errQuery := d.Query(`select task_name,session.interval from session`)
 	if errQuery != nil {
-		return nil, errQuery
+		return nil, fmt.Errorf("%w: %w", errExecuteQuery, errQuery)
 	}
-	tasks = make(map[string]int64)
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
+
+	tasks := make(map[string]int64)
 	for rows.Next() {
 		var (
 			n string
 			i int64
 		)
-		if err = rows.Scan(&n, &i); err != nil {
-			return nil, err
+		if err := rows.Scan(&n, &i); err != nil {
+			return nil, fmt.Errorf("%w: %w", errCopyResult, err)
 		}
 		tasks[n] = i
 	}
-	return
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%w: %w", errParseResults, err)
+	}
+
+	return tasks, nil
 }

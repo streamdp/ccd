@@ -2,6 +2,7 @@ package postgresql
 
 import (
 	"database/sql"
+	"fmt"
 
 	_ "github.com/lib/pq"
 	"github.com/streamdp/ccd/domain"
@@ -20,11 +21,12 @@ func (d *Db) DataPipe() chan *domain.Data {
 }
 
 // Connect after prepare to the Db
-func Connect(dataSource string) (d *Db, err error) {
-	sqlDb := &sql.DB{}
-	if sqlDb, err = sql.Open(Postgres, dataSource); err != nil {
-		return
+func Connect(dataSource string) (*Db, error) {
+	sqlDb, err := sql.Open(Postgres, dataSource)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
+
 	return &Db{
 		DB:   sqlDb,
 		pipe: make(chan *domain.Data, 1000),
@@ -32,10 +34,16 @@ func Connect(dataSource string) (d *Db, err error) {
 }
 
 // Close Db connection
-func (d *Db) Close() (err error) {
+func (d *Db) Close() error {
 	defer close(d.pipe)
+
 	if d.DB == nil {
-		return
+		return nil
 	}
-	return d.DB.Close()
+
+	if err := d.DB.Close(); err != nil {
+		return fmt.Errorf("failed to close database: %w", err)
+	}
+
+	return nil
 }

@@ -11,42 +11,41 @@ import (
 
 const DefaultPullingInterval = 60
 
-var (
-	// Port - set default port for gin-gonic engine init
-	Port              = ":8080"
-	RunMode           = gin.DebugMode
-	HttpClientTimeout = 5000 // milliseconds
-	Version           = "1.0.0"
-	DataProvider      = "cryptocompare" // "huobi"
-	SessionStore      = "db"            // "redis"
-)
+var Version = "1.0.0"
 
-// ParseFlags and update config variables
-func ParseFlags() {
+// LoadConfig and update config variables
+func LoadConfig() (*App, error) {
 	var (
 		showHelp    bool
 		showVersion bool
 		debug       bool
+		appCfg      = NewAppConfig()
 	)
 	flag.BoolVar(&showHelp, "h", false, "display help")
 	flag.BoolVar(&showVersion, "v", false, "display version")
 	flag.BoolVar(&debug, "debug", false, "run the program in debug mode")
-	flag.StringVar(&Port, "port", ":8080", "set specify port")
-	flag.StringVar(&SessionStore, "session", "db", "set session store \"db\" or \"redis\"")
-	flag.IntVar(&HttpClientTimeout, "timeout", HttpClientTimeout, "how long to wait for a response from the"+
-		" api server before sending data from the cache")
-	flag.StringVar(&DataProvider, "dataprovider", DataProvider, "use selected data provider"+
+	flag.IntVar(&appCfg.Http.port, "port", httpServerDefaultPort, "set specify port")
+	flag.StringVar(&appCfg.SessionStore, "session", defaultSessionStore,
+		"set session store \"db\" or \"redis\"")
+	flag.IntVar(&appCfg.Http.clientTimeout, "timeout", httpDefaultTimeout, "how long to wait for a "+
+		"response from the api server before sending data from the cache")
+	flag.StringVar(&appCfg.DataProvider, "dataprovider", defaultDataProvider, "use selected data provider"+
 		" (\"cryptocompare\", \"huobi\")")
 	flag.Parse()
-	if GetEnv("CCDC_DEBUG") != "" {
+
+	if appCfg.DatabaseUrl = os.Getenv("CCDC_DATABASEURL"); appCfg.DatabaseUrl == "" {
+		return nil, errEmptyDatabaseUrl
+	}
+	if os.Getenv("CCDC_DEBUG") != "" {
 		debug = true
 	}
-	if dataProvider := GetEnv("CCDC_DATAPROVIDER"); dataProvider != "" {
-		DataProvider = strings.ToLower(dataProvider)
+	if dataProvider := os.Getenv("CCDC_DATAPROVIDER"); dataProvider != "" {
+		appCfg.DataProvider = strings.ToLower(dataProvider)
 	}
-	if sessionStore := GetEnv("CCDC_SESSIONSTORE"); sessionStore != "" {
-		SessionStore = strings.ToLower(sessionStore)
+	if sessionStore := os.Getenv("CCDC_SESSIONSTORE"); sessionStore != "" {
+		appCfg.SessionStore = strings.ToLower(sessionStore)
 	}
+	appCfg.ApiKey = os.Getenv("CCDC_APIKEY")
 	if showHelp {
 		fmt.Println("ccd is a microservice that collect data from several crypto data providers using its API.")
 		fmt.Println("")
@@ -57,12 +56,16 @@ func ParseFlags() {
 		fmt.Println("ccd version: " + Version)
 		os.Exit(1)
 	}
-	if !debug {
-		RunMode = gin.ReleaseMode
-	}
-}
 
-// GetEnv values for selected name or return null
-func GetEnv(name string) (result string) {
-	return localEnvs.get(name)
+	appCfg.Version = Version
+	appCfg.RunMode = gin.ReleaseMode
+	if debug {
+		appCfg.RunMode = gin.DebugMode
+	}
+
+	if err := appCfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid app config: %w", err)
+	}
+
+	return appCfg, nil
 }

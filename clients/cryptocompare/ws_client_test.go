@@ -20,6 +20,7 @@ func Test_cryptoCompareWs_buildURL(t *testing.T) {
 			apiKey: "4pwP6HmdD0O8PGDAkvKA9DSCGK74Ixma",
 			wantU: func() *url.URL {
 				u, _ := url.Parse("wss://streamer.cryptocompare.com/v2?api_key=4pwP6HmdD0O8PGDAkvKA9DSCGK74Ixma")
+
 				return u
 			}(),
 			wantErr: false,
@@ -31,6 +32,7 @@ func Test_cryptoCompareWs_buildURL(t *testing.T) {
 			gotU, err := c.buildURL()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildURL() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
 			if !reflect.DeepEqual(gotU, tt.wantU) {

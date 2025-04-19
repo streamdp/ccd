@@ -1,6 +1,8 @@
 package router
 
 import (
+	"context"
+	"fmt"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -8,23 +10,22 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/db"
-	"github.com/streamdp/ccd/repos"
 	v1 "github.com/streamdp/ccd/router/api/v1"
 	"github.com/streamdp/ccd/router/api/v1/ws"
 	"github.com/streamdp/ccd/router/handlers"
-	"github.com/streamdp/ccd/router/validators"
 )
 
 // InitRouter basic work on setting up the application, declare endpoints, register our custom validation functions
 func InitRouter(
+	ctx context.Context,
 	e *gin.Engine,
 	d db.Database,
 	l *log.Logger,
-	sr *repos.SymbolRepo,
+	sr v1.SymbolsRepo,
 	r clients.RestClient,
 	w clients.WsClient,
 	p clients.RestApiPuller,
-) (err error) {
+) error {
 	// health checks
 	e.GET("/healthz", SendOK)
 	e.HEAD("/healthz", SendOK)
@@ -58,12 +59,12 @@ func InitRouter(
 		apiV1.GET("/price", handlers.GinHandler(v1.Price(r, d)))
 		apiV1.POST("/price", handlers.GinHandler(v1.Price(r, d)))
 
-		apiV1.GET("/ws", ws.HandleWs(r, l, d))
+		apiV1.GET("/ws", ws.HandleWs(ctx, r, l, d))
 		if w != nil {
-			apiV1.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(w)))
-			apiV1.POST("/ws/subscribe", handlers.GinHandler(v1.Subscribe(w)))
-			apiV1.GET("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(w)))
-			apiV1.POST("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(w)))
+			apiV1.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, w)))
+			apiV1.POST("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, w)))
+			apiV1.GET("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(ctx, w)))
+			apiV1.POST("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(ctx, w)))
 		}
 	}
 
@@ -83,16 +84,16 @@ func InitRouter(
 		// price
 		apiV2.GET("/price", handlers.GinHandler(v1.Price(r, d)))
 		// websockets
-		apiV2.GET("/ws", ws.HandleWs(r, l, d))
+		apiV2.GET("/ws", ws.HandleWs(ctx, r, l, d))
 		if w != nil {
-			apiV2.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(w)))
-			apiV2.GET("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(w)))
+			apiV2.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, w)))
+			apiV2.GET("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(ctx, w)))
 		}
 	}
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		if err = v.RegisterValidation("symbols", validators.Symbols(sr)); err != nil {
-			return err
+		if err := v.RegisterValidation("symbols", v1.ValidateSymbols(sr)); err != nil {
+			return fmt.Errorf("failed to register validator: %w", err)
 		}
 	}
 

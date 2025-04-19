@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -14,32 +15,45 @@ import (
 
 // PriceQuery structure for easily json serialization/validation/binding GET and POST query data
 type PriceQuery struct {
-	From string `json:"fsym" form:"fsym" binding:"required,symbols"`
-	To   string `json:"tsym" form:"tsym" binding:"required,symbols"`
+	From string `binding:"required,symbols" form:"fsym" json:"fsym"`
+	To   string `binding:"required,symbols" form:"tsym" json:"tsym"`
 }
 
+var errGetPrice = errors.New("failed to get price")
+
 // LastPrice return up-to-date data for the selected currencies pair
-func LastPrice(r clients.RestClient, db db.Database, query *PriceQuery) (d *domain.Data, err error) {
+func LastPrice(r clients.RestClient, db db.Database, query *PriceQuery) (*domain.Data, error) {
 	from, to := strings.ToUpper(query.From), strings.ToUpper(query.To)
-	if d, err = r.Get(from, to); err != nil {
-		return db.GetLast(from, to)
+	data, err := r.Get(from, to)
+	if err != nil {
+		if data, err = db.GetLast(from, to); err != nil {
+			return nil, errGetPrice
+		}
+
+		return data, nil
 	}
-	db.DataPipe() <- d
-	return
+
+	db.DataPipe() <- data
+
+	return data, nil
 }
 
 // Price return up-to-date or most recent data for the selected currencies pair
 func Price(rc clients.RestClient, db db.Database) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (r handlers.Result, err error) {
+	return func(c *gin.Context) (*domain.Result, error) {
 		q := PriceQuery{}
-		if err = c.Bind(&q); err != nil {
-			return
+		if err := c.Bind(&q); err != nil {
+			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
 		p, err := LastPrice(rc, db, &q)
 		if err != nil {
-			return
+			return &domain.Result{}, fmt.Errorf("failed to get price: %w", err)
 		}
-		r.UpdateAllFields(http.StatusOK, fmt.Sprintf("Most recent price, updated at %d", p.LastUpdate), p)
-		return
+
+		return domain.NewResult(
+			http.StatusOK,
+			fmt.Sprintf("Most recent price, updated at %d", p.LastUpdate),
+			p,
+		), nil
 	}
 }

@@ -1,101 +1,96 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/streamdp/ccd/clients"
-	"github.com/streamdp/ccd/clients/cryptocompare"
-	"github.com/streamdp/ccd/clients/huobi"
 	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/db"
-	"github.com/streamdp/ccd/db/redis"
 	"github.com/streamdp/ccd/repos"
 	"github.com/streamdp/ccd/router"
 )
 
 func main() {
-	l := log.New(os.Stderr, "CCD:", log.LstdFlags)
+	l := log.New(gin.DefaultWriter, "[CCD] ", log.LstdFlags)
 
-	config.ParseFlags()
-	gin.SetMode(config.RunMode)
+	appCfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	gin.SetMode(appCfg.RunMode)
 
-	d, err := db.Connect(l)
+	l.Printf("Run mode:\n")
+	l.Printf("\tVersion=%v\n", appCfg.Version)
+	l.Printf("\tRun mode=%v\n", appCfg.RunMode)
+	l.Printf("\tData provider=%v\n", appCfg.DataProvider)
+	l.Printf("\tSession store=%v\n", appCfg.SessionStore)
+
+	d, err := db.Connect(appCfg)
 	if err != nil {
 		l.Fatalln(err)
 	}
+	database, ok := d.(db.Database)
+	if !ok {
+		l.Fatalln("database type assertion error")
+	}
 	defer func() {
-		if errClose := d.Close(); errClose != nil {
-			l.Println(fmt.Errorf("failed to close database connection: %w", errClose))
+		if errClose := database.Close(); errClose != nil {
+			l.Printf("failed to close database connection: %v", errClose)
 		}
 	}()
+	go db.Serve(database, l)
 
-	s := newSessionStore(d, l)
+	taskRepo, ok := d.(repos.TaskStore)
+	if !ok {
+		l.Fatalln("task repo type assertion error")
+	}
+	s, err := newSessionStore(taskRepo, appCfg)
+	if err != nil {
+		l.Fatal(err)
+	}
 	defer func() {
 		if errClose := s.Close(); errClose != nil {
-			l.Println(fmt.Errorf("failed to close session store: %w", errClose))
+			l.Printf("failed to close session store: %v", errClose)
 		}
 	}()
 
-	sr := repos.NewSymbolRepository(d)
+	symbolRepo, ok := d.(repos.SymbolsStore)
+	if !ok {
+		l.Fatalln("symbol repo type assertion error")
+	}
+	sr := repos.NewSymbolRepository(symbolRepo)
 	if err = sr.Load(); err != nil {
 		l.Fatalln(err)
 	}
 
-	r, err := initRestClient()
+	r, err := initRestClient(appCfg)
 	if err != nil {
 		l.Fatalln(err)
 	}
 
-	w, err := initWsClient(d, l)
+	ctx := context.Background()
+
+	w, err := initWsClient(ctx, database, l, appCfg)
 	if err != nil {
 		l.Fatalln(err)
 	}
 
-	p := clients.NewPuller(r, l, s, d.DataPipe())
+	p := clients.NewPuller(r, l, s, database.DataPipe())
 	if err = p.RestoreLastSession(); err != nil {
-		l.Println(fmt.Errorf("error restoring last session: %w", err))
+		l.Printf("error restoring last session: %v", err)
 	}
 
 	e := gin.Default()
-	if err = router.InitRouter(e, d, l, sr, r, w, p); err != nil {
+	if err = router.InitRouter(ctx, e, database, l, sr, r, w, p); err != nil {
 		l.Fatalln(err)
 	}
-	if err = e.Run(config.Port); err != nil {
+
+	if err = e.Run(fmt.Sprintf(":%d", appCfg.Http.Port())); err != nil {
 		l.Fatalln(err)
 	}
-}
 
-func initRestClient() (r clients.RestClient, err error) {
-	switch config.DataProvider {
-	case "huobi":
-		return huobi.Init()
-	default:
-		return cryptocompare.Init()
-	}
-}
-
-func initWsClient(d db.Database, l *log.Logger) (w clients.WsClient, err error) {
-	switch config.DataProvider {
-	case "huobi":
-		return huobi.InitWs(d.DataPipe(), l)
-	default:
-		return cryptocompare.InitWs(d.DataPipe(), l)
-	}
-}
-
-func newSessionStore(d db.Database, l *log.Logger) (s db.Session) {
-	var err error
-	switch config.SessionStore {
-	case "redis":
-		s, err = redis.NewRedisKeysStore()
-	default:
-		s, err = repos.NewSessionRepo(d)
-	}
-	if err != nil {
-		l.Println(fmt.Errorf("failed to init session store: %w", err))
-	}
-	return
+	<-ctx.Done()
 }

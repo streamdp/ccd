@@ -7,8 +7,8 @@ type Result struct {
 	Data    interface{} `json:"data"`
 }
 
-func NewResult(code int, msg string, data any) Result {
-	return Result{
+func NewResult(code int, msg string, data any) *Result {
+	return &Result{
 		Code:    code,
 		Message: msg,
 		Data:    data,
@@ -16,17 +16,17 @@ func NewResult(code int, msg string, data any) Result {
 }
 
 // UpdateAllFields in Result and return it
-func (res Result) UpdateAllFields(code int, msg string, data any) Result {
-	res.Code = code
-	res.Message = msg
-	res.Data = data
+func (r *Result) UpdateAllFields(code int, msg string, data any) *Result {
+	r.Code = code
+	r.Message = msg
+	r.Data = data
 
-	return res
+	return r
 }
 
 // UpdateDataField in Result and return it
-func (res Result) UpdateDataField(data any) Result {
-	res.Data = data
+func (r *Result) UpdateDataField(data any) *Result {
+	r.Data = data
 
-	return res
+	return r
 }

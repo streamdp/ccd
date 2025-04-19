@@ -18,8 +18,7 @@ create table data
     mktcap          double     null,
     lastupdate      mediumtext not null,
     displaydataraw  text       null
-)
-    collate = utf8_general_ci;
+) default charset utf8 collate = utf8_general_ci;
 
 drop table if exists symbols;
 create table symbols
@@ -28,7 +27,7 @@ create table symbols
     symbol varchar(64) collate latin1_swedish_ci default '' not null,
     unicode char null,
     constraint symbols_symbol_uindex unique (symbol)
-) collate = utf8_general_ci;
+) default charset utf8 collate = utf8_general_ci;
 
 insert into symbols(symbol, unicode)
     values ('USDT','₮'),
@@ -47,7 +46,7 @@ create table session
     _id       int auto_increment primary key,
     task_name varchar(64) not null default '',
     `interval`  integer default 60 not null
-);
+) default charset utf8 collate = utf8_general_ci;
 
 create unique index session_task_name_uindex
     on session (task_name);

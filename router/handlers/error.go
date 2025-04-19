@@ -9,7 +9,7 @@ import (
 )
 
 // HandlerFuncResError to make router handler what return Result and error
-type HandlerFuncResError func(*gin.Context) (domain.Result, error)
+type HandlerFuncResError func(*gin.Context) (*domain.Result, error)
 
 var ErrBindQuery = errors.New("failed to bind query")
 
@@ -17,6 +17,9 @@ var ErrBindQuery = errors.New("failed to bind query")
 func GinHandler(h HandlerFuncResError) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if res, err := h(c); err != nil {
+			if res == nil {
+				res = &domain.Result{}
+			}
 			res.Message = err.Error()
 			if errors.Is(err, ErrBindQuery) {
 				res.Code = http.StatusBadRequest

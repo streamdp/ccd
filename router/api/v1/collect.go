@@ -20,10 +20,10 @@ type CollectQuery struct {
 
 // AddWorker that will collect data for the selected currency pair to the management service
 func AddWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (domain.Result, error) {
+	return func(c *gin.Context) (*domain.Result, error) {
 		q := CollectQuery{}
 		if err := c.Bind(&q); err != nil {
-			return domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
+			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
 		if t := p.Task(q.From, q.To); t != nil {
 			return domain.NewResult(
@@ -41,10 +41,10 @@ func AddWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 
 // RemoveWorker from the management service and stop collecting data for the selected currencies pair
 func RemoveWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (domain.Result, error) {
+	return func(c *gin.Context) (*domain.Result, error) {
 		q := CollectQuery{}
 		if err := c.Bind(&q); err != nil {
-			return domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
+			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
 		if p.Task(q.From, q.To) == nil {
 			return domain.NewResult(
@@ -59,7 +59,7 @@ func RemoveWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 
 // PullingStatus return information about running pull tasks
 func PullingStatus(p clients.RestApiPuller, w clients.WsClient) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (domain.Result, error) {
+	return func(c *gin.Context) (*domain.Result, error) {
 		var (
 			tasks         clients.Tasks
 			subscriptions domain.Subscriptions
@@ -79,13 +79,13 @@ func PullingStatus(p clients.RestApiPuller, w clients.WsClient) handlers.Handler
 
 // UpdateWorker update pulling data interval for the selected worker by the currencies pair
 func UpdateWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (domain.Result, error) {
+	return func(c *gin.Context) (*domain.Result, error) {
 		var (
 			t *clients.Task
 		)
 		q := CollectQuery{}
 		if err := c.Bind(&q); err != nil {
-			return domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
+			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
 		if t = p.Task(q.From, q.To); t == nil {
 			return domain.NewResult(http.StatusOK, "No data is collected for this pair", t), nil
@@ -97,14 +97,14 @@ func UpdateWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 }
 
 func Subscribe(ctx context.Context, w clients.WsClient) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (domain.Result, error) {
+	return func(c *gin.Context) (*domain.Result, error) {
 		q := CollectQuery{}
 
 		if err := c.Bind(&q); err != nil {
-			return domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
+			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
 		if err := w.Subscribe(ctx, q.From, q.To); err != nil {
-			return domain.Result{}, fmt.Errorf("subscribe error: %w", err)
+			return &domain.Result{}, fmt.Errorf("subscribe error: %w", err)
 		}
 
 		return domain.NewResult(
@@ -116,13 +116,13 @@ func Subscribe(ctx context.Context, w clients.WsClient) handlers.HandlerFuncResE
 }
 
 func Unsubscribe(ctx context.Context, w clients.WsClient) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (domain.Result, error) {
+	return func(c *gin.Context) (*domain.Result, error) {
 		q := CollectQuery{}
 		if err := c.Bind(&q); err != nil {
-			return domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
+			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
 		if err := w.Unsubscribe(ctx, q.From, q.To); err != nil {
-			return domain.Result{}, fmt.Errorf("unsubscribe error: %w", err)
+			return &domain.Result{}, fmt.Errorf("unsubscribe error: %w", err)
 		}
 
 		return domain.NewResult(

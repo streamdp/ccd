@@ -40,14 +40,14 @@ func LastPrice(r clients.RestClient, db db.Database, query *PriceQuery) (*domain
 
 // Price return up-to-date or most recent data for the selected currencies pair
 func Price(rc clients.RestClient, db db.Database) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (domain.Result, error) {
+	return func(c *gin.Context) (*domain.Result, error) {
 		q := PriceQuery{}
 		if err := c.Bind(&q); err != nil {
-			return domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
+			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
 		p, err := LastPrice(rc, db, &q)
 		if err != nil {
-			return domain.Result{}, fmt.Errorf("failed to get price: %w", err)
+			return &domain.Result{}, fmt.Errorf("failed to get price: %w", err)
 		}
 
 		return domain.NewResult(

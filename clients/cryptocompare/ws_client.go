@@ -107,7 +107,7 @@ func (c *cryptoCompareWs) reconnect(ctx context.Context) error {
 func (c *cryptoCompareWs) buildURL() (*url.URL, error) {
 	u, err := url.Parse(wssUrl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse url: %w", err)
 	}
 	q := u.Query()
 	q.Set("api_key", c.apiKey)
@@ -121,27 +121,35 @@ func buildChannelName(from, to string) string {
 }
 
 func (c *cryptoCompareWs) sendSubscribeMsg(ctx context.Context, ch string) error {
-	return c.conn.Write(ctx, websocket.MessageText, []byte(
+	if err := c.conn.Write(ctx, websocket.MessageText, []byte(
 		fmt.Sprintf("{\"action\":\"SubAdd\",\"subs\":[\"%s\"]}", ch)),
-	)
+	); err != nil {
+		return fmt.Errorf("failed to send subscribe message: %w", err)
+	}
+
+	return nil
 }
 
 func (c *cryptoCompareWs) sendUnsubscribeMsg(ctx context.Context, ch string) error {
-	return c.conn.Write(ctx, websocket.MessageText, []byte(
+	if err := c.conn.Write(ctx, websocket.MessageText, []byte(
 		fmt.Sprintf("{\"action\":\"SubRemove\",\"subs\":[\"%s\"]}", ch)),
-	)
+	); err != nil {
+		return fmt.Errorf("failed to send unsubscribe message: %w", err)
+	}
+
+	return nil
 }
 
-func (c *cryptoCompareWs) resubscribe(ctx context.Context) (err error) {
+func (c *cryptoCompareWs) resubscribe(ctx context.Context) error {
 	c.subMu.RLock()
 	defer c.subMu.RUnlock()
 	for k := range c.subscriptions {
-		if err = c.sendSubscribeMsg(ctx, k); err != nil {
-			return
+		if err := c.sendSubscribeMsg(ctx, k); err != nil {
+			return fmt.Errorf("failed to resubscribe: %w", err)
 		}
 	}
 
-	return
+	return nil
 }
 
 func (c *cryptoCompareWs) handleWssError(ctx context.Context, err error) error {

@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/streamdp/ccd/clients"
@@ -17,30 +17,52 @@ import (
 	"github.com/streamdp/ccd/router"
 )
 
+var (
+	errInitRestClient   = errors.New("failed to initialize rest client")
+	errInitWsClient     = errors.New("failed to initialize ws client")
+	errInitSessionStore = errors.New("failed to init session store")
+)
+
 func main() {
-	l := log.New(os.Stderr, "CCD:", log.LstdFlags)
+	l := log.New(gin.DefaultWriter, "CCD:", log.LstdFlags)
 
 	config.ParseFlags()
 	gin.SetMode(config.RunMode)
 
-	d, err := db.Connect(l)
+	d, err := db.Connect()
 	if err != nil {
 		l.Fatalln(err)
 	}
+	database, ok := d.(db.Database)
+	if !ok {
+		l.Fatalln("database type assertion error")
+	}
 	defer func() {
-		if errClose := d.Close(); errClose != nil {
-			l.Println(fmt.Errorf("failed to close database connection: %w", errClose))
+		if errClose := database.Close(); errClose != nil {
+			l.Printf("failed to close database connection: %v", errClose)
 		}
 	}()
+	go db.Serve(database, l)
 
-	s := newSessionStore(d, l)
+	taskRepo, ok := d.(repos.TaskStore)
+	if !ok {
+		l.Fatalln("task repo type assertion error")
+	}
+	s, err := newSessionStore(taskRepo)
+	if err != nil {
+		l.Fatal(err)
+	}
 	defer func() {
 		if errClose := s.Close(); errClose != nil {
-			l.Println(fmt.Errorf("failed to close session store: %w", errClose))
+			l.Printf("failed to close session store: %v", errClose)
 		}
 	}()
 
-	sr := repos.NewSymbolRepository(d)
+	symbolRepo, ok := d.(repos.SymbolsStore)
+	if !ok {
+		l.Fatalln("symbol repo type assertion error")
+	}
+	sr := repos.NewSymbolRepository(symbolRepo)
 	if err = sr.Load(); err != nil {
 		l.Fatalln(err)
 	}
@@ -52,20 +74,21 @@ func main() {
 
 	ctx := context.Background()
 
-	w, err := initWsClient(ctx, d, l)
+	w, err := initWsClient(ctx, database, l)
 	if err != nil {
 		l.Fatalln(err)
 	}
 
-	p := clients.NewPuller(r, l, s, d.DataPipe())
+	p := clients.NewPuller(r, l, s, database.DataPipe())
 	if err = p.RestoreLastSession(); err != nil {
-		l.Println(fmt.Errorf("error restoring last session: %w", err))
+		l.Printf("error restoring last session: %v", err)
 	}
 
 	e := gin.Default()
-	if err = router.InitRouter(ctx, e, d, l, sr, r, w, p); err != nil {
+	if err = router.InitRouter(ctx, e, database, l, sr, r, w, p); err != nil {
 		l.Fatalln(err)
 	}
+
 	if err = e.Run(config.Port); err != nil {
 		l.Fatalln(err)
 	}
@@ -73,35 +96,59 @@ func main() {
 	<-ctx.Done()
 }
 
-func initRestClient() (r clients.RestClient, err error) {
+func initRestClient() (clients.RestClient, error) {
+	var (
+		r   clients.RestClient
+		err error
+	)
+
 	switch config.DataProvider {
 	case "huobi":
-		return huobi.Init()
+		r, err = huobi.Init()
 	default:
-		return cryptocompare.Init()
+		r, err = cryptocompare.Init()
 	}
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errInitRestClient, err)
+	}
+
+	return r, nil
 }
 
-func initWsClient(ctx context.Context, d db.Database, l *log.Logger) (w clients.WsClient, err error) {
+func initWsClient(ctx context.Context, d db.Database, l *log.Logger) (clients.WsClient, error) {
+	var (
+		w   clients.WsClient
+		err error
+	)
+
 	switch config.DataProvider {
 	case "huobi":
-		return huobi.InitWs(ctx, d.DataPipe(), l)
+		w, err = huobi.InitWs(ctx, d.DataPipe(), l)
 	default:
-		return cryptocompare.InitWs(ctx, d.DataPipe(), l)
+		w, err = cryptocompare.InitWs(ctx, d.DataPipe(), l)
 	}
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errInitWsClient, err)
+	}
+
+	return w, nil
 }
 
-func newSessionStore(d db.Database, l *log.Logger) (s db.Session) {
-	var err error
+func newSessionStore(t repos.TaskStore) (db.Session, error) {
+	var (
+		s   db.Session
+		err error
+	)
+
 	switch config.SessionStore {
 	case "redis":
 		s, err = redis.NewRedisKeysStore()
 	default:
-		s, err = repos.NewSessionRepo(d)
+		s, err = repos.NewSessionRepo(t)
 	}
 	if err != nil {
-		l.Println(fmt.Errorf("failed to init session store: %w", err))
+		return nil, fmt.Errorf("%w: %w", errInitSessionStore, err)
 	}
 
-	return
+	return s, nil
 }

@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -18,32 +19,39 @@ type PriceQuery struct {
 	To   string `binding:"required,symbols" form:"tsym" json:"tsym"`
 }
 
+var errGetPrice = errors.New("failed to get price")
+
 // LastPrice return up-to-date data for the selected currencies pair
 func LastPrice(r clients.RestClient, db db.Database, query *PriceQuery) (*domain.Data, error) {
 	from, to := strings.ToUpper(query.From), strings.ToUpper(query.To)
-	d, err := r.Get(from, to)
+	data, err := r.Get(from, to)
 	if err != nil {
-		return db.GetLast(from, to)
+		if data, err = db.GetLast(from, to); err != nil {
+			return nil, errGetPrice
+		}
+
+		return data, nil
 	}
 
-	db.DataPipe() <- d
+	db.DataPipe() <- data
 
-	return d, nil
+	return data, nil
 }
 
 // Price return up-to-date or most recent data for the selected currencies pair
 func Price(rc clients.RestClient, db db.Database) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (r handlers.Result, err error) {
+	return func(c *gin.Context) (handlers.Result, error) {
 		q := PriceQuery{}
-		if err = c.Bind(&q); err != nil {
-			return
+		if err := c.Bind(&q); err != nil {
+			return handlers.Result{}, err
 		}
 		p, err := LastPrice(rc, db, &q)
 		if err != nil {
-			return
+			return handlers.Result{}, err
 		}
-		r.UpdateAllFields(http.StatusOK, fmt.Sprintf("Most recent price, updated at %d", p.LastUpdate), p)
 
-		return
+		return handlers.Result{}.UpdateAllFields(
+			http.StatusOK, fmt.Sprintf("Most recent price, updated at %d", p.LastUpdate), p,
+		), nil
 	}
 }

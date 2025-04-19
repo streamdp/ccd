@@ -1,23 +1,29 @@
 package repos
 
 import (
+	"database/sql"
 	"fmt"
-
-	"github.com/streamdp/ccd/db"
 )
 
-type sessionRepo struct {
-	db db.Database
+type TaskStore interface {
+	AddTask(n string, i int64) (result sql.Result, err error)
+	UpdateTask(n string, i int64) (result sql.Result, err error)
+	RemoveTask(n string) (result sql.Result, err error)
+	GetSession() (tasks map[string]int64, err error)
 }
 
-func NewSessionRepo(db db.Database) (*sessionRepo, error) {
+type sessionRepo struct {
+	r TaskStore
+}
+
+func NewSessionRepo(r TaskStore) (*sessionRepo, error) {
 	return &sessionRepo{
-		db: db,
+		r: r,
 	}, nil
 }
 
 func (sr *sessionRepo) UpdateTask(n string, i int64) error {
-	if _, err := sr.db.UpdateTask(n, i); err != nil {
+	if _, err := sr.r.UpdateTask(n, i); err != nil {
 		return fmt.Errorf("failed to update task: %w", err)
 	}
 
@@ -25,19 +31,30 @@ func (sr *sessionRepo) UpdateTask(n string, i int64) error {
 }
 
 func (sr *sessionRepo) GetSession() (map[string]int64, error) {
-	return sr.db.GetSession()
+	session, err := sr.r.GetSession()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get session: %w", err)
+	}
+
+	return session, nil
 }
 
-func (sr *sessionRepo) AddTask(n string, i int64) (err error) {
-	_, err = sr.db.AddTask(n, i)
+func (sr *sessionRepo) AddTask(n string, i int64) error {
+	_, err := sr.r.AddTask(n, i)
+	if err != nil {
+		return fmt.Errorf("failed to add task: %w", err)
+	}
 
-	return
+	return nil
 }
 
-func (sr *sessionRepo) RemoveTask(n string) (err error) {
-	_, err = sr.db.RemoveTask(n)
+func (sr *sessionRepo) RemoveTask(n string) error {
+	_, err := sr.r.RemoveTask(n)
+	if err != nil {
+		return fmt.Errorf("failed to remove task: %w", err)
+	}
 
-	return
+	return nil
 }
 
 func (sr *sessionRepo) Close() error {

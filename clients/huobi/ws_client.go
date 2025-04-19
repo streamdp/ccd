@@ -193,10 +193,13 @@ func (h *huobiWs) handleWsMessages(ctx context.Context, pipe chan *domain.Data) 
 	}()
 }
 
-func (h *huobiWs) pingHandler(ctx context.Context, m []byte) (err error) {
+func (h *huobiWs) pingHandler(ctx context.Context, m []byte) error {
 	m = bytes.ReplaceAll(m, []byte("ping"), []byte("pong"))
+	if err := h.conn.Write(ctx, websocket.MessageText, m); err != nil {
+		return fmt.Errorf("failed to send pong response: %w", err)
+	}
 
-	return h.conn.Write(ctx, websocket.MessageText, m)
+	return nil
 }
 
 func (h *huobiWs) pairFromChannelName(ch string) (string, string) {
@@ -218,24 +221,37 @@ func buildChannelName(from, to string) string {
 }
 
 func (h *huobiWs) sendUnsubscribeMsg(ctx context.Context, ch string, id int64) error {
-	return h.conn.Write(ctx, websocket.MessageText, []byte(
+	if err := h.conn.Write(ctx, websocket.MessageText, []byte(
 		fmt.Sprintf("{\"unsub\": \"%s\", \"id\":\"%d\"}", ch, id)),
-	)
+	); err != nil {
+		return fmt.Errorf("failed to send unsubscribe message: %w", err)
+	}
+
+	return nil
 }
 
 func (h *huobiWs) sendSubscribeMsg(ctx context.Context, ch string, id int64) error {
-	return h.conn.Write(ctx, websocket.MessageText, []byte(
+	if err := h.conn.Write(ctx, websocket.MessageText, []byte(
 		fmt.Sprintf("{\"sub\": \"%s\", \"id\":\"%d\"}", ch, id)),
-	)
+	); err != nil {
+		return fmt.Errorf("failed to send subscribe message: %w", err)
+	}
+
+	return nil
 }
 
 func gzipDecompress(r io.Reader) ([]byte, error) {
 	r, err := gzip.NewReader(r)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
 	}
 
-	return io.ReadAll(r)
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read uncompressed data: %w", err)
+	}
+
+	return data, nil
 }
 
 func convertHuobiWsDataToDomain(from, to string, d *huobiWsData) *domain.Data {

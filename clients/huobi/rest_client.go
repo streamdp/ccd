@@ -2,6 +2,7 @@ package huobi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,6 +30,8 @@ type huobiRest struct {
 	limiter *time.Timer
 }
 
+var errWrongStatusCode = errors.New("wrong response status code")
+
 func Init() (*huobiRest, error) {
 	return &huobiRest{
 		client: &http.Client{
@@ -47,21 +50,21 @@ func (h *huobiRest) Get(fSym string, tSym string) (*domain.Data, error) {
 	)
 	u, err := h.buildURL(fSym, tSym)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to build url: %w", err)
 	}
 
 	if response, err = h.client.Get(u.String()); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch data: %w", err)
 	}
 	if body, err = io.ReadAll(response.Body); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 	if response.StatusCode != http.StatusOK {
-		return nil, err
+		return nil, errWrongStatusCode
 	}
 	rawData := &huobiRestData{}
 	if err = json.Unmarshal(body, rawData); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 	if rawData.Status == "error" {
 		return nil, fmt.Errorf("server error: %v", rawData.ErrMsg)
@@ -78,7 +81,7 @@ func (h *huobiRest) limitRate() {
 func (h *huobiRest) buildURL(fSym string, tSym string) (*url.URL, error) {
 	u, err := url.Parse(apiUrl + latestAggregatedTicker)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse url: %w", err)
 	}
 	if strings.ToLower(tSym) == "usd" {
 		tSym = "usdt"

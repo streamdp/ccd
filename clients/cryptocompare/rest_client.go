@@ -30,8 +30,7 @@ type cryptoCompareRest struct {
 
 var (
 	errApiKeyNotDefined = errors.New("you should specify \"CCDC_APIKEY\" in you OS environment")
-	errServerError      = errors.New("server error")
-	errUnmarshalData    = errors.New("failed to unmarshal data")
+	errWrongStatusCode  = errors.New("wrong status code")
 )
 
 // Init apiKey, apiUrl, wsURL variables with environment values and return CryptoCompareData structure
@@ -57,22 +56,22 @@ func (cc *cryptoCompareRest) Get(fSym string, tSym string) (*domain.Data, error)
 	)
 	u, err := cc.buildURL(fSym, tSym)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to build url: %w", err)
 	}
 	response, err = cc.client.Get(u.String())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch data: %w", err)
 	}
 	body, err = io.ReadAll(response.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 	if response.StatusCode != http.StatusOK {
-		return nil, errServerError
+		return nil, errWrongStatusCode
 	}
 	rawData := &cryptoCompareData{}
 	if err = json.Unmarshal(body, rawData); err != nil {
-		return nil, errUnmarshalData
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return convertToDomain(fSym, tSym, rawData), nil
@@ -87,9 +86,10 @@ func getApiKey() (string, error) {
 	return apiKey, nil
 }
 
-func (cc *cryptoCompareRest) buildURL(fSym string, tSym string) (u *url.URL, err error) {
-	if u, err = url.Parse(apiUrl + multipleSymbolsFullData); err != nil {
-		return nil, err
+func (cc *cryptoCompareRest) buildURL(fSym string, tSym string) (*url.URL, error) {
+	u, err := url.Parse(apiUrl + multipleSymbolsFullData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build url: %w", err)
 	}
 	query := u.Query()
 	query.Set("fsyms", fSym)

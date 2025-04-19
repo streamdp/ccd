@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 
@@ -28,53 +29,61 @@ type Database interface {
 	GetLast(from string, to string) (result *domain.Data, err error)
 	DataPipe() chan *domain.Data
 
-	AddSymbol(s string, u string) (result sql.Result, err error)
-	UpdateSymbol(s string, u string) (result sql.Result, err error)
-	RemoveSymbol(s string) (result sql.Result, err error)
-	Symbols() (symbols []*domain.Symbol, err error)
-
-	AddTask(n string, i int64) (result sql.Result, err error)
-	UpdateTask(n string, i int64) (result sql.Result, err error)
-	RemoveTask(n string) (result sql.Result, err error)
-	GetSession() (tasks map[string]int64, err error)
-
 	Close() error
 }
 
-var errDatabaseUrl = errors.New("please set OS environment \"CCDC_DATABASEURL\" with database connection string")
+var errDatabaseUrl = errors.New("\"CCDC_DATABASEURL\" os environment variable is not set")
 
-func Connect(l *log.Logger) (d Database, err error) {
-	var (
-		driverName       = mysql.Mysql
-		dataBaseUrl      = config.GetEnv("CCDC_DATABASEURL")
-		connectionString string
-	)
-	if dataBaseUrl == "" {
-		return nil, errDatabaseUrl
+func Connect() (any, error) {
+	dataBaseUrl, err := getDatabaseUrl()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get database url: %w", err)
 	}
-	connectionParameters := strings.Split(dataBaseUrl, "://")
-	if len(connectionParameters) == 2 {
-		driverName, connectionString = connectionParameters[0], connectionParameters[1]
-	}
+
+	driverName, connectionString := getDataSource(dataBaseUrl)
+
+	var database any
 	switch driverName {
 	case postgresql.Postgres, "postgresql":
-		d, err = postgresql.Connect(dataBaseUrl)
+		database, err = postgresql.Connect(dataBaseUrl)
 	case mysql.Mysql:
 		fallthrough
 	default:
-		d, err = mysql.Connect(connectionString)
+		database, err = mysql.Connect(connectionString)
 	}
-	if err == nil {
-		go serve(d, l)
+	if err != nil {
+		return nil, fmt.Errorf("database connection error: %w", err)
 	}
 
-	return
+	return database, nil
 }
 
-func serve(d Database, l *log.Logger) {
+func Serve(d Database, l *log.Logger) {
 	for data := range d.DataPipe() {
 		if _, err := d.Insert(data); err != nil {
 			l.Println(err)
 		}
 	}
+}
+
+func getDatabaseUrl() (string, error) {
+	var dataBaseUrl = config.GetEnv("CCDC_DATABASEURL")
+	if dataBaseUrl == "" {
+		return "", errDatabaseUrl
+	}
+
+	return dataBaseUrl, nil
+}
+
+func getDataSource(dataBaseUrl string) (string, string) {
+	var (
+		driverName       = mysql.Mysql
+		connectionString string
+	)
+
+	if parameters := strings.Split(dataBaseUrl, "://"); len(parameters) == 2 {
+		driverName, connectionString = parameters[0], parameters[1]
+	}
+
+	return driverName, connectionString
 }

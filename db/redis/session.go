@@ -23,9 +23,10 @@ func NewRedisKeysStore() (*KeysStore, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse redis os environment variables: %w", err)
 	}
+
 	client := redis.NewClient(opt)
 	if _, err = client.Ping().Result(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to redis: %w", err)
 	}
 
 	return &KeysStore{
@@ -46,7 +47,7 @@ func getSeparatedOptions() (*redis.Options, error) {
 	if p := config.GetEnv("REDIS_PORT"); p != "" {
 		n, err := strconv.Atoi(p)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse redis port: %w", err)
 		}
 		port = n
 	}
@@ -56,7 +57,7 @@ func getSeparatedOptions() (*redis.Options, error) {
 	if d := config.GetEnv("REDIS_DB"); d != "" {
 		n, err := strconv.Atoi(d)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse redis db: %w", err)
 		}
 		db = n
 	}
@@ -70,10 +71,20 @@ func getSeparatedOptions() (*redis.Options, error) {
 
 func getRedisOptions() (*redis.Options, error) {
 	if redisUrl := config.GetEnv("REDIS_URL"); redisUrl != "" {
-		return redis.ParseURL(redisUrl)
+		options, err := redis.ParseURL(redisUrl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse redis url: %w", err)
+		}
+
+		return options, nil
 	}
 
-	return getSeparatedOptions()
+	options, err := getSeparatedOptions()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get redis options: %w", err)
+	}
+
+	return options, nil
 }
 
 // GetSession get previously saved session
@@ -85,7 +96,7 @@ func (s *KeysStore) GetSession() (map[string]int64, error) {
 	for k, v := range s.c.HGetAll(sessionName).Val() {
 		i, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get session: %w", err)
 		}
 		session[k] = i
 	}
@@ -125,5 +136,9 @@ func (s *KeysStore) Close() error {
 		return errKeyStoreNotInitialized
 	}
 
-	return s.c.Close()
+	if err := s.c.Close(); err != nil {
+		return fmt.Errorf("failed to close key store: %w", err)
+	}
+
+	return nil
 }

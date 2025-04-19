@@ -8,7 +8,7 @@ type Result struct {
 }
 
 // UpdateAllFields in Result and return it
-func (res *Result) UpdateAllFields(code int, msg string, data interface{}) *Result {
+func (res Result) UpdateAllFields(code int, msg string, data any) Result {
 	res.Code = code
 	res.Message = msg
 	res.Data = data
@@ -17,7 +17,7 @@ func (res *Result) UpdateAllFields(code int, msg string, data interface{}) *Resu
 }
 
 // UpdateDataField in Result and return it
-func (res *Result) UpdateDataField(data interface{}) *Result {
+func (res Result) UpdateDataField(data any) Result {
 	res.Data = data
 
 	return res

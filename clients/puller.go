@@ -89,13 +89,13 @@ func (p *restPuller) RemoveTask(from string, to string) {
 }
 
 // RestoreLastSession get the last session from the session store and restore it
-func (p *restPuller) RestoreLastSession() (err error) {
+func (p *restPuller) RestoreLastSession() error {
 	if p.s == nil {
-		return
+		return nil
 	}
 	ses, err := p.s.GetSession()
 	if err != nil {
-		return
+		return fmt.Errorf("failed to get session: %w", err)
 	}
 	for k, v := range ses {
 		if pair := strings.Split(k, ":"); len(pair) == 2 {
@@ -104,7 +104,7 @@ func (p *restPuller) RestoreLastSession() (err error) {
 		}
 	}
 
-	return
+	return nil
 }
 
 func (p *restPuller) UpdateTask(t *Task, interval int64) *Task {

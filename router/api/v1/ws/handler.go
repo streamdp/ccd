@@ -25,7 +25,6 @@ const (
 
 type wsHandler struct {
 	l           *log.Logger
-	cancel      context.CancelFunc
 	conn        *websocket.Conn
 	messagePipe chan []byte
 

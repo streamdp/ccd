@@ -24,7 +24,7 @@ func (d *Db) DataPipe() chan *domain.Data {
 func Connect(dataSource string) (*Db, error) {
 	sqlDb, err := sql.Open(Mysql, dataSource)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
 	return &Db{

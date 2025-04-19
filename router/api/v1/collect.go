@@ -19,45 +19,44 @@ type CollectQuery struct {
 
 // AddWorker that will collect data for the selected currency pair to the management service
 func AddWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (r handlers.Result, err error) {
+	return func(c *gin.Context) (handlers.Result, error) {
 		q := CollectQuery{}
-		if err = c.Bind(&q); err != nil {
-			return
+		if err := c.Bind(&q); err != nil {
+			return handlers.Result{}, err
 		}
 		if t := p.Task(q.From, q.To); t != nil {
-			r.UpdateAllFields(http.StatusOK, "Data for this pair is already being collected", t)
-
-			return
+			return handlers.Result{}.UpdateAllFields(
+				http.StatusOK, "Data for this pair is already being collected", t,
+			), nil
 		}
-		r.UpdateAllFields(http.StatusCreated, "Data collection started", p.AddTask(q.From, q.To, q.Interval))
 
-		return
+		return handlers.Result{}.UpdateAllFields(
+			http.StatusCreated, "Data collection started", p.AddTask(q.From, q.To, q.Interval),
+		), nil
 	}
 }
 
 // RemoveWorker from the management service and stop collecting data for the selected currencies pair
 func RemoveWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (r handlers.Result, err error) {
+	return func(c *gin.Context) (handlers.Result, error) {
 		q := CollectQuery{}
-		if err = c.Bind(&q); err != nil {
-			return
+		if err := c.Bind(&q); err != nil {
+			return handlers.Result{}, err
 		}
 		if p.Task(q.From, q.To) == nil {
-			r.UpdateAllFields(http.StatusOK, "No data is collected for this pair", nil)
-
-			return
+			return handlers.Result{}.UpdateAllFields(
+				http.StatusOK, "No data is collected for this pair", nil,
+			), nil
 		}
 		p.RemoveTask(q.From, q.To)
-		r.UpdateAllFields(http.StatusOK, "Task stopped successfully", nil)
 
-		return
+		return handlers.Result{}.UpdateAllFields(http.StatusOK, "Task stopped successfully", nil), nil
 	}
 }
 
 // PullingStatus return information about running pull tasks
 func PullingStatus(p clients.RestApiPuller, w clients.WsClient) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (r handlers.Result, err error) {
-		r.UpdateAllFields(http.StatusOK, "Information about running tasks", nil)
+	return func(c *gin.Context) (handlers.Result, error) {
 		var (
 			tasks         clients.Tasks
 			subscriptions domain.Subscriptions
@@ -68,67 +67,62 @@ func PullingStatus(p clients.RestApiPuller, w clients.WsClient) handlers.Handler
 		if w != nil {
 			subscriptions = w.ListSubscriptions()
 		}
-		r.UpdateDataField(mergeTasks(tasks, subscriptions))
 
-		return
+		return handlers.Result{}.UpdateAllFields(
+			http.StatusOK, "Information about running tasks", mergeTasks(tasks, subscriptions),
+		), nil
 	}
 }
 
 // UpdateWorker update pulling data interval for the selected worker by the currencies pair
 func UpdateWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (r handlers.Result, err error) {
-		var t *clients.Task
+	return func(c *gin.Context) (handlers.Result, error) {
+		var (
+			t *clients.Task
+		)
 		q := CollectQuery{}
-		if err = c.Bind(&q); err != nil {
-			return
+		if err := c.Bind(&q); err != nil {
+			return handlers.Result{}, err
 		}
 		if t = p.Task(q.From, q.To); t == nil {
-			r.UpdateAllFields(http.StatusOK, "No data is collected for this pair", t)
-
-			return
+			return handlers.Result{}.UpdateAllFields(http.StatusOK, "No data is collected for this pair", t), nil
 		}
 		p.UpdateTask(t, q.Interval)
-		r.UpdateAllFields(http.StatusOK, "Task updated successfully", t)
 
-		return
+		return handlers.Result{}.UpdateAllFields(http.StatusOK, "Task updated successfully", t), nil
 	}
 }
 
 func Subscribe(ctx context.Context, w clients.WsClient) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (r handlers.Result, err error) {
+	return func(c *gin.Context) (handlers.Result, error) {
 		q := CollectQuery{}
-		if err = c.Bind(&q); err != nil {
-			return
-		}
-		if err = w.Subscribe(ctx, q.From, q.To); err != nil {
-			r.UpdateAllFields(http.StatusOK, "subscribe error:", err)
 
-			return
+		if err := c.Bind(&q); err != nil {
+			return handlers.Result{}, err
 		}
-		r.UpdateAllFields(
+		if err := w.Subscribe(ctx, q.From, q.To); err != nil {
+			return handlers.Result{}.UpdateAllFields(http.StatusOK, "subscribe error:", err), err
+		}
+
+		return handlers.Result{}.UpdateAllFields(
 			http.StatusCreated, "Subscribed successfully, data collection started", []string{q.From, q.To},
-		)
-
-		return
+		), nil
 	}
 }
 
 func Unsubscribe(ctx context.Context, w clients.WsClient) handlers.HandlerFuncResError {
-	return func(c *gin.Context) (r handlers.Result, err error) {
+	return func(c *gin.Context) (handlers.Result, error) {
 		q := CollectQuery{}
-		if err = c.Bind(&q); err != nil {
-			return
+		if err := c.Bind(&q); err != nil {
+			return handlers.Result{}, err
 		}
-		if err = w.Unsubscribe(ctx, q.From, q.To); err != nil {
-			r.UpdateAllFields(http.StatusOK, "Unsubscribe error:", err)
+		if err := w.Unsubscribe(ctx, q.From, q.To); err != nil {
+			return handlers.Result{}.UpdateAllFields(http.StatusOK, "Unsubscribe error:", err), nil
+		}
 
-			return
-		}
-		r.UpdateAllFields(
+		return handlers.Result{}.UpdateAllFields(
 			http.StatusOK, "Unsubscribed successfully, data collection stopped ", []string{q.From, q.To},
-		)
-
-		return
+		), nil
 	}
 }
 

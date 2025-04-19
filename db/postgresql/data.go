@@ -3,6 +3,7 @@ package postgresql
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/streamdp/ccd/domain"
 )
@@ -48,7 +49,7 @@ func (d *Db) GetLast(from string, to string) (*domain.Data, error) {
 		&result.LastUpdate,
 		&result.DisplayDataRaw,
 	); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", errCopyResult, err)
 	}
 
 	return result, nil
@@ -80,8 +81,7 @@ func (d *Db) Insert(data *domain.Data) (sql.Result, error) {
 		        $3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
 		)
 `
-
-	return d.Exec(
+	result, err := d.Exec(
 		query,
 		&data.FromSymbol,
 		&data.ToSymbol,
@@ -97,4 +97,9 @@ func (d *Db) Insert(data *domain.Data) (sql.Result, error) {
 		&data.LastUpdate,
 		&data.DisplayDataRaw,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errExecuteQuery, err)
+	}
+
+	return result, nil
 }

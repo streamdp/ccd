@@ -3,41 +3,57 @@ package mysql
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 )
 
 var errEmptyTaskName = errors.New("empty task name")
 
-func (d *Db) AddTask(n string, i int64) (result sql.Result, err error) {
+func (d *Db) AddTask(n string, i int64) (sql.Result, error) {
 	if n == "" {
 		return nil, errEmptyTaskName
 	}
 
-	return d.Exec(
+	result, err := d.Exec(
 		`insert ignore into session (task_name,"interval") values (?,?);`, strings.ToUpper(n), i,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errExecuteQuery, err)
+	}
+
+	return result, nil
 }
 
-func (d *Db) UpdateTask(n string, i int64) (result sql.Result, err error) {
+func (d *Db) UpdateTask(n string, i int64) (sql.Result, error) {
 	if n == "" {
 		return nil, errEmptyTaskName
 	}
 
-	return d.Exec(`update session set "interval"=? where task_name=?;`, i, strings.ToUpper(n))
+	result, err := d.Exec(`update session set "interval"=? where task_name=?;`, i, strings.ToUpper(n))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errExecuteQuery, err)
+	}
+
+	return result, nil
 }
 
-func (d *Db) RemoveTask(n string) (result sql.Result, err error) {
+func (d *Db) RemoveTask(n string) (sql.Result, error) {
 	if n == "" {
 		return nil, errEmptySymbol
 	}
 
-	return d.Exec(`delete from session where task_name=?;`, strings.ToUpper(n))
+	result, err := d.Exec(`delete from session where task_name=?;`, strings.ToUpper(n))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errExecuteQuery, err)
+	}
+
+	return result, nil
 }
 
 func (d *Db) GetSession() (map[string]int64, error) {
 	rows, errQuery := d.Query(`select task_name,"interval" from session`)
 	if errQuery != nil {
-		return nil, errQuery
+		return nil, fmt.Errorf("%w: %w", errExecuteQuery, errQuery)
 	}
 	defer func(rows *sql.Rows) {
 		_ = rows.Close()
@@ -50,13 +66,13 @@ func (d *Db) GetSession() (map[string]int64, error) {
 			i int64
 		)
 		if err := rows.Scan(&n, &i); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w: %w", errCopyResult, err)
 		}
 		tasks[n] = i
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", errParseResults, err)
 	}
 
 	return tasks, nil

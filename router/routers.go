@@ -10,11 +10,9 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/db"
-	"github.com/streamdp/ccd/repos"
 	v1 "github.com/streamdp/ccd/router/api/v1"
 	"github.com/streamdp/ccd/router/api/v1/ws"
 	"github.com/streamdp/ccd/router/handlers"
-	"github.com/streamdp/ccd/router/validators"
 )
 
 // InitRouter basic work on setting up the application, declare endpoints, register our custom validation functions
@@ -23,7 +21,7 @@ func InitRouter(
 	e *gin.Engine,
 	d db.Database,
 	l *log.Logger,
-	sr *repos.SymbolRepo,
+	sr v1.SymbolsRepo,
 	r clients.RestClient,
 	w clients.WsClient,
 	p clients.RestApiPuller,
@@ -94,7 +92,7 @@ func InitRouter(
 	}
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		if err := v.RegisterValidation("symbols", validators.Symbols(sr)); err != nil {
+		if err := v.RegisterValidation("symbols", v1.ValidateSymbols(sr)); err != nil {
 			return fmt.Errorf("failed to register validator: %w", err)
 		}
 	}

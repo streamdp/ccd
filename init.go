@@ -59,9 +59,9 @@ func initWsClient(ctx context.Context, d db.Database, l *log.Logger, cfg *config
 	return w, nil
 }
 
-func newSessionStore(t repos.TaskStore, cfg *config.App) (db.Session, error) {
+func newSessionStore(t repos.TaskStore, cfg *config.App) (clients.Session, error) {
 	var (
-		s   db.Session
+		s   clients.Session
 		err error
 	)
 

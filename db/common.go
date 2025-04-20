@@ -12,16 +12,6 @@ import (
 	"github.com/streamdp/ccd/domain"
 )
 
-// Session interface makes it possible to expand the list of session storages
-type Session interface {
-	AddTask(n string, i int64) (err error)
-	UpdateTask(n string, i int64) (err error)
-	RemoveTask(n string) (err error)
-	GetSession() (map[string]int64, error)
-
-	Close() error
-}
-
 // Database interface makes it possible to expand the list of data storages
 type Database interface {
 	Insert(data *domain.Data) (result sql.Result, err error)

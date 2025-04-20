@@ -19,11 +19,9 @@ type CollectQuery struct {
 	Interval int64  `form:"interval,default=60" json:"interval"`
 }
 
-func (c *CollectQuery) toUpper() *CollectQuery {
+func (c *CollectQuery) toUpper() {
 	c.From = strings.ToUpper(c.From)
 	c.To = strings.ToUpper(c.To)
-
-	return c
 }
 
 // AddWorker that will collect data for the selected currency pair to the management service

@@ -26,10 +26,8 @@ type SymbolQuery struct {
 	Unicode string `form:"unicode"     json:"unicode"`
 }
 
-func (s *SymbolQuery) toUpper() *SymbolQuery {
+func (s *SymbolQuery) toUpper() {
 	s.Symbol = strings.ToUpper(s.Symbol)
-
-	return s
 }
 
 // AllSymbols return all symbols

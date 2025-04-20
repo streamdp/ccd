@@ -45,5 +45,6 @@ func (sc *SymbolCache) IsPresent(s string) bool {
 	sc.m.RLock()
 	defer sc.m.RUnlock()
 	_, ok := sc.c[strings.ToUpper(s)]
+
 	return ok
 }

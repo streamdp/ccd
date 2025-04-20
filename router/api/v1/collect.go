@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/streamdp/ccd/clients"
@@ -18,6 +19,13 @@ type CollectQuery struct {
 	Interval int64  `form:"interval,default=60" json:"interval"`
 }
 
+func (c *CollectQuery) toUpper() *CollectQuery {
+	c.From = strings.ToUpper(c.From)
+	c.To = strings.ToUpper(c.To)
+
+	return c
+}
+
 // AddWorker that will collect data for the selected currency pair to the management service
 func AddWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (*domain.Result, error) {
@@ -25,6 +33,8 @@ func AddWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+		q.toUpper()
+
 		if t := p.Task(q.From, q.To); t != nil {
 			return domain.NewResult(
 				http.StatusOK, "Data for this pair is already being collected", t,
@@ -46,6 +56,8 @@ func RemoveWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+		q.toUpper()
+
 		if p.Task(q.From, q.To) == nil {
 			return domain.NewResult(
 				http.StatusOK, "No data is collected for this pair", nil,
@@ -80,13 +92,13 @@ func PullingStatus(p clients.RestApiPuller, w clients.WsClient) handlers.Handler
 // UpdateWorker update pulling data interval for the selected worker by the currencies pair
 func UpdateWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (*domain.Result, error) {
-		var (
-			t *clients.Task
-		)
 		q := CollectQuery{}
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+		q.toUpper()
+
+		var t *clients.Task
 		if t = p.Task(q.From, q.To); t == nil {
 			return domain.NewResult(http.StatusOK, "No data is collected for this pair", t), nil
 		}
@@ -99,10 +111,11 @@ func UpdateWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 func Subscribe(ctx context.Context, w clients.WsClient) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (*domain.Result, error) {
 		q := CollectQuery{}
-
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+		q.toUpper()
+
 		if err := w.Subscribe(ctx, q.From, q.To); err != nil {
 			return &domain.Result{}, fmt.Errorf("subscribe error: %w", err)
 		}
@@ -121,6 +134,8 @@ func Unsubscribe(ctx context.Context, w clients.WsClient) handlers.HandlerFuncRe
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+		q.toUpper()
+
 		if err := w.Unsubscribe(ctx, q.From, q.To); err != nil {
 			return &domain.Result{}, fmt.Errorf("unsubscribe error: %w", err)
 		}

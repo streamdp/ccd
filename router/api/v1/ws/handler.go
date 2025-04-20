@@ -75,31 +75,36 @@ func (w *wsHandler) handleClientRequests(ctx context.Context) {
 				err   error
 				query = v1.PriceQuery{}
 			)
+
 			if _, data, err = w.conn.Read(ctx); err != nil {
-				if errors.As(err, &websocket.CloseError{}) {
+				if errors.As(err, &websocket.CloseError{}) || errors.Is(err, context.DeadlineExceeded) {
 					return
 				}
 				w.l.Println(err)
 
-				continue
+				return
 			}
+
 			if err = json.Unmarshal(data, &query); err != nil {
 				w.returnAnErrorToTheClient(errInvalidRequest)
 
 				continue
 			}
-			if data, err = w.getLastPrice(&query); err != nil {
+			query.ToUpper()
+
+			if data, err = w.getLastPrice(query.From, query.To); err != nil {
 				w.l.Println(err)
 
 				continue
 			}
+
 			w.messagePipe <- data
 		}
 	}
 }
 
-func (w *wsHandler) getLastPrice(q *v1.PriceQuery) ([]byte, error) {
-	data, err := v1.LastPrice(w.rc, w.db, q)
+func (w *wsHandler) getLastPrice(from, to string) ([]byte, error) {
+	data, err := v1.LastPrice(w.rc, w.db, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get last price: %w", err)
 	}

@@ -3,6 +3,7 @@ package v1
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -25,6 +26,12 @@ type SymbolQuery struct {
 	Unicode string `form:"unicode"     json:"unicode"`
 }
 
+func (s *SymbolQuery) toUpper() *SymbolQuery {
+	s.Symbol = strings.ToUpper(s.Symbol)
+
+	return s
+}
+
 // AllSymbols return all symbols
 func AllSymbols(sr SymbolsRepo) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (*domain.Result, error) {
@@ -43,6 +50,8 @@ func AddSymbol(sr SymbolsRepo) handlers.HandlerFuncResError {
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+		q.toUpper()
+
 		if err := sr.Add(q.Symbol, q.Unicode); err != nil {
 			return &domain.Result{}, fmt.Errorf("failed to add symbol: %w", err)
 		}
@@ -62,6 +71,8 @@ func UpdateSymbol(sr SymbolsRepo) handlers.HandlerFuncResError {
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+		q.toUpper()
+
 		if err := sr.Update(q.Symbol, q.Unicode); err != nil {
 			return &domain.Result{}, fmt.Errorf("failed to update symbol: %w", err)
 		}
@@ -81,6 +92,8 @@ func RemoveSymbol(sr SymbolsRepo) handlers.HandlerFuncResError {
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+		q.toUpper()
+
 		if err := sr.Remove(q.Symbol); err != nil {
 			return &domain.Result{}, fmt.Errorf("failed to remove symbol: %w", err)
 		}

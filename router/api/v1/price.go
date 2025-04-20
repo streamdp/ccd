@@ -19,11 +19,17 @@ type PriceQuery struct {
 	To   string `binding:"required,symbols" form:"tsym" json:"tsym"`
 }
 
+func (p *PriceQuery) ToUpper() *PriceQuery {
+	p.From = strings.ToUpper(p.From)
+	p.To = strings.ToUpper(p.To)
+
+	return p
+}
+
 var errGetPrice = errors.New("failed to get price")
 
 // LastPrice return up-to-date data for the selected currencies pair
-func LastPrice(r clients.RestClient, db db.Database, query *PriceQuery) (*domain.Data, error) {
-	from, to := strings.ToUpper(query.From), strings.ToUpper(query.To)
+func LastPrice(r clients.RestClient, db db.Database, from, to string) (*domain.Data, error) {
 	data, err := r.Get(from, to)
 	if err != nil {
 		if data, err = db.GetLast(from, to); err != nil {
@@ -45,7 +51,9 @@ func Price(rc clients.RestClient, db db.Database) handlers.HandlerFuncResError {
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
-		p, err := LastPrice(rc, db, &q)
+		q.ToUpper()
+
+		p, err := LastPrice(rc, db, q.From, q.To)
 		if err != nil {
 			return &domain.Result{}, fmt.Errorf("failed to get price: %w", err)
 		}

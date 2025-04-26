@@ -60,6 +60,6 @@ jobs:
       uses: docker/scout-action@v1
       with:
         command: cves
-        image: ${{ steps.meta.outputs.tags }}
+        image: streamdp/ccd@latest
         only-severities: critical,high
         exit-code: true

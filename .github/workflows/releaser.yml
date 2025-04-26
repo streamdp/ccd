@@ -45,8 +45,8 @@ jobs:
       uses: docker/metadata-action@v5.5.1
       with:
         images: |
-          streamdp/ccd
-          ghcr.io/streamdp/ccd
+          ${{ github.repository }}
+          ghcr.io/${{ github.repository }}
     - name: Build and push Docker image
       uses: docker/build-push-action@v6.2.0
       with:
@@ -60,6 +60,6 @@ jobs:
       uses: docker/scout-action@v1
       with:
         command: cves
-        image: streamdp/ccd@latest
+        image: ${{ github.repository }}:latest
         only-severities: critical,high
         exit-code: true

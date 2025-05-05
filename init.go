@@ -9,6 +9,7 @@ import (
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/clients/cryptocompare"
 	"github.com/streamdp/ccd/clients/huobi"
+	"github.com/streamdp/ccd/clients/kraken"
 	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/db"
 	"github.com/streamdp/ccd/db/redis"
@@ -30,6 +31,8 @@ func initRestClient(cfg *config.App) (clients.RestClient, error) {
 	switch cfg.DataProvider {
 	case "huobi":
 		r, err = huobi.Init(cfg)
+	case "kraken":
+		r, err = kraken.Init(cfg)
 	default:
 		r, err = cryptocompare.Init(cfg)
 	}
@@ -49,6 +52,8 @@ func initWsClient(ctx context.Context, d db.Database, l *log.Logger, cfg *config
 	switch cfg.DataProvider {
 	case "huobi":
 		w, err = huobi.InitWs(ctx, d.DataPipe(), l)
+	case "kraken":
+		w, err = kraken.InitWs(ctx, d.DataPipe(), l)
 	default:
 		w, err = cryptocompare.InitWs(ctx, d.DataPipe(), l, cfg)
 	}

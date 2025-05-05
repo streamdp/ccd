@@ -1,6 +1,6 @@
 package huobi
 
-type huobiRestData struct {
+type restData struct {
 	Ch      string   `json:"ch"`
 	Status  string   `json:"status"`
 	ErrCode string   `json:"err-code"`
@@ -23,7 +23,7 @@ type restTick struct {
 	Ask     []float64 `json:"ask"`
 }
 
-type huobiWsData struct {
+type wsData struct {
 	Ch   string `json:"ch"`
 	Ts   int64  `json:"ts"`
 	Tick wsTick `json:"tick"`

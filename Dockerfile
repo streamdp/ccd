@@ -8,7 +8,7 @@ WORKDIR /build
 ADD . /build
 COPY go.* ./
 RUN go get ./...
-RUN go build -mod=readonly -o app -ldflags="-s -X github.com/streamdp/ccd/config.Version=$VERSION" ./
+RUN go build -mod=readonly -o app -ldflags="-s -X github.com/streamdp/ccd/config.version=$VERSION" ./
 
 FROM gcr.io/distroless/static-debian12
 

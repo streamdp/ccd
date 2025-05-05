@@ -1,11 +1,11 @@
 package cryptocompare
 
-type cryptoCompareData struct {
+type restData struct {
 	Raw     map[string]map[string]*Response `json:"RAW"`
 	Display map[string]map[string]*Display  `json:"DISPLAY"`
 }
 
-type cryptoCompareWsData struct {
+type wsData struct {
 	Type                string  `json:"TYPE"`
 	FromSymbol          string  `json:"FROMSYMBOL"`
 	ToSymbol            string  `json:"TOSYMBOL"`
@@ -49,12 +49,4 @@ type Display struct {
 	LastUpdate      string `json:"LASTUPDATE"`
 	Supply          string `json:"SUPPLY"`
 	MktCap          string `json:"MKTCAP"`
-}
-
-// Data structure for easily json serialization
-type Data struct {
-	From    string
-	To      string
-	Raw     *Response `json:"RAW"`
-	Display *Display  `json:"DISPLAY"`
 }

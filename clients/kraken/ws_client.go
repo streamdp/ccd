@@ -1,15 +1,13 @@
-package huobi
+package kraken
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
-	"strings"
 	"sync"
 	"time"
 
@@ -17,7 +15,7 @@ import (
 	"github.com/streamdp/ccd/domain"
 )
 
-const wssUrl = "wss://api.huobi.pro/ws"
+const wssUrl = "wss://ws.kraken.com/v2"
 
 type ws struct {
 	l             *log.Logger
@@ -29,16 +27,16 @@ type ws struct {
 var errReconnect = errors.New("reconnect failed")
 
 func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger) (*ws, error) {
-	h := &ws{
+	k := &ws{
 		l:             l,
 		subscriptions: domain.Subscriptions{},
 	}
-	if err := h.reconnect(ctx); err != nil {
+	if err := k.reconnect(ctx); err != nil {
 		return nil, err
 	}
-	go h.handleWsMessages(ctx, pipe)
+	go k.handleWsMessages(ctx, pipe)
 
-	return h, nil
+	return k, nil
 }
 
 func (w *ws) Subscribe(ctx context.Context, from, to string) error {
@@ -46,7 +44,8 @@ func (w *ws) Subscribe(ctx context.Context, from, to string) error {
 		id = time.Now().UnixMilli()
 		ch = buildChannelName(from, to)
 	)
-	if err := w.sendSubscribeMsg(ctx, ch, id); err != nil {
+	w.l.Printf("trying to subscribe on the %s/%s pair", from, to)
+	if err := w.sendSubscribeMsg(ctx, ch); err != nil {
 		return fmt.Errorf("failed to ws subscribe: %w", err)
 	}
 
@@ -71,9 +70,10 @@ func (w *ws) ListSubscriptions() domain.Subscriptions {
 func (w *ws) Unsubscribe(ctx context.Context, from, to string) error {
 	w.subMu.Lock()
 	defer w.subMu.Unlock()
-	var ch = buildChannelName(from, to)
-	if c, ok := w.subscriptions[ch]; ok {
-		if err := w.sendUnsubscribeMsg(ctx, ch, c.Id()); err != nil {
+	ch := buildChannelName(from, to)
+	if _, ok := w.subscriptions[ch]; ok {
+		w.l.Printf("trying to unsubscribe from the %s/%s pair", from, to)
+		if err := w.sendUnsubscribeMsg(ctx, ch); err != nil {
 			return fmt.Errorf("failed to wss unsubscribes: %w", err)
 		}
 		delete(w.subscriptions, ch)
@@ -102,8 +102,8 @@ func (w *ws) reconnect(ctx context.Context) error {
 func (w *ws) resubscribe(ctx context.Context) error {
 	w.subMu.RLock()
 	defer w.subMu.RUnlock()
-	for k, v := range w.subscriptions {
-		if err := w.sendSubscribeMsg(ctx, k, v.Id()); err != nil {
+	for k := range w.subscriptions {
+		if err := w.sendSubscribeMsg(ctx, k); err != nil {
 			return fmt.Errorf("failed to wss resubscribe: %w", err)
 		}
 	}
@@ -134,22 +134,52 @@ func (w *ws) handleWsError(ctx context.Context, err error) error {
 	}
 }
 
+func (w *ws) handleServerResponse(body []byte) string {
+	msg := &wsMessage{}
+	if err := json.Unmarshal(body, msg); err != nil {
+		return "failed to unmarshal server response: " + err.Error()
+	}
+
+	switch msg.Method {
+	case "subscribe":
+		if msg.Error != "" {
+			return "failed to subscribe: " + msg.Error
+		}
+		if msg.Success {
+			return fmt.Sprintf(
+				"%s channel: successfully subscribed on the %s pair", msg.Result.Channel, msg.Result.Symbol)
+		}
+	case "unsubscribe":
+		if msg.Error != "" {
+			return "failed to unsubscribe: " + msg.Error
+		}
+		if msg.Success {
+			return fmt.Sprintf(
+				"%s channel: successfully unsubscribed from the %s pair", msg.Result.Channel, msg.Result.Symbol)
+		}
+	}
+
+	return ""
+}
+
 func (w *ws) handleWsUpdate(body []byte, pipe chan *domain.Data) error {
 	data := &wsData{}
 	if err := json.Unmarshal(body, data); err != nil {
 		return fmt.Errorf("failed to unmarshal ws update message: %w", err)
 	}
 
-	if data.Ch == "" {
+	if data.Channel != "ticker" || len(data.Data) == 0 {
 		return nil
 	}
 
-	from, to := w.pairFromChannelName(data.Ch)
-	if from == "" || to == "" {
-		return nil
-	}
+	for _, tick := range data.Data {
+		from, to := w.pairFromChannelName(tick.Symbol)
+		if from == "" || to == "" {
+			continue
+		}
 
-	pipe <- convertWsDataToDomain(from, to, data)
+		pipe <- convertWsDataToDomain(from, to, &tick, time.Now().UTC().UnixMilli())
+	}
 
 	return nil
 }
@@ -170,6 +200,7 @@ func (w *ws) handleWsMessages(ctx context.Context, pipe chan *domain.Data) {
 				body []byte
 				err  error
 			)
+
 			if _, r, err = w.conn.Reader(ctx); err != nil {
 				if err = w.handleWsError(ctx, err); err != nil {
 					w.l.Println(err)
@@ -179,16 +210,21 @@ func (w *ws) handleWsMessages(ctx context.Context, pipe chan *domain.Data) {
 
 				continue
 			}
-			if body, err = gzipDecompress(r); err != nil {
+			if body, err = io.ReadAll(r); err != nil {
 				w.l.Println(err)
 
 				continue
 			}
-			if bytes.Contains(body, []byte("ping")) {
-				if err = w.pingHandler(ctx, body); err != nil {
-					w.l.Println(err)
+
+			if bytes.Contains(body, []byte("method")) {
+				if msg := w.handleServerResponse(body); msg != "" {
+					w.l.Println(msg)
 				}
 
+				continue
+			}
+
+			if bytes.Contains(body, []byte("heartbeat")) {
 				continue
 			}
 
@@ -197,15 +233,6 @@ func (w *ws) handleWsMessages(ctx context.Context, pipe chan *domain.Data) {
 			}
 		}
 	}
-}
-
-func (w *ws) pingHandler(ctx context.Context, m []byte) error {
-	m = bytes.ReplaceAll(m, []byte("ping"), []byte("pong"))
-	if err := w.conn.Write(ctx, websocket.MessageText, m); err != nil {
-		return fmt.Errorf("failed to send pong response: %w", err)
-	}
-
-	return nil
 }
 
 func (w *ws) pairFromChannelName(ch string) (string, string) {
@@ -219,73 +246,74 @@ func (w *ws) pairFromChannelName(ch string) (string, string) {
 }
 
 func buildChannelName(from, to string) string {
-	if strings.ToLower(to) == "usd" {
-		to = "usdt"
-	}
-
-	return fmt.Sprintf("market.%s.ticker", strings.ToLower(from+to))
+	return fmt.Sprintf("%s/%s", from, to)
 }
 
-func (w *ws) sendUnsubscribeMsg(ctx context.Context, ch string, id int64) error {
-	if err := w.conn.Write(ctx, websocket.MessageText, []byte(
-		fmt.Sprintf("{\"unsub\": \"%s\", \"id\":\"%d\"}", ch, id)),
-	); err != nil {
+func (w *ws) sendUnsubscribeMsg(ctx context.Context, ch string) error {
+	msg, err := json.Marshal(wsMessage{
+		Method: "unsubscribe",
+		Params: &wsMessageParams{
+			Channel: "ticker",
+			Symbol:  []string{ch},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal subscribe message: %w", err)
+	}
+
+	if err = w.conn.Write(ctx, websocket.MessageText, msg); err != nil {
 		return fmt.Errorf("failed to send unsubscribe message: %w", err)
 	}
 
 	return nil
 }
 
-func (w *ws) sendSubscribeMsg(ctx context.Context, ch string, id int64) error {
-	if err := w.conn.Write(ctx, websocket.MessageText, []byte(
-		fmt.Sprintf("{\"sub\": \"%s\", \"id\":\"%d\"}", ch, id)),
-	); err != nil {
+func (w *ws) sendSubscribeMsg(ctx context.Context, ch string) error {
+	msg, err := json.Marshal(wsMessage{
+		Method: "subscribe",
+		Params: &wsMessageParams{
+			Channel: "ticker",
+			Symbol:  []string{ch},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal subscribe message: %w", err)
+	}
+
+	if err = w.conn.Write(ctx, websocket.MessageText, msg); err != nil {
 		return fmt.Errorf("failed to send subscribe message: %w", err)
 	}
 
 	return nil
 }
 
-func gzipDecompress(r io.Reader) ([]byte, error) {
-	r, err := gzip.NewReader(r)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read uncompressed data: %w", err)
-	}
-
-	return data, nil
-}
-
-func convertWsDataToDomain(from, to string, d *wsData) *domain.Data {
-	if d == nil {
+func convertWsDataToDomain(from, to string, tick *wsTickerInfo, lastUpdate int64) *domain.Data {
+	if tick == nil {
 		return nil
 	}
+
 	b, _ := json.Marshal(&domain.Raw{
-		FromSymbol:     from,
-		ToSymbol:       to,
-		Open24Hour:     d.Tick.Open,
-		Volume24Hour:   d.Tick.Amount,
-		Volume24HourTo: d.Tick.Vol,
-		High24Hour:     d.Tick.High,
-		Price:          d.Tick.Bid,
-		LastUpdate:     d.Ts,
-		Supply:         float64(d.Tick.Count),
+		FromSymbol:      from,
+		ToSymbol:        to,
+		Change24Hour:    tick.Change,
+		ChangePct24Hour: tick.ChangePct,
+		Volume24Hour:    tick.Volume,
+		High24Hour:      tick.High,
+		Low24Hour:       tick.Low,
+		Price:           tick.Vwap,
+		LastUpdate:      lastUpdate,
 	})
 
 	return &domain.Data{
-		FromSymbol:     from,
-		ToSymbol:       to,
-		Open24Hour:     d.Tick.Open,
-		Volume24Hour:   d.Tick.Amount,
-		Low24Hour:      d.Tick.Low,
-		High24Hour:     d.Tick.High,
-		Price:          d.Tick.Bid,
-		Supply:         float64(d.Tick.Count),
-		LastUpdate:     d.Ts,
-		DisplayDataRaw: string(b),
+		FromSymbol:      from,
+		ToSymbol:        to,
+		Change24Hour:    tick.Change,
+		ChangePct24Hour: tick.ChangePct,
+		Volume24Hour:    tick.Volume,
+		High24Hour:      tick.High,
+		Low24Hour:       tick.Low,
+		Price:           tick.Vwap,
+		LastUpdate:      lastUpdate,
+		DisplayDataRaw:  string(b),
 	}
 }

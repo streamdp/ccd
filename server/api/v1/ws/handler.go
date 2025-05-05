@@ -14,7 +14,7 @@ import (
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/db"
 	"github.com/streamdp/ccd/domain"
-	v1 "github.com/streamdp/ccd/router/api/v1"
+	v1 "github.com/streamdp/ccd/server/api/v1"
 )
 
 const (

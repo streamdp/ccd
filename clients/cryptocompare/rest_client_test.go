@@ -13,7 +13,7 @@ func Test_convertToDomain(t *testing.T) {
 	type args struct {
 		from string
 		to   string
-		d    *cryptoCompareData
+		d    *restData
 	}
 	tests := []struct {
 		name string
@@ -25,7 +25,7 @@ func Test_convertToDomain(t *testing.T) {
 			args: args{
 				from: "BTC",
 				to:   "USDT",
-				d: &cryptoCompareData{
+				d: &restData{
 					Raw: map[string]map[string]*Response{
 						"BTC": {
 							"USDT": {
@@ -69,7 +69,7 @@ func Test_convertToDomain(t *testing.T) {
 			args: args{
 				from: "BTC",
 				to:   "USDT",
-				d: &cryptoCompareData{
+				d: &restData{
 					Raw: map[string]map[string]*Response{
 						"BTC": nil,
 					},
@@ -82,7 +82,7 @@ func Test_convertToDomain(t *testing.T) {
 			args: args{
 				from: "BTC",
 				to:   "USDT",
-				d: &cryptoCompareData{
+				d: &restData{
 					Raw: map[string]map[string]*Response{"BTC": {"USDT": {}}},
 				},
 			},
@@ -143,7 +143,7 @@ func Test_cryptoCompareRest_buildURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cc := &cryptoCompareRest{
+			cc := &rest{
 				apiKey: tt.fields.apiKey,
 				client: tt.fields.client,
 			}

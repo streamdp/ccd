@@ -10,7 +10,7 @@ import (
 	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/db"
 	"github.com/streamdp/ccd/repos"
-	"github.com/streamdp/ccd/router"
+	"github.com/streamdp/ccd/server"
 )
 
 func main() {
@@ -20,11 +20,11 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	gin.SetMode(appCfg.RunMode)
+	gin.SetMode(appCfg.RunMode())
 
 	l.Printf("Run mode:\n")
-	l.Printf("\tVersion=%v\n", appCfg.Version)
-	l.Printf("\tRun mode=%v\n", appCfg.RunMode)
+	l.Printf("\tVersion=%v\n", appCfg.Version())
+	l.Printf("\tRun mode=%v\n", appCfg.RunMode())
 	l.Printf("\tData provider=%v\n", appCfg.DataProvider)
 	l.Printf("\tSession store=%v\n", appCfg.SessionStore)
 
@@ -83,12 +83,12 @@ func main() {
 		l.Printf("error restoring last session: %v", err)
 	}
 
-	e := gin.Default()
-	if err = router.InitRouter(ctx, e, database, l, sr, r, w, p); err != nil {
+	srv := server.NewServer(database, sr, r, w, p, l, appCfg)
+	if err = srv.InitRouter(ctx); err != nil {
 		l.Fatalln(err)
 	}
 
-	if err = e.Run(fmt.Sprintf(":%d", appCfg.Http.Port())); err != nil {
+	if err = srv.Run(fmt.Sprintf(":%d", appCfg.Http.Port())); err != nil {
 		l.Fatalln(err)
 	}
 

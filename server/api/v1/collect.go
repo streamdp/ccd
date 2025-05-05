@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/domain"
-	"github.com/streamdp/ccd/router/handlers"
+	"github.com/streamdp/ccd/server/handlers"
 )
 
 // CollectQuery structure for easily json serialization/validation/binding GET and POST query data

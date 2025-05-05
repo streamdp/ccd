@@ -1,4 +1,4 @@
-package huobi
+package kraken
 
 import (
 	"encoding/json"
@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,12 +16,15 @@ import (
 )
 
 const (
-	apiUrl = "https://api.huobi.pro"
+	apiUrl = "https://api.kraken.com"
 
-	// Get Latest Aggregated Ticker https://huobiapi.github.io/docs/spot/v1/en/#get-latest-aggregated-ticker
-	// This endpoint retrieves the latest ticker with some important 24h aggregated market data.
-	// Request Parameters "symbol" (all supported trading symbol, e.g. btcusdt, bccbtc. Refer to /v1/common/symbols)
-	latestAggregatedTicker = "/market/detail/merged"
+	// Get Ticker Information https://docs.kraken.com/api/docs/rest-api/get-ticker-information
+	// Get ticker information for all or requested markets. To clarify usage, note that:
+	// - Today's prices start at midnight UTC
+	// - Leaving the pair parameter blank will return tickers for all tradeable assets on Kraken
+	// Request Parameters "pair" (Asset pair to get data for (optional, default: all tradeable exchange pairs), e.g.
+	// XBTUSD, WBTCUSD. Refer to /0/public/Assets)
+	tickerInformation = "/0/public/Ticker"
 
 	rateLimit = 500 * time.Millisecond // make max two api calls per second
 )
@@ -66,11 +70,11 @@ func (r *rest) Get(fSym string, tSym string) (*domain.Data, error) {
 	if err = json.Unmarshal(body, rawData); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
-	if rawData.Status == "error" {
-		return nil, fmt.Errorf("server error: %v", rawData.ErrMsg)
+	if len(rawData.Error) != 0 {
+		return nil, fmt.Errorf("server error: %v", rawData.Error)
 	}
 
-	return convertRestDataToDomain(fSym, tSym, rawData), nil
+	return convertRestDataToDomain(fSym, tSym, rawData, time.Now().UTC().UnixMilli()), nil
 }
 
 func (r *rest) limitRate() {
@@ -79,50 +83,55 @@ func (r *rest) limitRate() {
 }
 
 func (r *rest) buildURL(fSym string, tSym string) (*url.URL, error) {
-	u, err := url.Parse(apiUrl + latestAggregatedTicker)
+	u, err := url.Parse(apiUrl + tickerInformation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse url: %w", err)
 	}
-	if strings.ToLower(tSym) == "usd" {
-		tSym = "usdt"
-	}
 	query := u.Query()
-	query.Set("symbol", strings.ToLower(fSym+tSym))
+	query.Set("pair", strings.ToLower(fSym+tSym))
 	u.RawQuery = query.Encode()
 
 	return u, nil
 }
 
-func convertRestDataToDomain(from, to string, d *restData) *domain.Data {
-	if d == nil {
+func convertRestDataToDomain(from, to string, d *restData, lastUpdate int64) *domain.Data {
+	if d == nil || len(d.Result) == 0 {
 		return nil
 	}
-	var price float64
-	if len(d.Tick.Bid) > 0 {
-		price = d.Tick.Bid[0]
+
+	var tick restTickerInfo
+	for _, v := range d.Result {
+		tick = v
 	}
+
+	open24Hour, _ := strconv.ParseFloat(tick.O, 64)
+	volume24Hour, _ := strconv.ParseFloat(tick.V[1], 64)
+	low24Hour, _ := strconv.ParseFloat(tick.L[1], 64)
+	high24Hour, _ := strconv.ParseFloat(tick.H[1], 64)
+	price, _ := strconv.ParseFloat(tick.P[0], 64)
+
 	b, _ := json.Marshal(&domain.Raw{
-		FromSymbol:     from,
-		ToSymbol:       to,
-		Open24Hour:     d.Tick.Open,
-		Volume24Hour:   d.Tick.Amount,
-		Volume24HourTo: d.Tick.Vol,
-		High24Hour:     d.Tick.High,
-		Price:          price,
-		LastUpdate:     d.Ts,
-		Supply:         float64(d.Tick.Count),
+		FromSymbol:   from,
+		ToSymbol:     to,
+		Open24Hour:   open24Hour,
+		Volume24Hour: volume24Hour,
+		Low24Hour:    low24Hour,
+		High24Hour:   high24Hour,
+		Price:        price,
+		Supply:       float64(tick.T[1]),
+		LastUpdate:   lastUpdate,
 	})
 
 	return &domain.Data{
 		FromSymbol:     from,
 		ToSymbol:       to,
-		Open24Hour:     d.Tick.Open,
-		Volume24Hour:   d.Tick.Amount,
-		Low24Hour:      d.Tick.Low,
-		High24Hour:     d.Tick.High,
+		Open24Hour:     open24Hour,
+		Volume24Hour:   volume24Hour,
+		Low24Hour:      low24Hour,
+		High24Hour:     high24Hour,
 		Price:          price,
-		Supply:         float64(d.Tick.Count),
-		LastUpdate:     d.Ts,
+		Supply:         float64(tick.T[1]),
+		LastUpdate:     lastUpdate,
 		DisplayDataRaw: string(b),
 	}
 }

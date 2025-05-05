@@ -12,7 +12,7 @@ func Test_convertHuobiRestDataToDomain(t *testing.T) {
 	type args struct {
 		from string
 		to   string
-		d    *huobiRestData
+		d    *restData
 	}
 	tests := []struct {
 		name string
@@ -24,7 +24,7 @@ func Test_convertHuobiRestDataToDomain(t *testing.T) {
 			args: args{
 				from: "BTC",
 				to:   "USDT",
-				d: &huobiRestData{
+				d: &restData{
 					Tick: restTick{},
 				},
 			},
@@ -50,7 +50,7 @@ func Test_convertHuobiRestDataToDomain(t *testing.T) {
 			args: args{
 				from: "BTC",
 				to:   "USDT",
-				d: &huobiRestData{
+				d: &restData{
 					Ts: 1719731197640,
 					Tick: restTick{
 						Open:   60867.47,
@@ -82,8 +82,8 @@ func Test_convertHuobiRestDataToDomain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := convertHuobiRestDataToDomain(tt.args.from, tt.args.to, tt.args.d); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("convertHuobiRestDataToDomain() = %v, want %v", got, tt.want)
+			if got := convertRestDataToDomain(tt.args.from, tt.args.to, tt.args.d); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("convertRestDataToDomain() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -129,7 +129,7 @@ func Test_huobiRest_buildURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := &huobiRest{}
+			h := &rest{}
 			gotU, err := h.buildURL(tt.args.fSym, tt.args.tSym)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildURL() error = %v, wantErr %v", err, tt.wantErr)

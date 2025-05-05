@@ -28,7 +28,7 @@ func Test_cryptoCompareWs_buildURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &cryptoCompareWs{apiKey: tt.apiKey}
+			c := &ws{apiKey: tt.apiKey}
 			gotU, err := c.buildURL()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildURL() error = %v, wantErr %v", err, tt.wantErr)
@@ -101,7 +101,7 @@ func Test_cryptoCompareWs_ListSubscriptions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &cryptoCompareWs{
+			c := &ws{
 				subscriptions: tt.subscriptions,
 			}
 			if got := c.ListSubscriptions(); !reflect.DeepEqual(got, tt.want) {
@@ -114,12 +114,12 @@ func Test_cryptoCompareWs_ListSubscriptions(t *testing.T) {
 func Test_convertCryptoCompareWsDataToDomain(t *testing.T) {
 	tests := []struct {
 		name string
-		d    *cryptoCompareWsData
+		d    *wsData
 		want *domain.Data
 	}{
 		{
 			name: "regular conversion",
-			d: &cryptoCompareWsData{
+			d: &wsData{
 				FromSymbol:          "BTC",
 				ToSymbol:            "ETH",
 				Price:               61391.27,
@@ -151,7 +151,7 @@ func Test_convertCryptoCompareWsDataToDomain(t *testing.T) {
 		},
 		{
 			name: "empty",
-			d:    &cryptoCompareWsData{},
+			d:    &wsData{},
 			want: &domain.Data{
 				DisplayDataRaw: "{\"from_symbol\":\"\",\"to_symbol\":\"\",\"change_24_hour\":0," +
 					"\"changepct_24_hour\":0,\"open_24_hour\":0,\"volume_24_hour\":0,\"volume_24_hour_to\":0," +
@@ -166,8 +166,8 @@ func Test_convertCryptoCompareWsDataToDomain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := convertCryptoCompareWsDataToDomain(tt.d); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("convertCryptoCompareWsDataToDomain() = %v, want %v", got, tt.want)
+			if got := convertWsDataToDomain(tt.d); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("convertWsDataToDomain() = %v, want %v", got, tt.want)
 			}
 		})
 	}

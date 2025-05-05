@@ -14,7 +14,7 @@ $ go build -o ccd .
 ## Run app
 To configure app, export some environment variables:
 ```bash
-export CCDC_DATAPROVIDER=cryptocompare #huobi
+export CCDC_DATAPROVIDER=cryptocompare #huobi, kraken
 export CCDC_DATABASEURL=postgres://username:password@127.0.0.1:5432/dbname?sslmode=disable
 export CCDC_APIKEY=put you api key here
 export CCDC_SESSIONSTORE=redis // or "db", default value is "db"
@@ -39,16 +39,18 @@ ccd is a microservice that collect data from several crypto data providers crypr
 
 Usage of ccd:
   -dataprovider string
-        use selected data provider ("cryptocompare", "huobi") (default "cryptocompare")
+        use selected data provider ("cryptocompare", "huobi", "kraken") (default "cryptocompare")
   -debug
         run the program in debug mode
   -h    display help
-  -port string
-        set specify port (default ":8080")
+  -port int
+        set specify port (default 8080)
   -session string
-        set session store "db" or "redis" (default "db")  
+        set session store "db" or "redis" (default "db")
   -timeout int
-        how long to wait for a response from the api server before sending data from the cache (default 1000)
+        how long to wait for a response from the api server before sending data from the cache (default 5000)
+  -v    display version
+
 ```
 Since the release of v2.3.0, the ccd service has moved to API v2, all v1 endpoints have been deprecated and 
 are not recommended for use. List of the implemented endpoints v2 API:

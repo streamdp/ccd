@@ -22,7 +22,7 @@ const (
 	multipleSymbolsFullData = "/data/pricemultifull"
 )
 
-type cryptoCompareRest struct {
+type rest struct {
 	apiKey string
 	client *http.Client
 }
@@ -33,12 +33,12 @@ var (
 )
 
 // Init apiKey, apiUrl, wsURL variables with environment values and return CryptoCompareData structure
-func Init(cfg *config.App) (*cryptoCompareRest, error) {
+func Init(cfg *config.App) (*rest, error) {
 	if cfg.ApiKey == "" {
 		return nil, errApiKeyNotDefined
 	}
 
-	return &cryptoCompareRest{
+	return &rest{
 		apiKey: cfg.ApiKey,
 		client: &http.Client{
 			Timeout: cfg.Http.ClientTimeout(),
@@ -47,16 +47,16 @@ func Init(cfg *config.App) (*cryptoCompareRest, error) {
 }
 
 // Get filled CryptoCompareData structure for the selected pair currencies over http/https
-func (cc *cryptoCompareRest) Get(fSym string, tSym string) (*domain.Data, error) {
+func (r *rest) Get(fSym string, tSym string) (*domain.Data, error) {
 	var (
 		response *http.Response
 		body     []byte
 	)
-	u, err := cc.buildURL(fSym, tSym)
+	u, err := r.buildURL(fSym, tSym)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build url: %w", err)
 	}
-	response, err = cc.client.Get(u.String())
+	response, err = r.client.Get(u.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch data: %w", err)
 	}
@@ -67,7 +67,7 @@ func (cc *cryptoCompareRest) Get(fSym string, tSym string) (*domain.Data, error)
 	if response.StatusCode != http.StatusOK {
 		return nil, errWrongStatusCode
 	}
-	rawData := &cryptoCompareData{}
+	rawData := &restData{}
 	if err = json.Unmarshal(body, rawData); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
@@ -75,7 +75,7 @@ func (cc *cryptoCompareRest) Get(fSym string, tSym string) (*domain.Data, error)
 	return convertToDomain(fSym, tSym, rawData), nil
 }
 
-func (cc *cryptoCompareRest) buildURL(fSym string, tSym string) (*url.URL, error) {
+func (r *rest) buildURL(fSym string, tSym string) (*url.URL, error) {
 	u, err := url.Parse(apiUrl + multipleSymbolsFullData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build url: %w", err)
@@ -83,13 +83,13 @@ func (cc *cryptoCompareRest) buildURL(fSym string, tSym string) (*url.URL, error
 	query := u.Query()
 	query.Set("fsyms", fSym)
 	query.Set("tsyms", tSym)
-	query.Set("api_key", cc.apiKey)
+	query.Set("api_key", r.apiKey)
 	u.RawQuery = query.Encode()
 
 	return u, nil
 }
 
-func convertToDomain(from, to string, d *cryptoCompareData) *domain.Data {
+func convertToDomain(from, to string, d *restData) *domain.Data {
 	if d == nil || d.Raw == nil || d.Raw[from] == nil {
 		return nil
 	}

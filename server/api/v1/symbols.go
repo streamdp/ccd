@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/streamdp/ccd/domain"
-	"github.com/streamdp/ccd/router/handlers"
+	"github.com/streamdp/ccd/server/handlers"
 )
 
 type SymbolsRepo interface {

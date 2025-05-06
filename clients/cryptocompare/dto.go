@@ -6,18 +6,23 @@ type restData struct {
 }
 
 type wsData struct {
-	Type                string  `json:"TYPE"`
-	FromSymbol          string  `json:"FROMSYMBOL"`
-	ToSymbol            string  `json:"TOSYMBOL"`
-	Price               float64 `json:"PRICE"`
-	LastUpdate          int64   `json:"LASTUPDATE"`
-	Volume24Hour        float64 `json:"VOLUME24HOUR"`
-	Volume24HourTo      float64 `json:"VOLUME24HOURTO"`
-	Open24Hour          float64 `json:"OPEN24HOUR"`
-	High24Hour          float64 `json:"HIGH24HOUR"`
-	Low24Hour           float64 `json:"LOW24HOUR"`
-	CurrentSupply       float64 `json:"CURRENTSUPPLY"`
-	CurrentSupplyMktCap float64 `json:"CURRENTSUPPLYMKTCAP"`
+	Type      string `json:"TYPE"`
+	Message   string `json:"MESSAGE,omitempty"`
+	Sub       string `json:"SUB,omitempty"`
+	Parameter string `json:"PARAMETER,omitempty"`
+	Info      string `json:"INFO,omitempty"`
+
+	FromSymbol          string  `json:"FROMSYMBOL,omitempty"`
+	ToSymbol            string  `json:"TOSYMBOL,omitempty"`
+	Price               float64 `json:"PRICE,omitempty"`
+	LastUpdate          int64   `json:"LASTUPDATE,omitempty"`
+	Volume24Hour        float64 `json:"VOLUME24HOUR,omitempty"`
+	Volume24HourTo      float64 `json:"VOLUME24HOURTO,omitempty"`
+	Open24Hour          float64 `json:"OPEN24HOUR,omitempty"`
+	High24Hour          float64 `json:"HIGH24HOUR,omitempty"`
+	Low24Hour           float64 `json:"LOW24HOUR,omitempty"`
+	CurrentSupply       float64 `json:"CURRENTSUPPLY,omitempty"`
+	CurrentSupplyMktCap float64 `json:"CURRENTSUPPLYMKTCAP,omitempty"`
 }
 
 // Response structure for easily json serialization

@@ -19,11 +19,17 @@ import (
 const wssUrl = "wss://streamer.cryptocompare.com/v2"
 
 type ws struct {
-	l             *log.Logger
-	conn          *websocket.Conn
-	apiKey        string
+	l      *log.Logger
+	conn   *websocket.Conn
+	apiKey string
+
 	subscriptions domain.Subscriptions
 	subMu         sync.RWMutex
+
+	pipe chan *domain.Data
+
+	up   chan struct{}
+	down chan struct{}
 }
 
 var (
@@ -36,20 +42,24 @@ func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger, cfg *con
 		return nil, errApiKeyNotDefined
 	}
 
-	h := &ws{
+	w := &ws{
 		l:             l,
 		apiKey:        cfg.ApiKey,
 		subscriptions: domain.Subscriptions{},
-	}
-	if err := h.reconnect(ctx); err != nil {
-		return nil, err
-	}
-	go h.handleWsMessages(ctx, pipe)
+		pipe:          pipe,
 
-	return h, nil
+		up:   make(chan struct{}),
+		down: make(chan struct{}),
+	}
+
+	go w.serveWsConnection(ctx)
+
+	return w, nil
 }
 
 func (w *ws) Subscribe(ctx context.Context, from, to string) error {
+	w.wsUp()
+
 	var ch = buildChannelName(from, to)
 	if err := w.sendSubscribeMsg(ctx, ch); err != nil {
 		return fmt.Errorf("failed to wss subscribe: %w", err)
@@ -65,10 +75,10 @@ func (w *ws) Subscribe(ctx context.Context, from, to string) error {
 func (w *ws) ListSubscriptions() domain.Subscriptions {
 	s := make(domain.Subscriptions, len(w.subscriptions))
 	w.subMu.RLock()
-	defer w.subMu.RUnlock()
 	for k, v := range w.subscriptions {
 		s[k] = v
 	}
+	w.subMu.RUnlock()
 
 	return s
 }
@@ -84,12 +94,81 @@ func (w *ws) Unsubscribe(ctx context.Context, from, to string) error {
 		delete(w.subscriptions, ch)
 	}
 
+	w.wsDown()
+
 	return nil
+}
+
+func (w *ws) serveWsConnection(ctx context.Context) {
+	defer close(w.up)
+	defer close(w.down)
+
+	var (
+		ctxUp  context.Context
+		cancel context.CancelFunc
+
+		isConnected bool
+	)
+	defer func() {
+		if cancel != nil {
+			cancel()
+		}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			if cancel != nil {
+				cancel()
+			}
+
+			return
+		case <-w.up:
+			if !isConnected {
+				ctxUp, cancel = context.WithCancel(ctx)
+				if err := w.reconnect(ctxUp); err != nil {
+					w.l.Println(err)
+
+					continue
+				}
+				go w.handleWsMessages(ctxUp, w.pipe)
+
+				w.l.Printf("websocket connection open")
+				isConnected = true
+			}
+			w.up <- struct{}{}
+		case <-w.down:
+			if isConnected && len(w.subscriptions) == 0 {
+				if cancel != nil {
+					cancel()
+				}
+
+				if err := w.conn.CloseNow(); err != nil {
+					w.l.Printf("failed to close websocket connection: %v", err)
+				}
+				w.conn = nil
+
+				w.l.Printf("websocket connection closed (no active subscriptions were found)")
+				isConnected = false
+			}
+			w.down <- struct{}{}
+		}
+	}
+}
+
+func (w *ws) wsUp() {
+	w.up <- struct{}{}
+	<-w.up
+}
+
+func (w *ws) wsDown() {
+	w.down <- struct{}{}
+	<-w.down
 }
 
 func (w *ws) reconnect(ctx context.Context) error {
 	if w.conn != nil {
-		if err := w.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
+		if err := w.conn.CloseNow(); !errors.As(err, &websocket.CloseError{}) && !errors.Is(err, context.Canceled) {
 			w.l.Println(err)
 			// reducing logs and CPU load when API key expired
 			time.Sleep(10 * time.Second)
@@ -145,6 +224,7 @@ func (w *ws) sendUnsubscribeMsg(ctx context.Context, ch string) error {
 func (w *ws) resubscribe(ctx context.Context) error {
 	w.subMu.RLock()
 	defer w.subMu.RUnlock()
+
 	for k := range w.subscriptions {
 		if err := w.sendSubscribeMsg(ctx, k); err != nil {
 			return fmt.Errorf("failed to resubscribe: %w", err)
@@ -155,6 +235,10 @@ func (w *ws) resubscribe(ctx context.Context) error {
 }
 
 func (w *ws) handleWssError(ctx context.Context, err error) error {
+	if errors.As(err, &websocket.CloseError{}) || errors.Is(err, context.Canceled) {
+		return nil
+	}
+
 	w.l.Println(err)
 	for {
 		select {
@@ -177,12 +261,24 @@ func (w *ws) handleWssError(ctx context.Context, err error) error {
 	}
 }
 
+func (w *ws) handleServerResponse(data *wsData) string {
+	switch data.Message {
+	case "SUBSCRIBECOMPLETE":
+		return "cccagg channel: successfully subscribed on the " + data.Sub
+	case "UNSUBSCRIBECOMPLETE":
+		return "cccagg channel: successfully unsubscribed from the " + data.Sub
+	case "UNSUBSCRIBEALLCOMPLETE":
+		return "cccagg channel: " + data.Info
+	case "LOADCOMPLETE":
+		return "cccagg channel: " + data.Info
+	case "SUBSCRIPTION_ALREADY_ACTIVE":
+		return fmt.Sprintf("cccagg channel: %s subscription already active", data.Parameter)
+	}
+
+	return ""
+}
+
 func (w *ws) handleWsMessages(ctx context.Context, pipe chan *domain.Data) {
-	defer func(conn *websocket.Conn, code websocket.StatusCode, reason string) {
-		if errClose := conn.Close(code, reason); errClose != nil {
-			w.l.Println(errClose)
-		}
-	}(w.conn, websocket.StatusNormalClosure, "")
 	var (
 		hb      = newHeartbeat()
 		hbTimer = time.NewTimer(heartbeatCheckInterval)
@@ -225,6 +321,10 @@ func (w *ws) handleWsMessages(ctx context.Context, pipe chan *domain.Data) {
 			switch data.Type {
 			case "999":
 				hb.reset()
+			case "3", "16", "17", "18", "500":
+				if msg := w.handleServerResponse(data); msg != "" {
+					w.l.Println(msg)
+				}
 			case "5":
 				pipe <- convertWsDataToDomain(data)
 			}

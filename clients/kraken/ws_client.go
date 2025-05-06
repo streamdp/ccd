@@ -48,72 +48,6 @@ func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger) (*ws, er
 	return w, nil
 }
 
-func (w *ws) serveWsConnection(ctx context.Context) {
-	defer close(w.up)
-	defer close(w.down)
-
-	var (
-		ctxUp  context.Context
-		cancel context.CancelFunc
-
-		isConnected bool
-	)
-	defer func() {
-		if cancel != nil {
-			cancel()
-		}
-	}()
-
-	for {
-		select {
-		case <-ctx.Done():
-			if cancel != nil {
-				cancel()
-			}
-			return
-		case <-w.up:
-			if !isConnected {
-				ctxUp, cancel = context.WithCancel(ctx)
-				if err := w.reconnect(ctxUp); err != nil {
-					w.l.Println(err)
-
-					continue
-				}
-				go w.handleWsMessages(ctxUp, w.pipe)
-
-				w.l.Printf("websocket connection open")
-				isConnected = true
-			}
-			w.up <- struct{}{}
-		case <-w.down:
-			if isConnected && len(w.subscriptions) == 0 {
-				if cancel != nil {
-					cancel()
-				}
-
-				if err := w.conn.CloseNow(); err != nil {
-					w.l.Printf("failed to close websocket connection: %v", err)
-				}
-				w.conn = nil
-
-				w.l.Printf("websocket connection closed (no active subscriptions were found)")
-				isConnected = false
-			}
-			w.down <- struct{}{}
-		}
-	}
-}
-
-func (w *ws) wsUp() {
-	w.up <- struct{}{}
-	<-w.up
-}
-
-func (w *ws) wsDown() {
-	w.down <- struct{}{}
-	<-w.down
-}
-
 func (w *ws) Subscribe(ctx context.Context, from, to string) error {
 	w.wsUp()
 
@@ -160,6 +94,73 @@ func (w *ws) Unsubscribe(ctx context.Context, from, to string) error {
 	w.wsDown()
 
 	return nil
+}
+
+func (w *ws) serveWsConnection(ctx context.Context) {
+	defer close(w.up)
+	defer close(w.down)
+
+	var (
+		ctxUp  context.Context
+		cancel context.CancelFunc
+
+		isConnected bool
+	)
+	defer func() {
+		if cancel != nil {
+			cancel()
+		}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			if cancel != nil {
+				cancel()
+			}
+
+			return
+		case <-w.up:
+			if !isConnected {
+				ctxUp, cancel = context.WithCancel(ctx)
+				if err := w.reconnect(ctxUp); err != nil {
+					w.l.Println(err)
+
+					continue
+				}
+				go w.handleWsMessages(ctxUp, w.pipe)
+
+				w.l.Printf("websocket connection open")
+				isConnected = true
+			}
+			w.up <- struct{}{}
+		case <-w.down:
+			if isConnected && len(w.subscriptions) == 0 {
+				if cancel != nil {
+					cancel()
+				}
+
+				if err := w.conn.CloseNow(); err != nil {
+					w.l.Printf("failed to close websocket connection: %v", err)
+				}
+				w.conn = nil
+
+				w.l.Printf("websocket connection closed (no active subscriptions were found)")
+				isConnected = false
+			}
+			w.down <- struct{}{}
+		}
+	}
+}
+
+func (w *ws) wsUp() {
+	w.up <- struct{}{}
+	<-w.up
+}
+
+func (w *ws) wsDown() {
+	w.down <- struct{}{}
+	<-w.down
 }
 
 func (w *ws) reconnect(ctx context.Context) error {

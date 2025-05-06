@@ -12,8 +12,8 @@ specific currency pairs. These workers handle data pulling at defined intervals.
 * **Symbol Management**: Add, update, list, or delete currency symbols that are tracked by the system.
 * **Price Retrieval**: Fetch the most recent price data for a selected currency pair, including cached data when the 
 data provider is unavailable.
-* **WebSocket Integration**: Provides a WebSocket connection for real-time updates. Clients can subscribe or 
-unsubscribe to specific currency pairs using JSON messages like _{"fsym":"BTC","tsym":"USD"}_.
+* **WebSocket Integration**: Provides a WebSocket connection to receiving real-time data. Clients can receive market info 
+for specific currency pairs using JSON messages like _{"fsym":"BTC","tsym":"USD"}_.
 ## Build app
 ```bash
 $ go build -o ccd .

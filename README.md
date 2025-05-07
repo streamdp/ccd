@@ -61,19 +61,22 @@ Usage of ccd:
 ```
 Since the release of v2.3.0, the ccd service has moved to API v2, all v1 endpoints have been deprecated and 
 are not recommended for use. List of the implemented endpoints v2 API:
-* **/healthz** [GET]   _check node status_
-* **/v2/collect** [GET] _list of all running workers_
-* **/v2/collect** [POST] _add new worker to collect data for the selected pair_
-* **/v2/collect** [PUT]  _update pulling interval for the selected pair_
-* **/v2/collect** [DELETE] _stop and remove worker and collecting data for the selected pair_
-* **/v2/symbols** [GET] _list of all symbols presented_
-* **/v2/symbols** [POST] _add currency symbol_
-* **/v2/symbols** [PUT] _update currency symbol_
-* **/v2/symbols** [DELETE] _delete currency symbol_
-* **/v2/price** [GET] _get actual (or cached when dataprovider is unavailable) info for the selected pair_
-* **/v2/ws** [GET] _websocket connection url, when you connected, try to send request like {"fsym":"BTC","tsym":"USD"}_
-* **/v2/ws/subscribe** [GET] _subscribe to collect data for the selected pair_
-* **/v2/ws/unsubscribe** [GET] _unsubscribe to stop collect data for the selected pair_
+
+| Method | Endpoint               | Description                                                                                        |
+|:------:|:-----------------------|:---------------------------------------------------------------------------------------------------|
+|  GET   | **/healthz**           | check node status                                                                                  |
+|  GET   | **/v2/collect**        | list of all running workers                                                                        |
+|  POST  | **/v2/collect**        | add new worker to collect data for the selected pair                                               |
+|  PUT   | **/v2/collect**        | update pulling interval for the selected pair                                                      |
+| DELETE | **/v2/collect**        | stop and remove worker and collecting data for the selected pair                                   |
+|  GET   | **/v2/symbols**        | list of all symbols presented                                                                      |
+|  POST  | **/v2/symbols**        | add currency symbol                                                                                |
+|  PUT   | **/v2/symbols**        | update currency symbol                                                                             |
+| DELETE | **/v2/symbols**        | delete currency symbol                                                                             |
+|  GET   | **/v2/price**          | get actual (or cached when dataprovider is unavailable) info for the selected pair                 |
+|  GET   | **/v2/ws**             | websocket connection url, when you connected, try to send request like {"fsym":"BTC","tsym":"USD"} |
+|  GET   | **/v2/ws/subscribe**   | subscribe to collect data for the selected pair                                                    |
+|  GET   | **/v2/ws/unsubscribe** | unsubscribe to stop collect data for the selected pair                                             |
 ## Usage examples
 Get actual info about selected pair:
 ```bash

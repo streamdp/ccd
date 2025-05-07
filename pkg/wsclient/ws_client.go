@@ -39,6 +39,8 @@ type Ws struct {
 var (
 	ErrReconnect                  = errors.New("reconnect failed")
 	ErrWsConnectionNotInitialized = errors.New("ws connection is not initialized")
+	ErrBodyNotInitialized         = errors.New("response body cannot be nil")
+	ErrReaderNotInitialized       = errors.New("response reader cannot be nil")
 )
 
 func New(ctx context.Context, wsUrl string, l *log.Logger) *Ws {
@@ -184,6 +186,9 @@ func (w *Ws) Read(ctx context.Context) ([]byte, error) {
 			return nil, err
 		}
 	}
+	if body == nil {
+		return nil, ErrBodyNotInitialized
+	}
 
 	return body, nil
 }
@@ -198,6 +203,9 @@ func (w *Ws) Reader(ctx context.Context) (io.Reader, error) {
 		if err = w.HandleWsError(ctx, err); err != nil {
 			return nil, err
 		}
+	}
+	if r == nil {
+		return nil, ErrReaderNotInitialized
 	}
 
 	return r, nil

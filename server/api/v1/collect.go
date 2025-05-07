@@ -149,7 +149,7 @@ func Unsubscribe(ctx context.Context, w clients.WsClient) handlers.HandlerFuncRe
 
 		return domain.NewResult(
 			http.StatusOK,
-			"Unsubscribed successfully, data collection stopped ",
+			"Unsubscribed successfully, data collection stopped",
 			[]string{q.From, q.To},
 		), nil
 	}

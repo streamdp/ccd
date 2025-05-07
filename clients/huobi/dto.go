@@ -1,5 +1,9 @@
 package huobi
 
+import (
+	"encoding/json"
+)
+
 type restData struct {
 	Ch      string   `json:"ch"`
 	Status  string   `json:"status"`
@@ -52,4 +56,13 @@ type wsTick struct {
 	AskSize   float64 `json:"askSize"`
 	LastPrice float64 `json:"lastPrice"`
 	LastSize  float64 `json:"lastSize"`
+}
+type wsPing struct {
+	Ts int64 `json:"ping"`
+}
+
+func (p *wsPing) Unmarshal(body []byte) *wsPing {
+	_ = json.Unmarshal(body, p)
+
+	return p
 }

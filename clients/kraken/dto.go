@@ -31,6 +31,7 @@ type wsMessage struct {
 	} `json:"result,omitempty"`
 	Success bool       `json:"success,omitempty"`
 	Error   string     `json:"error,omitempty"`
+	ReqId   int64      `json:"req_id,omitempty"`
 	TimeIn  *time.Time `json:"time_in,omitempty"`
 	TimeOut *time.Time `json:"time_out,omitempty"`
 }

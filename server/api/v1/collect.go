@@ -12,6 +12,15 @@ import (
 	"github.com/streamdp/ccd/server/handlers"
 )
 
+type Puller interface {
+	Task(from string, to string) *clients.Task
+	AddTask(from string, to string, interval int64) *clients.Task
+	RemoveTask(from string, to string)
+	ListTasks() clients.Tasks
+	UpdateTask(t *clients.Task, interval int64) *clients.Task
+	RestoreLastSession() error
+}
+
 // CollectQuery structure for easily json serialization/validation/binding GET and POST query data
 type CollectQuery struct {
 	From     string `binding:"required,symbols" form:"fsym"     json:"fsym"`
@@ -25,7 +34,7 @@ func (c *CollectQuery) toUpper() {
 }
 
 // AddWorker that will collect data for the selected currency pair to the management service
-func AddWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
+func AddWorker(p Puller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (*domain.Result, error) {
 		q := CollectQuery{}
 		if err := c.Bind(&q); err != nil {
@@ -48,7 +57,7 @@ func AddWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 }
 
 // RemoveWorker from the management service and stop collecting data for the selected currencies pair
-func RemoveWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
+func RemoveWorker(p Puller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (*domain.Result, error) {
 		q := CollectQuery{}
 		if err := c.Bind(&q); err != nil {
@@ -68,7 +77,7 @@ func RemoveWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
 }
 
 // PullingStatus return information about running pull tasks
-func PullingStatus(p clients.RestApiPuller, w clients.WsClient) handlers.HandlerFuncResError {
+func PullingStatus(p Puller, w clients.WsClient) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (*domain.Result, error) {
 		var (
 			tasks         clients.Tasks
@@ -88,7 +97,7 @@ func PullingStatus(p clients.RestApiPuller, w clients.WsClient) handlers.Handler
 }
 
 // UpdateWorker update pulling data interval for the selected worker by the currencies pair
-func UpdateWorker(p clients.RestApiPuller) handlers.HandlerFuncResError {
+func UpdateWorker(p Puller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (*domain.Result, error) {
 		q := CollectQuery{}
 		if err := c.Bind(&q); err != nil {

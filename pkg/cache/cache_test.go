@@ -1,4 +1,4 @@
-package repos
+package cache
 
 import (
 	"sync"
@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSymbolCache_Add(t *testing.T) {
+func TestCache_Add(t *testing.T) {
 	tests := []struct {
 		name string
 		s    string
@@ -23,7 +23,7 @@ func TestSymbolCache_Add(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sc := &SymbolCache{
+			sc := &Cache{
 				c: map[string]struct{}{},
 				m: new(sync.RWMutex),
 			}
@@ -33,7 +33,7 @@ func TestSymbolCache_Add(t *testing.T) {
 	}
 }
 
-func TestSymbolCache_Remove(t *testing.T) {
+func TestCache_Remove(t *testing.T) {
 	type fields struct {
 		c map[string]struct{}
 	}
@@ -67,7 +67,7 @@ func TestSymbolCache_Remove(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sc := &SymbolCache{
+			sc := &Cache{
 				c: tt.fields.c,
 				m: new(sync.RWMutex),
 			}

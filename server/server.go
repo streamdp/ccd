@@ -17,7 +17,7 @@ type Server struct {
 	sr v1.SymbolsRepo
 	r  clients.RestClient
 	w  clients.WsClient
-	p  clients.RestApiPuller
+	p  v1.Puller
 
 	l   *log.Logger
 	cfg *config.App
@@ -28,7 +28,7 @@ func NewServer(
 	sr v1.SymbolsRepo,
 	r clients.RestClient,
 	w clients.WsClient,
-	p clients.RestApiPuller,
+	p v1.Puller,
 	l *log.Logger,
 	cfg *config.App,
 ) *Server {

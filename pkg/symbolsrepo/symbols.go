@@ -1,10 +1,11 @@
-package repos
+package symbolsrepo
 
 import (
 	"database/sql"
 	"fmt"
 
 	"github.com/streamdp/ccd/domain"
+	"github.com/streamdp/ccd/pkg/cache"
 )
 
 type SymbolsStore interface {
@@ -16,12 +17,12 @@ type SymbolsStore interface {
 
 type symbolRepo struct {
 	s SymbolsStore
-	c *SymbolCache
+	c *cache.Cache
 }
 
-func NewSymbolRepository(s SymbolsStore) *symbolRepo {
+func New(s SymbolsStore) *symbolRepo {
 	return &symbolRepo{
-		c: NewSymbolCache(),
+		c: cache.New(),
 		s: s,
 	}
 }

@@ -1,6 +1,7 @@
 package cryptocompare
 
 import (
+	"errors"
 	"time"
 )
 
@@ -15,6 +16,8 @@ const (
 type heartbeat struct {
 	c int64
 }
+
+var errHeartbeat = errors.New("heartbeat loss")
 
 func newHeartbeat() *heartbeat {
 	return &heartbeat{c: heartbeatInitCounter}

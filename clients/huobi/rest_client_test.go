@@ -8,7 +8,7 @@ import (
 	"github.com/streamdp/ccd/domain"
 )
 
-func Test_convertHuobiRestDataToDomain(t *testing.T) {
+func Test_convertRestDataToDomain(t *testing.T) {
 	type args struct {
 		from string
 		to   string
@@ -89,7 +89,7 @@ func Test_convertHuobiRestDataToDomain(t *testing.T) {
 	}
 }
 
-func Test_huobiRest_buildURL(t *testing.T) {
+func Test_rest_buildURL(t *testing.T) {
 	type args struct {
 		fSym string
 		tSym string

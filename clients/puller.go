@@ -11,8 +11,8 @@ import (
 	"github.com/streamdp/ccd/domain"
 )
 
-// Session interface makes it possible to expand the list of session storages
-type Session interface {
+// SessionRepo interface makes it possible to expand the list of session storages
+type SessionRepo interface {
 	AddTask(n string, i int64) (err error)
 	UpdateTask(n string, i int64) (err error)
 	RemoveTask(n string) (err error)
@@ -21,43 +21,33 @@ type Session interface {
 	Close() error
 }
 
-// RestApiPuller interface makes it possible to expand the list of rest api pullers
-type RestApiPuller interface {
-	Task(from string, to string) *Task
-	AddTask(from string, to string, interval int64) *Task
-	RemoveTask(from string, to string)
-	ListTasks() Tasks
-	UpdateTask(t *Task, interval int64) *Task
-	RestoreLastSession() error
-}
-
 // restPuller puller base struct
 type restPuller struct {
-	t        Tasks
-	l        *log.Logger
-	s        Session
-	dataPipe chan *domain.Data
-	client   RestClient
-	pullerMu sync.RWMutex
+	tasks       Tasks
+	l           *log.Logger
+	sessionRepo SessionRepo
+	dataPipe    chan *domain.Data
+	client      RestClient
+	pullerMu    sync.RWMutex
 }
 
 // NewPuller init rest puller
-func NewPuller(r RestClient, l *log.Logger, s Session, dataPipe chan *domain.Data) *restPuller {
+func NewPuller(r RestClient, l *log.Logger, sessionRepo SessionRepo, dataPipe chan *domain.Data) *restPuller {
 	return &restPuller{
-		t:        Tasks{},
-		l:        l,
-		s:        s,
-		dataPipe: dataPipe,
-		client:   r,
+		tasks:       Tasks{},
+		l:           l,
+		sessionRepo: sessionRepo,
+		dataPipe:    dataPipe,
+		client:      r,
 	}
 }
 
 // ListTasks return all tasks
 func (p *restPuller) ListTasks() Tasks {
-	var t = make(Tasks, len(p.t))
+	var t = make(Tasks, len(p.tasks))
 
 	p.pullerMu.RLock()
-	for k, v := range p.t {
+	for k, v := range p.tasks {
 		t[k] = v
 	}
 	p.pullerMu.RUnlock()
@@ -78,10 +68,10 @@ func (p *restPuller) AddTask(from string, to string, interval int64) *Task {
 	t.run(p.client, p.l, p.dataPipe)
 
 	p.pullerMu.Lock()
-	p.t[name] = t
+	p.tasks[name] = t
 	p.pullerMu.Unlock()
 
-	if err := p.s.AddTask(name, interval); err != nil {
+	if err := p.sessionRepo.AddTask(name, interval); err != nil {
 		p.l.Println(err)
 	}
 
@@ -96,20 +86,20 @@ func (p *restPuller) RemoveTask(from string, to string) {
 	t.close()
 
 	p.pullerMu.Lock()
-	delete(p.t, name)
+	delete(p.tasks, name)
 	p.pullerMu.Unlock()
 
-	if err := p.s.RemoveTask(name); err != nil {
+	if err := p.sessionRepo.RemoveTask(name); err != nil {
 		p.l.Print(err)
 	}
 }
 
 // RestoreLastSession get the last session from the session store and restore it
 func (p *restPuller) RestoreLastSession() error {
-	if p.s == nil {
+	if p.sessionRepo == nil {
 		return nil
 	}
-	ses, err := p.s.GetSession()
+	ses, err := p.sessionRepo.GetSession()
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
 	}
@@ -125,7 +115,7 @@ func (p *restPuller) RestoreLastSession() error {
 
 func (p *restPuller) UpdateTask(t *Task, interval int64) *Task {
 	atomic.StoreInt64(&t.Interval, interval)
-	if err := p.s.UpdateTask(buildTaskName(t.From, t.To), interval); err != nil {
+	if err := p.sessionRepo.UpdateTask(buildTaskName(t.From, t.To), interval); err != nil {
 		p.l.Println(err)
 	}
 
@@ -153,5 +143,5 @@ func (p *restPuller) task(name string) *Task {
 	p.pullerMu.RLock()
 	defer p.pullerMu.RUnlock()
 
-	return p.t[name]
+	return p.tasks[name]
 }

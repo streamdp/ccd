@@ -9,7 +9,8 @@ import (
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/db"
-	"github.com/streamdp/ccd/repos"
+	"github.com/streamdp/ccd/pkg/sessionrepo"
+	"github.com/streamdp/ccd/pkg/symbolsrepo"
 	"github.com/streamdp/ccd/server"
 )
 
@@ -43,47 +44,47 @@ func main() {
 	}()
 	go db.Serve(database, l)
 
-	taskRepo, ok := d.(repos.TaskStore)
+	sessionStore, ok := d.(sessionrepo.SessionStore)
 	if !ok {
 		l.Fatalln("task repo type assertion error")
 	}
-	s, err := newSessionStore(taskRepo, appCfg)
+	sessionRepo, err := newSessionRepo(sessionStore, appCfg)
 	if err != nil {
 		l.Fatal(err)
 	}
 	defer func() {
-		if errClose := s.Close(); errClose != nil {
+		if errClose := sessionRepo.Close(); errClose != nil {
 			l.Printf("failed to close session store: %v", errClose)
 		}
 	}()
 
-	symbolRepo, ok := d.(repos.SymbolsStore)
+	symbolsStore, ok := d.(symbolsrepo.SymbolsStore)
 	if !ok {
 		l.Fatalln("symbol repo type assertion error")
 	}
-	sr := repos.NewSymbolRepository(symbolRepo)
-	if err = sr.Load(); err != nil {
+	symbolRepo := symbolsrepo.New(symbolsStore)
+	if err = symbolRepo.Load(); err != nil {
 		l.Fatalln(err)
 	}
 
-	r, err := initRestClient(appCfg)
+	restClient, err := initRestClient(appCfg)
 	if err != nil {
 		l.Fatalln(err)
 	}
 
 	ctx := context.Background()
 
-	w, err := initWsClient(ctx, database, l, appCfg)
+	wsClient, err := initWsClient(ctx, database, l, appCfg)
 	if err != nil {
 		l.Fatalln(err)
 	}
 
-	p := clients.NewPuller(r, l, s, database.DataPipe())
-	if err = p.RestoreLastSession(); err != nil {
+	restPuller := clients.NewPuller(restClient, l, sessionRepo, database.DataPipe())
+	if err = restPuller.RestoreLastSession(); err != nil {
 		l.Printf("error restoring last session: %v", err)
 	}
 
-	srv := server.NewServer(database, sr, r, w, p, l, appCfg)
+	srv := server.NewServer(database, symbolRepo, restClient, wsClient, restPuller, l, appCfg)
 	if err = srv.InitRouter(ctx); err != nil {
 		l.Fatalln(err)
 	}

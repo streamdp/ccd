@@ -23,7 +23,7 @@ func Test_buildChannelName(t *testing.T) {
 				from: "btc",
 				to:   "eth",
 			},
-			want: "btc/eth",
+			want: "BTC/ETH",
 		},
 		{
 			name: "usd case",
@@ -31,7 +31,7 @@ func Test_buildChannelName(t *testing.T) {
 				from: "btc",
 				to:   "usd",
 			},
-			want: "btc/usd",
+			want: "BTC/USD",
 		},
 	}
 	for _, tt := range tests {
@@ -43,81 +43,7 @@ func Test_buildChannelName(t *testing.T) {
 	}
 }
 
-func Test_huobiWs_pairFromChannelName(t *testing.T) {
-	tests := []struct {
-		name          string
-		subscriptions domain.Subscriptions
-		ch            string
-		wantFrom      string
-		wantTo        string
-	}{
-		{
-			name: "get pair from channel name",
-			subscriptions: map[string]*domain.Subscription{
-				buildChannelName("btc", "usdt"): domain.NewSubscription("btc", "usdt", 0),
-			},
-			ch:       buildChannelName("btc", "usdt"),
-			wantFrom: "BTC",
-			wantTo:   "USDT",
-		},
-		{
-			name:          "unknown channel name",
-			subscriptions: map[string]*domain.Subscription{},
-			ch:            buildChannelName("btc", "usdt"),
-			wantFrom:      "",
-			wantTo:        "",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h := &ws{
-				subscriptions: tt.subscriptions,
-			}
-			gotFrom, gotTo := h.pairFromChannelName(tt.ch)
-			if gotFrom != tt.wantFrom {
-				t.Errorf("pairFromChannelName() gotFrom = %v, want %v", gotFrom, tt.wantFrom)
-			}
-			if gotTo != tt.wantTo {
-				t.Errorf("pairFromChannelName() gotTo = %v, want %v", gotTo, tt.wantTo)
-			}
-		})
-	}
-}
-
-func Test_cryptoCompareWs_ListSubscriptions(t *testing.T) {
-	tests := []struct {
-		name          string
-		subscriptions domain.Subscriptions
-		want          domain.Subscriptions
-	}{
-		{
-			name: "get list of subscriptions",
-			subscriptions: map[string]*domain.Subscription{
-				buildChannelName("btc", "eth"): domain.NewSubscription("btc", "eth", 0),
-			},
-			want: domain.Subscriptions{
-				buildChannelName("btc", "eth"): domain.NewSubscription("btc", "eth", 0),
-			},
-		},
-		{
-			name:          "empty",
-			subscriptions: map[string]*domain.Subscription{},
-			want:          domain.Subscriptions{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &ws{
-				subscriptions: tt.subscriptions,
-			}
-			if got := c.ListSubscriptions(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ListSubscriptions() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_convertHuobiWsDataToDomain(t *testing.T) {
+func Test_convertWsDataToDomain(t *testing.T) {
 	type args struct {
 		from       string
 		to         string

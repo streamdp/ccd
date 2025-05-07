@@ -1,11 +1,11 @@
-package repos
+package sessionrepo
 
 import (
 	"database/sql"
 	"fmt"
 )
 
-type TaskStore interface {
+type SessionStore interface {
 	AddTask(n string, i int64) (result sql.Result, err error)
 	UpdateTask(n string, i int64) (result sql.Result, err error)
 	RemoveTask(n string) (result sql.Result, err error)
@@ -13,10 +13,10 @@ type TaskStore interface {
 }
 
 type sessionRepo struct {
-	r TaskStore
+	r SessionStore
 }
 
-func NewSessionRepo(r TaskStore) (*sessionRepo, error) {
+func New(r SessionStore) (*sessionRepo, error) {
 	return &sessionRepo{
 		r: r,
 	}, nil

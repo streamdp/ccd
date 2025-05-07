@@ -8,15 +8,17 @@ import (
 	"github.com/streamdp/ccd/domain"
 )
 
-func Test_cryptoCompareWs_buildURL(t *testing.T) {
+func Test_ws_buildURL(t *testing.T) {
 	tests := []struct {
 		name    string
+		url     string
 		apiKey  string
 		wantU   *url.URL
 		wantErr bool
 	}{
 		{
 			name:   "build url",
+			url:    "wss://streamer.cryptocompare.com/v2",
 			apiKey: "4pwP6HmdD0O8PGDAkvKA9DSCGK74Ixma",
 			wantU: func() *url.URL {
 				u, _ := url.Parse("wss://streamer.cryptocompare.com/v2?api_key=4pwP6HmdD0O8PGDAkvKA9DSCGK74Ixma")
@@ -28,8 +30,7 @@ func Test_cryptoCompareWs_buildURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &ws{apiKey: tt.apiKey}
-			gotU, err := c.buildURL()
+			gotU, err := buildURL(tt.url, tt.apiKey)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildURL() error = %v, wantErr %v", err, tt.wantErr)
 
@@ -78,40 +79,7 @@ func Test_buildChannelName(t *testing.T) {
 	}
 }
 
-func Test_cryptoCompareWs_ListSubscriptions(t *testing.T) {
-	tests := []struct {
-		name          string
-		subscriptions domain.Subscriptions
-		want          domain.Subscriptions
-	}{
-		{
-			name: "get list of subscriptions",
-			subscriptions: map[string]*domain.Subscription{
-				buildChannelName("btc", "eth"): domain.NewSubscription("btc", "eth", 0),
-			},
-			want: domain.Subscriptions{
-				buildChannelName("btc", "eth"): domain.NewSubscription("btc", "eth", 0),
-			},
-		},
-		{
-			name:          "empty",
-			subscriptions: map[string]*domain.Subscription{},
-			want:          domain.Subscriptions{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &ws{
-				subscriptions: tt.subscriptions,
-			}
-			if got := c.ListSubscriptions(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ListSubscriptions() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_convertCryptoCompareWsDataToDomain(t *testing.T) {
+func Test_convertWsDataToDomain(t *testing.T) {
 	tests := []struct {
 		name string
 		d    *wsData

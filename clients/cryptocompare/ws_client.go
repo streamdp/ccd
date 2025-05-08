@@ -67,6 +67,10 @@ func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger, cfg *con
 					return
 				}
 
+				if body == nil {
+					return
+				}
+
 				data := &wsData{}
 				if err := json.Unmarshal(body, data); err != nil {
 					l.Println(err)

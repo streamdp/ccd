@@ -248,7 +248,7 @@ func (w *Ws) RestoreLastSession(ctx context.Context) error {
 	for session := range sessions {
 		if pair := strings.Split(session, ":"); len(pair) == 3 {
 			if err = w.Subscribe(ctx, pair[1], pair[2]); err != nil {
-				w.l.Println("failed to restore ws session: " + err.Error())
+				return fmt.Errorf("failed to restore last ws session: %w", err)
 			}
 		}
 	}

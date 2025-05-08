@@ -13,7 +13,10 @@ import (
 	"github.com/streamdp/ccd/domain"
 )
 
-const defaultReconnectTimeout = 10 * time.Second
+const (
+	defaultReconnectTimeout = 10 * time.Second
+	defaultPingTimeout      = 5 * time.Second
+)
 
 type Ws struct {
 	l    *log.Logger
@@ -33,11 +36,12 @@ type Ws struct {
 	MessageHandler func(ctx context.Context)
 
 	up   chan struct{}
-	down chan struct{}
+	down chan bool
 }
 
 var (
 	ErrReconnect                  = errors.New("reconnect failed")
+	ErrClientReconnected          = errors.New("ws client has been reconnected")
 	ErrWsConnectionNotInitialized = errors.New("ws connection is not initialized")
 )
 
@@ -50,7 +54,7 @@ func New(ctx context.Context, wsUrl string, l *log.Logger) *Ws {
 		subscriptions: domain.Subscriptions{},
 
 		up:   make(chan struct{}),
-		down: make(chan struct{}),
+		down: make(chan bool),
 	}
 
 	go w.serveWsConnection(ctx)
@@ -59,7 +63,7 @@ func New(ctx context.Context, wsUrl string, l *log.Logger) *Ws {
 }
 
 func (w *Ws) Subscribe(ctx context.Context, from, to string) error {
-	w.wsUp()
+	w.WsUp()
 
 	id := time.Now().UnixMilli()
 	ch := w.ChannelNameBuilder(from, to)
@@ -112,7 +116,7 @@ func (w *Ws) Unsubscribe(ctx context.Context, from, to string) error {
 		w.subMu.Unlock()
 	}
 
-	w.wsDown()
+	w.WsDown(false)
 
 	return nil
 }
@@ -178,12 +182,14 @@ func (w *Ws) Read(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		if errors.As(err, &websocket.CloseError{Code: websocket.StatusNormalClosure}) ||
 			errors.Is(err, context.Canceled) {
+
 			return nil, err
 		}
 
 		if err = w.HandleWsError(ctx, err); err != nil {
 			return nil, err
 		}
+		return nil, ErrClientReconnected
 	}
 
 	return body, nil
@@ -194,12 +200,14 @@ func (w *Ws) Reader(ctx context.Context) (io.Reader, error) {
 	if err != nil {
 		if errors.As(err, &websocket.CloseError{Code: websocket.StatusNormalClosure}) ||
 			errors.Is(err, context.Canceled) {
+
 			return nil, err
 		}
 
 		if err = w.HandleWsError(ctx, err); err != nil {
 			return nil, err
 		}
+		return nil, ErrClientReconnected
 	}
 
 	return r, nil
@@ -277,8 +285,11 @@ func (w *Ws) serveWsConnection(ctx context.Context) {
 
 			return
 		case <-w.up:
-			isConnectionAlive := w.conn != nil && w.conn.Ping(ctx) == nil
-			if !isConnected || !isConnectionAlive {
+			if !isConnected || w.isConnectionBroken(ctx) {
+				if cancel != nil {
+					cancel()
+				}
+
 				ctxUp, cancel = context.WithCancel(ctx)
 				if err := w.reconnect(ctxUp); err != nil {
 					w.l.Println(err)
@@ -292,32 +303,42 @@ func (w *Ws) serveWsConnection(ctx context.Context) {
 				isConnected = true
 			}
 			w.up <- struct{}{}
-		case <-w.down:
-			isConnectionBroken := w.conn != nil && w.conn.Ping(ctx) != nil
-			if isConnected && len(w.subscriptions) == 0 || isConnectionBroken {
+		case forced := <-w.down:
+			if forced || isConnected && len(w.subscriptions) == 0 || w.isConnectionBroken(ctx) {
 				if cancel != nil {
 					cancel()
 				}
 
-				if err := w.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
+				if err := w.conn.Close(websocket.StatusNormalClosure, "no active subscriptions"); err != nil {
 					w.l.Printf("failed to close websocket connection: %v", err)
 				}
 				w.conn = nil
 
+				w.subMu.Lock()
+				w.subscriptions = domain.Subscriptions{}
+				w.subMu.Unlock()
+
 				w.l.Printf("websocket connection closed (no active subscriptions were found)")
 				isConnected = false
 			}
-			w.down <- struct{}{}
+			w.down <- false
 		}
 	}
 }
 
-func (w *Ws) wsUp() {
+func (w *Ws) isConnectionBroken(ctx context.Context) bool {
+	ctx, cancel := context.WithTimeout(ctx, defaultPingTimeout)
+	defer cancel()
+
+	return w.conn != nil && w.conn.Ping(ctx) != nil
+}
+
+func (w *Ws) WsUp() {
 	w.up <- struct{}{}
 	<-w.up
 }
 
-func (w *Ws) wsDown() {
-	w.down <- struct{}{}
+func (w *Ws) WsDown(force bool) {
+	w.down <- force
 	<-w.down
 }

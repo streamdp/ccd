@@ -38,11 +38,14 @@ func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger, cfg *con
 	}
 
 	w.MessageHandler = func(ctx context.Context) {
+		defer w.WsDown(true)
+
 		var (
 			hb      = newHeartbeat()
 			hbTimer = time.NewTimer(heartbeatCheckInterval)
 		)
 		defer hbTimer.Stop()
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -63,11 +66,11 @@ func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger, cfg *con
 					if !errors.Is(err, context.Canceled) {
 						l.Println(err)
 					}
+					if errors.Is(err, wsclient.ErrClientReconnected) {
+						continue
+					}
 
 					return
-				}
-				if body == nil {
-					continue
 				}
 
 				data := &wsData{}

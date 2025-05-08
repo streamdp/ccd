@@ -33,6 +33,8 @@ func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger) *wsclien
 	}
 
 	w.MessageHandler = func(ctx context.Context) {
+		defer w.WsDown(true)
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -47,11 +49,11 @@ func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger) *wsclien
 					if !errors.Is(err, context.Canceled) {
 						l.Println(err)
 					}
+					if errors.Is(err, wsclient.ErrClientReconnected) {
+						continue
+					}
 
 					return
-				}
-				if r == nil {
-					continue
 				}
 
 				if body, err = gzipDecompress(r); err != nil {

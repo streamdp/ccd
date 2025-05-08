@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -12,12 +13,12 @@ var (
 	errEmptySymbol   = errors.New("empty symbol")
 )
 
-func (d *Db) AddTask(n string, i int64) (sql.Result, error) {
+func (d *Db) AddTask(ctx context.Context, n string, i int64) (sql.Result, error) {
 	if n == "" {
 		return nil, errEmptyTaskName
 	}
 
-	result, err := d.Exec(
+	result, err := d.ExecContext(ctx,
 		`insert into session (task_name,interval) values ($1,$2) on conflict do nothing;`, strings.ToUpper(n), i,
 	)
 	if err != nil {
@@ -27,12 +28,12 @@ func (d *Db) AddTask(n string, i int64) (sql.Result, error) {
 	return result, nil
 }
 
-func (d *Db) UpdateTask(n string, i int64) (sql.Result, error) {
+func (d *Db) UpdateTask(ctx context.Context, n string, i int64) (sql.Result, error) {
 	if n == "" {
 		return nil, errEmptyTaskName
 	}
 
-	result, err := d.Exec(`update session set interval=$2 where task_name=$1;`, strings.ToUpper(n), i)
+	result, err := d.ExecContext(ctx, `update session set interval=$2 where task_name=$1;`, strings.ToUpper(n), i)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errExecuteQuery, err)
 	}
@@ -40,12 +41,12 @@ func (d *Db) UpdateTask(n string, i int64) (sql.Result, error) {
 	return result, nil
 }
 
-func (d *Db) RemoveTask(n string) (sql.Result, error) {
+func (d *Db) RemoveTask(ctx context.Context, n string) (sql.Result, error) {
 	if n == "" {
 		return nil, errEmptySymbol
 	}
 
-	result, err := d.Exec(`delete from session where task_name=$1;`, strings.ToUpper(n))
+	result, err := d.ExecContext(ctx, `delete from session where task_name=$1;`, strings.ToUpper(n))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errExecuteQuery, err)
 	}
@@ -53,8 +54,8 @@ func (d *Db) RemoveTask(n string) (sql.Result, error) {
 	return result, nil
 }
 
-func (d *Db) GetSession() (map[string]int64, error) {
-	rows, err := d.Query(`select task_name,"interval" from session`)
+func (d *Db) GetSession(ctx context.Context) (map[string]int64, error) {
+	rows, err := d.QueryContext(ctx, `select task_name,"interval" from session`)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errExecuteQuery, err)
 	}

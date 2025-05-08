@@ -74,14 +74,17 @@ func main() {
 
 	ctx := context.Background()
 
-	wsClient, err := initWsClient(ctx, database, l, appCfg)
+	wsClient, err := initWsClient(ctx, database, sessionRepo, l, appCfg)
 	if err != nil {
 		l.Fatalln(err)
 	}
+	if err = wsClient.RestoreLastSession(ctx); err != nil {
+		l.Printf("error restoring last ws session: %v", err)
+	}
 
 	restPuller := clients.NewPuller(restClient, l, sessionRepo, database.DataPipe())
-	if err = restPuller.RestoreLastSession(); err != nil {
-		l.Printf("error restoring last session: %v", err)
+	if err = restPuller.RestoreLastSession(ctx); err != nil {
+		l.Printf("error restoring last rest session: %v", err)
 	}
 
 	srv := server.NewServer(database, symbolRepo, restClient, wsClient, restPuller, l, appCfg)

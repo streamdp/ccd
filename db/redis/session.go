@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -35,12 +36,12 @@ func NewRedisKeysStore(cfg *config.App) (*keysStore, error) {
 }
 
 // GetSession get previously saved session
-func (s *keysStore) GetSession() (map[string]int64, error) {
+func (s *keysStore) GetSession(ctx context.Context) (map[string]int64, error) {
 	if s == nil {
 		return nil, errKeyStoreNotInitialized
 	}
 	session := make(map[string]int64)
-	for k, v := range s.c.HGetAll(sessionName).Val() {
+	for k, v := range s.c.WithContext(ctx).HGetAll(sessionName).Val() {
 		i, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get session: %w", err)
@@ -52,28 +53,28 @@ func (s *keysStore) GetSession() (map[string]int64, error) {
 }
 
 // AddTask add a new task or update an already saved task in the current session
-func (s *keysStore) AddTask(n string, i int64) error {
+func (s *keysStore) AddTask(ctx context.Context, n string, i int64) error {
 	if s == nil {
 		return errKeyStoreNotInitialized
 	}
 
-	s.c.HSet(sessionName, n, strconv.FormatInt(i, 10))
+	s.c.WithContext(ctx).HSet(sessionName, n, strconv.FormatInt(i, 10))
 
 	return nil
 }
 
 // UpdateTask add a new task or update an already saved task in the current session
-func (s *keysStore) UpdateTask(n string, i int64) error {
-	return s.AddTask(n, i)
+func (s *keysStore) UpdateTask(ctx context.Context, n string, i int64) error {
+	return s.AddTask(ctx, n, i)
 }
 
 // RemoveTask remove a task from the current session
-func (s *keysStore) RemoveTask(n string) error {
+func (s *keysStore) RemoveTask(ctx context.Context, n string) error {
 	if s == nil {
 		return errKeyStoreNotInitialized
 	}
 
-	s.c.HDel(sessionName, n)
+	s.c.WithContext(ctx).HDel(sessionName, n)
 
 	return nil
 }

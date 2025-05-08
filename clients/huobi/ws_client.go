@@ -11,12 +11,13 @@ import (
 	"log"
 	"strings"
 
+	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/domain"
 	"github.com/streamdp/ccd/pkg/wsclient"
 )
 
-func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger) *wsclient.Ws {
-	w := wsclient.New(ctx, "wss://api.huobi.pro/ws", l)
+func InitWs(ctx context.Context, pipe chan *domain.Data, sessionRepo clients.SessionRepo, l *log.Logger) *wsclient.Ws {
+	w := wsclient.New(ctx, "wss://api.huobi.pro/ws", sessionRepo, l)
 
 	w.ChannelNameBuilder = buildChannelName
 

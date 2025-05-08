@@ -10,22 +10,24 @@ import (
 	"strings"
 	"time"
 
-	"github.com/streamdp/ccd/config"
+	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/domain"
 	"github.com/streamdp/ccd/pkg/wsclient"
 )
 
-func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger, cfg *config.App) (*wsclient.Ws, error) {
-	if cfg.ApiKey == "" {
+func InitWs(
+	ctx context.Context, pipe chan *domain.Data, sessionRepo clients.SessionRepo, l *log.Logger, apiKey string,
+) (*wsclient.Ws, error) {
+	if apiKey == "" {
 		return nil, errApiKeyNotDefined
 	}
 
-	wssUrl, err := buildURL("wss://streamer.cryptocompare.com/v2", cfg.ApiKey)
+	wssUrl, err := buildURL("wss://streamer.cryptocompare.com/v2", apiKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build url: %w", err)
 	}
 
-	w := wsclient.New(ctx, wssUrl.String(), l)
+	w := wsclient.New(ctx, wssUrl.String(), sessionRepo, l)
 
 	w.ChannelNameBuilder = buildChannelName
 

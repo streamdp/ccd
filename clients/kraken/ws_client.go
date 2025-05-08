@@ -60,6 +60,9 @@ func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger) *wsclien
 
 					return
 				}
+				if body == nil {
+					continue
+				}
 
 				if bytes.Contains(body, []byte("method")) {
 					if msg := handleServerResponse(body); msg != "" {

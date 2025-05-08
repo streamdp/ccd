@@ -50,6 +50,10 @@ func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger) *wsclien
 
 					return
 				}
+				if r == nil {
+					continue
+				}
+
 				if body, err = gzipDecompress(r); err != nil {
 					l.Println(err)
 

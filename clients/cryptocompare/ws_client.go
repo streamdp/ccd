@@ -66,9 +66,8 @@ func InitWs(ctx context.Context, pipe chan *domain.Data, l *log.Logger, cfg *con
 
 					return
 				}
-
 				if body == nil {
-					return
+					continue
 				}
 
 				data := &wsData{}

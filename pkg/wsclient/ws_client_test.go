@@ -88,3 +88,39 @@ func TestWs_ListSubscriptions(t *testing.T) {
 		})
 	}
 }
+
+func Test_buildWsSessionName(t *testing.T) {
+	type args struct {
+		from string
+		to   string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "symbols in the upper case",
+			args: args{
+				from: "BTC",
+				to:   "USDT",
+			},
+			want: "WS:BTC:USDT",
+		},
+		{
+			name: "symbols in the lower case",
+			args: args{
+				from: "eth",
+				to:   "usdt",
+			},
+			want: "WS:eth:usdt",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := buildWsSessionName(tt.args.from, tt.args.to); got != tt.want {
+				t.Errorf("buildWsSessionName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

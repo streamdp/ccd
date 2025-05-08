@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/domain"
 )
 
@@ -37,6 +39,8 @@ type Ws struct {
 
 	up   chan struct{}
 	down chan struct{}
+
+	sessionRepo clients.SessionRepo
 }
 
 var (
@@ -45,7 +49,7 @@ var (
 	ErrWsConnectionNotInitialized = errors.New("ws connection is not initialized")
 )
 
-func New(ctx context.Context, wsUrl string, l *log.Logger) *Ws {
+func New(ctx context.Context, wsUrl string, sessionRepo clients.SessionRepo, l *log.Logger) *Ws {
 	w := &Ws{
 		l: l,
 
@@ -55,6 +59,8 @@ func New(ctx context.Context, wsUrl string, l *log.Logger) *Ws {
 
 		up:   make(chan struct{}),
 		down: make(chan struct{}),
+
+		sessionRepo: sessionRepo,
 	}
 
 	go w.serveWsConnection(ctx)
@@ -80,6 +86,10 @@ func (w *Ws) Subscribe(ctx context.Context, from, to string) error {
 	w.subMu.Lock()
 	w.subscriptions[ch] = domain.NewSubscription(from, to, id)
 	w.subMu.Unlock()
+
+	if err = w.sessionRepo.AddTask(ctx, buildWsSessionName(from, to), 0); err != nil {
+		w.l.Println("failed to add subscription to the session repo: " + err.Error())
+	}
 
 	return nil
 }
@@ -114,6 +124,10 @@ func (w *Ws) Unsubscribe(ctx context.Context, from, to string) error {
 		w.subMu.Lock()
 		delete(w.subscriptions, ch)
 		w.subMu.Unlock()
+	}
+
+	if err := w.sessionRepo.RemoveTask(ctx, buildWsSessionName(from, to)); err != nil {
+		w.l.Println("failed to add subscription to the session repo: " + err.Error())
 	}
 
 	w.WsDown()
@@ -219,6 +233,27 @@ func (w *Ws) Reader(ctx context.Context) (io.Reader, error) {
 	}
 
 	return r, nil
+}
+
+func (w *Ws) RestoreLastSession(ctx context.Context) error {
+	if w.sessionRepo == nil {
+		return nil
+	}
+
+	sessions, err := w.sessionRepo.GetSession(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get session: %w", err)
+	}
+
+	for session := range sessions {
+		if pair := strings.Split(session, ":"); len(pair) == 3 {
+			if err = w.Subscribe(ctx, pair[1], pair[2]); err != nil {
+				w.l.Println("failed to restore ws session: " + err.Error())
+			}
+		}
+	}
+
+	return nil
 }
 
 func (w *Ws) WsDown() {
@@ -341,4 +376,8 @@ func (w *Ws) isConnectionBroken(ctx context.Context) bool {
 	defer cancel()
 
 	return w.conn != nil && w.conn.Ping(ctx) != nil
+}
+
+func buildWsSessionName(from, to string) string {
+	return fmt.Sprintf("WS:%s:%s", from, to)
 }

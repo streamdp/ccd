@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -11,17 +12,6 @@ import (
 	"github.com/streamdp/ccd/domain"
 )
 
-// SessionRepo interface makes it possible to expand the list of session storages
-type SessionRepo interface {
-	AddTask(n string, i int64) (err error)
-	UpdateTask(n string, i int64) (err error)
-	RemoveTask(n string) (err error)
-	GetSession() (map[string]int64, error)
-
-	Close() error
-}
-
-// restPuller puller base struct
 type restPuller struct {
 	tasks       Tasks
 	l           *log.Logger
@@ -31,7 +21,6 @@ type restPuller struct {
 	pullerMu    sync.RWMutex
 }
 
-// NewPuller init rest puller
 func NewPuller(r RestClient, l *log.Logger, sessionRepo SessionRepo, dataPipe chan *domain.Data) *restPuller {
 	return &restPuller{
 		tasks:       Tasks{},
@@ -61,7 +50,7 @@ func (p *restPuller) Task(from, to string) *Task {
 }
 
 // AddTask to collect data for the selected currency pair to the puller
-func (p *restPuller) AddTask(from string, to string, interval int64) *Task {
+func (p *restPuller) AddTask(ctx context.Context, from string, to string, interval int64) *Task {
 	name := buildTaskName(from, to)
 
 	t := p.newTask(from, to, interval)
@@ -71,7 +60,7 @@ func (p *restPuller) AddTask(from string, to string, interval int64) *Task {
 	p.tasks[name] = t
 	p.pullerMu.Unlock()
 
-	if err := p.sessionRepo.AddTask(name, interval); err != nil {
+	if err := p.sessionRepo.AddTask(ctx, name, interval); err != nil {
 		p.l.Println(err)
 	}
 
@@ -79,7 +68,7 @@ func (p *restPuller) AddTask(from string, to string, interval int64) *Task {
 }
 
 // RemoveTask from the puller by the selected currency pair
-func (p *restPuller) RemoveTask(from string, to string) {
+func (p *restPuller) RemoveTask(ctx context.Context, from string, to string) {
 	name := buildTaskName(from, to)
 
 	t := p.task(name)
@@ -89,33 +78,33 @@ func (p *restPuller) RemoveTask(from string, to string) {
 	delete(p.tasks, name)
 	p.pullerMu.Unlock()
 
-	if err := p.sessionRepo.RemoveTask(name); err != nil {
+	if err := p.sessionRepo.RemoveTask(ctx, name); err != nil {
 		p.l.Print(err)
 	}
 }
 
 // RestoreLastSession get the last session from the session store and restore it
-func (p *restPuller) RestoreLastSession() error {
+func (p *restPuller) RestoreLastSession(ctx context.Context) error {
 	if p.sessionRepo == nil {
 		return nil
 	}
-	ses, err := p.sessionRepo.GetSession()
+	ses, err := p.sessionRepo.GetSession(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
 	}
 	for k, v := range ses {
 		if pair := strings.Split(k, ":"); len(pair) == 2 {
 			from, to := pair[0], pair[1]
-			p.AddTask(from, to, v)
+			p.AddTask(ctx, from, to, v)
 		}
 	}
 
 	return nil
 }
 
-func (p *restPuller) UpdateTask(t *Task, interval int64) *Task {
+func (p *restPuller) UpdateTask(ctx context.Context, t *Task, interval int64) *Task {
 	atomic.StoreInt64(&t.Interval, interval)
-	if err := p.sessionRepo.UpdateTask(buildTaskName(t.From, t.To), interval); err != nil {
+	if err := p.sessionRepo.UpdateTask(ctx, buildTaskName(t.From, t.To), interval); err != nil {
 		p.l.Println(err)
 	}
 

@@ -43,7 +43,9 @@ func initRestClient(cfg *config.App) (clients.RestClient, error) {
 	return restClient, nil
 }
 
-func initWsClient(ctx context.Context, d db.Database, l *log.Logger, cfg *config.App) (clients.WsClient, error) {
+func initWsClient(
+	ctx context.Context, d db.Database, sessionRepo clients.SessionRepo, l *log.Logger, cfg *config.App,
+) (clients.WsClient, error) {
 	var (
 		wsClient clients.WsClient
 		err      error
@@ -51,11 +53,11 @@ func initWsClient(ctx context.Context, d db.Database, l *log.Logger, cfg *config
 
 	switch cfg.DataProvider {
 	case "huobi":
-		wsClient = huobi.InitWs(ctx, d.DataPipe(), l)
+		wsClient = huobi.InitWs(ctx, d.DataPipe(), sessionRepo, l)
 	case "kraken":
-		wsClient = kraken.InitWs(ctx, d.DataPipe(), l)
+		wsClient = kraken.InitWs(ctx, d.DataPipe(), sessionRepo, l)
 	default:
-		wsClient, err = cryptocompare.InitWs(ctx, d.DataPipe(), l, cfg)
+		wsClient, err = cryptocompare.InitWs(ctx, d.DataPipe(), sessionRepo, l, cfg.ApiKey)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errInitWsClient, err)

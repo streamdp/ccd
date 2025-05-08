@@ -28,12 +28,12 @@ func (s *Server) InitRouter(ctx context.Context) error {
 	apiV1 := s.Group("/v1")
 	{
 		apiV1.GET("/collect/status", handlers.GinHandler(v1.PullingStatus(s.p, s.w)))
-		apiV1.GET("/collect/add", handlers.GinHandler(v1.AddWorker(s.p)))
-		apiV1.POST("/collect", handlers.GinHandler(v1.AddWorker(s.p)))
-		apiV1.GET("/collect/remove", handlers.GinHandler(v1.RemoveWorker(s.p)))
-		apiV1.DELETE("/collect", handlers.GinHandler(v1.RemoveWorker(s.p)))
-		apiV1.GET("/collect/update", handlers.GinHandler(v1.UpdateWorker(s.p)))
-		apiV1.PUT("/collect", handlers.GinHandler(v1.UpdateWorker(s.p)))
+		apiV1.GET("/collect/add", handlers.GinHandler(v1.AddWorker(ctx, s.p)))
+		apiV1.POST("/collect", handlers.GinHandler(v1.AddWorker(ctx, s.p)))
+		apiV1.GET("/collect/remove", handlers.GinHandler(v1.RemoveWorker(ctx, s.p)))
+		apiV1.DELETE("/collect", handlers.GinHandler(v1.RemoveWorker(ctx, s.p)))
+		apiV1.GET("/collect/update", handlers.GinHandler(v1.UpdateWorker(ctx, s.p)))
+		apiV1.PUT("/collect", handlers.GinHandler(v1.UpdateWorker(ctx, s.p)))
 
 		apiV1.GET("/symbols", handlers.GinHandler(v1.AllSymbols(s.sr)))
 		apiV1.GET("/symbols/add", handlers.GinHandler(v1.AddSymbol(s.sr)))
@@ -60,9 +60,9 @@ func (s *Server) InitRouter(ctx context.Context) error {
 	{
 		// collect
 		apiV2.GET("/collect", handlers.GinHandler(v1.PullingStatus(s.p, s.w)))
-		apiV2.POST("/collect", handlers.GinHandler(v1.AddWorker(s.p)))
-		apiV2.PUT("/collect", handlers.GinHandler(v1.UpdateWorker(s.p)))
-		apiV2.DELETE("/collect", handlers.GinHandler(v1.RemoveWorker(s.p)))
+		apiV2.POST("/collect", handlers.GinHandler(v1.AddWorker(ctx, s.p)))
+		apiV2.PUT("/collect", handlers.GinHandler(v1.UpdateWorker(ctx, s.p)))
+		apiV2.DELETE("/collect", handlers.GinHandler(v1.RemoveWorker(ctx, s.p)))
 		// symbols
 		apiV2.GET("/symbols", handlers.GinHandler(v1.AllSymbols(s.sr)))
 		apiV2.POST("/symbols", handlers.GinHandler(v1.AddSymbol(s.sr)))

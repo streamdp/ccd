@@ -14,11 +14,11 @@ import (
 
 type Puller interface {
 	Task(from string, to string) *clients.Task
-	AddTask(from string, to string, interval int64) *clients.Task
-	RemoveTask(from string, to string)
+	AddTask(ctx context.Context, from string, to string, interval int64) *clients.Task
+	RemoveTask(ctx context.Context, from string, to string)
 	ListTasks() clients.Tasks
-	UpdateTask(t *clients.Task, interval int64) *clients.Task
-	RestoreLastSession() error
+	UpdateTask(ctx context.Context, t *clients.Task, interval int64) *clients.Task
+	RestoreLastSession(ctx context.Context) error
 }
 
 // CollectQuery structure for easily json serialization/validation/binding GET and POST query data
@@ -34,7 +34,7 @@ func (c *CollectQuery) toUpper() {
 }
 
 // AddWorker that will collect data for the selected currency pair to the management service
-func AddWorker(p Puller) handlers.HandlerFuncResError {
+func AddWorker(ctx context.Context, p Puller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (*domain.Result, error) {
 		q := CollectQuery{}
 		if err := c.Bind(&q); err != nil {
@@ -51,13 +51,13 @@ func AddWorker(p Puller) handlers.HandlerFuncResError {
 		return domain.NewResult(
 			http.StatusCreated,
 			"Data collection started",
-			p.AddTask(q.From, q.To, q.Interval),
+			p.AddTask(ctx, q.From, q.To, q.Interval),
 		), nil
 	}
 }
 
 // RemoveWorker from the management service and stop collecting data for the selected currencies pair
-func RemoveWorker(p Puller) handlers.HandlerFuncResError {
+func RemoveWorker(ctx context.Context, p Puller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (*domain.Result, error) {
 		q := CollectQuery{}
 		if err := c.Bind(&q); err != nil {
@@ -70,7 +70,7 @@ func RemoveWorker(p Puller) handlers.HandlerFuncResError {
 				http.StatusOK, "No data is collected for this pair", nil,
 			), nil
 		}
-		p.RemoveTask(q.From, q.To)
+		p.RemoveTask(ctx, q.From, q.To)
 
 		return domain.NewResult(http.StatusOK, "Task stopped successfully", nil), nil
 	}
@@ -97,7 +97,7 @@ func PullingStatus(p Puller, w clients.WsClient) handlers.HandlerFuncResError {
 }
 
 // UpdateWorker update pulling data interval for the selected worker by the currencies pair
-func UpdateWorker(p Puller) handlers.HandlerFuncResError {
+func UpdateWorker(ctx context.Context, p Puller) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (*domain.Result, error) {
 		q := CollectQuery{}
 		if err := c.Bind(&q); err != nil {
@@ -109,7 +109,7 @@ func UpdateWorker(p Puller) handlers.HandlerFuncResError {
 		if t = p.Task(q.From, q.To); t == nil {
 			return domain.NewResult(http.StatusOK, "No data is collected for this pair", t), nil
 		}
-		p.UpdateTask(t, q.Interval)
+		p.UpdateTask(ctx, t, q.Interval)
 
 		return domain.NewResult(http.StatusOK, "Task updated successfully", t), nil
 	}

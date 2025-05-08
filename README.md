@@ -94,7 +94,6 @@ Subscribe wss channel:
 ```bash
 $ curl "http://localhost:8080/v2/ws/subscribe?fsym=BTC&tsym=USD"
 ```
-Web UI: https://ccd.oncook.top
 ## Contributing
 Contributions are welcome! If you encounter any issues, have suggestions for new features, or want to improve **CCD**, please feel free to open an issue or submit a pull request on the project's GitHub repository.
 ## License

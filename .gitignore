@@ -12,3 +12,4 @@ model/postgres_data/
 dist/
 
 *.http
+*.private.env.json

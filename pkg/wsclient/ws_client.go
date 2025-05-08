@@ -178,7 +178,8 @@ func (w *Ws) Pong(ctx context.Context, ch string, id int64) error {
 func (w *Ws) Read(ctx context.Context) ([]byte, error) {
 	_, body, err := w.conn.Read(ctx)
 	if err != nil {
-		if errors.As(err, &websocket.CloseError{}) || errors.Is(err, context.Canceled) {
+		if errors.As(err, &websocket.CloseError{Code: websocket.StatusNormalClosure}) ||
+			errors.Is(err, context.Canceled) {
 			return nil, err
 		}
 
@@ -196,7 +197,8 @@ func (w *Ws) Read(ctx context.Context) ([]byte, error) {
 func (w *Ws) Reader(ctx context.Context) (io.Reader, error) {
 	_, r, err := w.conn.Reader(ctx)
 	if err != nil {
-		if errors.As(err, &websocket.CloseError{}) || errors.Is(err, context.Canceled) {
+		if errors.As(err, &websocket.CloseError{Code: websocket.StatusNormalClosure}) ||
+			errors.Is(err, context.Canceled) {
 			return nil, err
 		}
 

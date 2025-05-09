@@ -148,6 +148,7 @@ func (w *Ws) HandleWsError(ctx context.Context, err error) error {
 		default:
 			if err = w.reconnect(ctx); err != nil {
 				w.l.Println("ws reconnect error:", err)
+				time.Sleep(defaultReconnectTimeout)
 
 				continue
 			}
@@ -269,10 +270,8 @@ func (w *Ws) reconnect(ctx context.Context) error {
 
 	if w.conn != nil {
 		err = w.conn.Close(websocket.StatusNormalClosure, "attempt to reconnect")
-		if !errors.As(err, &websocket.CloseError{}) && !errors.Is(err, context.Canceled) {
+		if err != nil && !errors.As(err, &websocket.CloseError{}) && !errors.Is(err, context.Canceled) {
 			w.l.Println(err)
-
-			time.Sleep(defaultReconnectTimeout)
 		}
 		w.conn = nil
 	}

@@ -198,7 +198,8 @@ func (w *Ws) Read(ctx context.Context) ([]byte, error) {
 
 	_, body, err := w.conn.Read(ctx)
 	if err != nil {
-		if errors.As(err, &websocket.CloseError{Code: websocket.StatusNormalClosure}) ||
+		if errors.As(err, &websocket.CloseError{}) &&
+			err.(websocket.CloseError).Code == websocket.StatusNormalClosure ||
 			errors.Is(err, context.Canceled) {
 			return nil, fmt.Errorf("failed to ws read: %w", err)
 		}
@@ -220,7 +221,8 @@ func (w *Ws) Reader(ctx context.Context) (io.Reader, error) {
 
 	_, r, err := w.conn.Reader(ctx)
 	if err != nil {
-		if errors.As(err, &websocket.CloseError{Code: websocket.StatusNormalClosure}) ||
+		if errors.As(err, &websocket.CloseError{}) &&
+			err.(websocket.CloseError).Code == websocket.StatusNormalClosure ||
 			errors.Is(err, context.Canceled) {
 			return nil, fmt.Errorf("failed to get ws reader: %w", err)
 		}

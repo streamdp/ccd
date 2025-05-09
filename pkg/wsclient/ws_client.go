@@ -136,16 +136,24 @@ func (w *Ws) Unsubscribe(ctx context.Context, from, to string) error {
 }
 
 func (w *Ws) HandleWsError(ctx context.Context, err error) error {
-	w.l.Println(err)
+	if errors.As(err, &websocket.CloseError{}) && err.(websocket.CloseError).Code == websocket.StatusNormalClosure ||
+		errors.Is(err, context.Canceled) {
+		return fmt.Errorf("ws connection closed: %w", err)
+	}
+
 	for {
 		select {
 		case <-time.After(time.Minute):
 			return ErrReconnect
 		default:
 			if err = w.reconnect(ctx); err != nil {
+				w.l.Println("ws reconnect error:", err)
+
 				continue
 			}
 			if err = w.resubscribe(ctx); err != nil {
+				w.l.Println("ws resubscribe error:", err)
+
 				continue
 			}
 
@@ -198,12 +206,6 @@ func (w *Ws) Read(ctx context.Context) ([]byte, error) {
 
 	_, body, err := w.conn.Read(ctx)
 	if err != nil {
-		if errors.As(err, &websocket.CloseError{}) &&
-			err.(websocket.CloseError).Code == websocket.StatusNormalClosure ||
-			errors.Is(err, context.Canceled) {
-			return nil, fmt.Errorf("failed to ws read: %w", err)
-		}
-
 		if err = w.HandleWsError(ctx, err); err != nil {
 			return nil, fmt.Errorf("failed to handle ws client error: %w", err)
 		}
@@ -221,12 +223,6 @@ func (w *Ws) Reader(ctx context.Context) (io.Reader, error) {
 
 	_, r, err := w.conn.Reader(ctx)
 	if err != nil {
-		if errors.As(err, &websocket.CloseError{}) &&
-			err.(websocket.CloseError).Code == websocket.StatusNormalClosure ||
-			errors.Is(err, context.Canceled) {
-			return nil, fmt.Errorf("failed to get ws reader: %w", err)
-		}
-
 		if err = w.HandleWsError(ctx, err); err != nil {
 			return nil, fmt.Errorf("failed to handle ws client error: %w", err)
 		}
@@ -272,7 +268,7 @@ func (w *Ws) reconnect(ctx context.Context) error {
 	var err error
 
 	if w.conn != nil {
-		err = w.conn.Close(websocket.StatusNormalClosure, "")
+		err = w.conn.Close(websocket.StatusNormalClosure, "attempt to reconnect")
 		if !errors.As(err, &websocket.CloseError{}) && !errors.Is(err, context.Canceled) {
 			w.l.Println(err)
 

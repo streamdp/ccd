@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/coder/websocket"
 	"github.com/streamdp/ccd/domain"
 )
 
@@ -120,6 +121,50 @@ func Test_buildWsSessionName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := buildWsSessionName(tt.args.from, tt.args.to); got != tt.want {
 				t.Errorf("buildWsSessionName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_errUnwrapCloseError(t *testing.T) {
+	type args struct {
+		err error
+	}
+	tests := []struct {
+		name string
+		args args
+		want websocket.CloseError
+	}{
+		{
+			name: "single wrapped error",
+			args: args{
+				err: fmt.Errorf("some err: %w", websocket.CloseError{Code: websocket.StatusGoingAway}),
+			},
+			want: websocket.CloseError{Code: websocket.StatusGoingAway},
+		},
+		{
+			name: "double wrapped error",
+			args: args{
+				err: fmt.Errorf("some err2: %w",
+					fmt.Errorf("some err: %w",
+						websocket.CloseError{Code: websocket.StatusNormalClosure},
+					),
+				),
+			},
+			want: websocket.CloseError{Code: websocket.StatusNormalClosure},
+		},
+		{
+			name: "unwrapped error",
+			args: args{
+				err: websocket.CloseError{Code: websocket.StatusBadGateway},
+			},
+			want: websocket.CloseError{Code: websocket.StatusBadGateway},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := unwrapError[websocket.CloseError](tt.args.err); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("unwrapError() = %v, want %v", got, tt.want)
 			}
 		})
 	}

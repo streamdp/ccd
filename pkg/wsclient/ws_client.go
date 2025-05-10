@@ -136,7 +136,8 @@ func (w *Ws) Unsubscribe(ctx context.Context, from, to string) error {
 }
 
 func (w *Ws) HandleWsError(ctx context.Context, err error) error {
-	if errors.As(err, &websocket.CloseError{}) && err.(websocket.CloseError).Code == websocket.StatusNormalClosure ||
+	if errors.As(err, &websocket.CloseError{}) &&
+		unwrapError[websocket.CloseError](err).Code == websocket.StatusNormalClosure ||
 		errors.Is(err, context.Canceled) {
 		return fmt.Errorf("ws connection closed: %w", err)
 	}
@@ -377,4 +378,14 @@ func (w *Ws) isConnectionBroken(ctx context.Context) bool {
 
 func buildWsSessionName(from, to string) string {
 	return fmt.Sprintf("WS:%s:%s", from, to)
+}
+
+func unwrapError[T error](err error) T {
+	for e := err; e != nil; e = errors.Unwrap(e) {
+		if unwrappedErr, ok := e.(T); ok {
+			return unwrappedErr
+		}
+	}
+
+	return *new(T)
 }

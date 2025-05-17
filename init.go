@@ -53,11 +53,11 @@ func initWsClient(
 
 	switch cfg.DataProvider {
 	case "huobi":
-		wsClient = huobi.InitWs(ctx, d.DataPipe(), sessionRepo, l)
+		wsClient = huobi.InitWs(ctx, d.DataPipe(), sessionRepo, l, cfg.Http)
 	case "kraken":
-		wsClient = kraken.InitWs(ctx, d.DataPipe(), sessionRepo, l)
+		wsClient = kraken.InitWs(ctx, d.DataPipe(), sessionRepo, l, cfg.Http)
 	default:
-		wsClient, err = cryptocompare.InitWs(ctx, d.DataPipe(), sessionRepo, l, cfg.ApiKey)
+		wsClient, err = cryptocompare.InitWs(ctx, d.DataPipe(), sessionRepo, l, cfg.Http, cfg.ApiKey)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errInitWsClient, err)

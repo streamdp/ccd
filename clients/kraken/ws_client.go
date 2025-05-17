@@ -11,14 +11,21 @@ import (
 	"time"
 
 	"github.com/streamdp/ccd/clients"
+	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/domain"
 	"github.com/streamdp/ccd/pkg/wsclient"
 )
 
 const defaultPingInterval = 5 * time.Second
 
-func InitWs(ctx context.Context, pipe chan *domain.Data, sessionRepo clients.SessionRepo, l *log.Logger) *wsclient.Ws {
-	w := wsclient.New(ctx, "wss://ws.kraken.com/v2", sessionRepo, l)
+func InitWs(
+	ctx context.Context,
+	pipe chan *domain.Data,
+	sessionRepo clients.SessionRepo,
+	l *log.Logger,
+	cfg *config.Http,
+) *wsclient.Ws {
+	w := wsclient.New(ctx, "wss://ws.kraken.com/v2", sessionRepo, l, cfg)
 
 	w.ChannelNameBuilder = buildChannelName
 

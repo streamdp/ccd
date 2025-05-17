@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/coder/websocket"
 	"github.com/streamdp/ccd/clients"
+	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/domain"
 )
 
@@ -21,8 +23,10 @@ const (
 )
 
 type Ws struct {
-	l    *log.Logger
-	conn *websocket.Conn
+	l *log.Logger
+
+	httpClient *http.Client
+	conn       *websocket.Conn
 
 	wsUrl string
 
@@ -47,13 +51,15 @@ var (
 	ErrReconnect                  = errors.New("reconnect failed")
 	ErrClientReconnected          = errors.New("ws client has been reconnected")
 	ErrWsConnectionNotInitialized = errors.New("ws connection is not initialized")
+	ErrNotSubscribed              = errors.New("not subscribed")
 )
 
-func New(ctx context.Context, wsUrl string, sessionRepo clients.SessionRepo, l *log.Logger) *Ws {
+func New(ctx context.Context, wsUrl string, sessionRepo clients.SessionRepo, l *log.Logger, cfg *config.Http) *Ws {
 	w := &Ws{
 		l: l,
 
-		wsUrl: wsUrl,
+		httpClient: &http.Client{Timeout: cfg.ClientTimeout()},
+		wsUrl:      wsUrl,
 
 		subscriptions: domain.Subscriptions{},
 
@@ -111,26 +117,30 @@ func (w *Ws) Unsubscribe(ctx context.Context, from, to string) error {
 	sub, ok := w.subscriptions[ch]
 	w.subMu.RUnlock()
 
-	if ok {
-		msg, err := w.UnsubscribeMessageBuilder(ch, sub.Id())
-		if err != nil {
-			return fmt.Errorf("failed to build subscribe message: %w", err)
-		}
-
-		if err = w.sendMessage(ctx, msg); err != nil {
-			return fmt.Errorf("failed to ws unsubscribe: %w", err)
-		}
-
-		w.subMu.Lock()
-		delete(w.subscriptions, ch)
-		w.subMu.Unlock()
+	if !ok {
+		return ErrNotSubscribed
 	}
 
-	if err := w.sessionRepo.RemoveTask(ctx, buildWsSessionName(from, to)); err != nil {
+	msg, err := w.UnsubscribeMessageBuilder(ch, sub.Id())
+	if err != nil {
+		return fmt.Errorf("failed to build subscribe message: %w", err)
+	}
+
+	if err = w.sendMessage(ctx, msg); err != nil {
+		return fmt.Errorf("failed to ws unsubscribe: %w", err)
+	}
+
+	w.subMu.Lock()
+	delete(w.subscriptions, ch)
+	w.subMu.Unlock()
+
+	if err = w.sessionRepo.RemoveTask(ctx, buildWsSessionName(from, to)); err != nil {
 		w.l.Println("failed to add subscription to the session repo: " + err.Error())
 	}
 
-	w.WsDown()
+	if len(w.subscriptions) == 0 {
+		w.WsDown()
+	}
 
 	return nil
 }
@@ -277,7 +287,7 @@ func (w *Ws) reconnect(ctx context.Context) error {
 		w.conn = nil
 	}
 
-	if w.conn, _, err = websocket.Dial(ctx, w.wsUrl, nil); err != nil {
+	if w.conn, _, err = websocket.Dial(ctx, w.wsUrl, &websocket.DialOptions{HTTPClient: w.httpClient}); err != nil {
 		return fmt.Errorf("failed to dial ws server: %w", err)
 	}
 
@@ -336,8 +346,13 @@ func (w *Ws) serveWsConnection(ctx context.Context) {
 				cancel()
 
 				ctxUp, cancel = context.WithCancel(ctx)
-				if err := w.reconnect(ctxUp); err != nil {
+				if err := w.HandleWsError(ctxUp, nil); err != nil {
 					w.l.Println(err)
+					cancel()
+
+					w.l.Printf("failed to open websocket connection")
+					isConnected = false
+
 					w.up <- struct{}{}
 
 					continue
@@ -349,7 +364,7 @@ func (w *Ws) serveWsConnection(ctx context.Context) {
 			}
 			w.up <- struct{}{}
 		case <-w.down:
-			if isConnected && len(w.subscriptions) == 0 || w.isConnectionBroken(ctx) {
+			if isConnected || w.isConnectionBroken(ctx) {
 				cancel()
 
 				if err := w.conn.Close(websocket.StatusNormalClosure, "no active subscriptions"); err != nil {
@@ -357,11 +372,12 @@ func (w *Ws) serveWsConnection(ctx context.Context) {
 				}
 				w.conn = nil
 
-				w.subMu.Lock()
-				w.subscriptions = domain.Subscriptions{}
-				w.subMu.Unlock()
+				msg := "websocket connection closed"
+				if len(w.subscriptions) == 0 {
+					msg += " (no active subscriptions were found)"
+				}
+				w.l.Println(msg)
 
-				w.l.Printf("websocket connection closed (no active subscriptions were found)")
 				isConnected = false
 			}
 			w.down <- struct{}{}

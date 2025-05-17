@@ -11,12 +11,18 @@ import (
 	"time"
 
 	"github.com/streamdp/ccd/clients"
+	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/domain"
 	"github.com/streamdp/ccd/pkg/wsclient"
 )
 
 func InitWs(
-	ctx context.Context, pipe chan *domain.Data, sessionRepo clients.SessionRepo, l *log.Logger, apiKey string,
+	ctx context.Context,
+	pipe chan *domain.Data,
+	sessionRepo clients.SessionRepo,
+	l *log.Logger,
+	cfg *config.Http,
+	apiKey string,
 ) (*wsclient.Ws, error) {
 	if apiKey == "" {
 		return nil, errApiKeyNotDefined
@@ -27,7 +33,7 @@ func InitWs(
 		return nil, fmt.Errorf("failed to build url: %w", err)
 	}
 
-	w := wsclient.New(ctx, wssUrl.String(), sessionRepo, l)
+	w := wsclient.New(ctx, wssUrl.String(), sessionRepo, l, cfg)
 
 	w.ChannelNameBuilder = buildChannelName
 

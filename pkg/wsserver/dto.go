@@ -1,12 +1,18 @@
 package ws
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/streamdp/ccd/domain"
 )
+
+type client struct {
+	handler *handler
+	cancel  context.CancelFunc
+}
 
 type wsMessage struct {
 	T       string       `json:"type"`
@@ -15,7 +21,7 @@ type wsMessage struct {
 	Message string       `json:"message,omitempty"`
 }
 
-func (w *wsMessage) Marshal() []byte {
+func (w *wsMessage) Bytes() []byte {
 	b, _ := json.Marshal(w)
 
 	return b

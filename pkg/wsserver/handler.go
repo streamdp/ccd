@@ -17,20 +17,20 @@ import (
 )
 
 const (
-	writeWait      = 10 * time.Second
-	maxMessageSize = 512
-
 	welcomeMessage = "Welcome to CCD WS Server! To get the latest price send request like this: " +
 		"{\"type\": \"price\", \n\"pair\": { \"fsym\":\"CRYPTO\",\"tsym\":\"COMMON\" }}"
 	closeMessage = "Goodbye!"
 )
 
-type client struct {
-	handler *wsHandler
-	cancel  context.CancelFunc
-}
+const (
+	writeWait      = 10 * time.Second
+	maxMessageSize = 512
 
-type wsHandler struct {
+	messageTypeMessage = "message"
+	messageTypeError   = "error"
+)
+
+type handler struct {
 	l           *log.Logger
 	conn        *websocket.Conn
 	messagePipe chan []byte
@@ -43,73 +43,72 @@ type wsHandler struct {
 	isActive bool
 }
 
-var errUnknownMessageType = errors.New("unknown message type")
+func (h *handler) handleClientRequests(ctx context.Context) {
+	defer close(h.messagePipe)
 
-func (w *wsHandler) handleClientRequests(ctx context.Context) {
-	defer close(w.messagePipe)
+	h.sendMessage(messageTypeMessage, welcomeMessage)
 
+	h.isActive = true
 	defer func() {
-		w.isActive = false
+		h.isActive = false
 	}()
-
-	w.sendMessage(welcomeMessage)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			query := &wsMessage{}
-			if err := wsjson.Read(ctx, w.conn, query); err != nil {
+			msg := &wsMessage{}
+			if err := wsjson.Read(ctx, h.conn, msg); err != nil {
 				if errors.As(err, &websocket.CloseError{}) || errors.Is(err, context.DeadlineExceeded) {
 					return
 				}
-				w.l.Println(err)
+				h.l.Println(err)
 
 				return
 			}
-			query.Pair.toUpper()
+			msg.Pair.toUpper()
 
-			switch query.T {
+			switch msg.T {
 			case "price":
-				data, err := w.getLastPrice(query.Pair)
+				data, err := h.getLastPrice(msg.Pair)
 				if err != nil {
-					w.returnClientError(fmt.Errorf("failed to handle get price action: %w", err))
-					w.l.Println(err)
+					h.sendMessage(messageTypeError, "failed to handle get price action: "+err.Error())
+					h.l.Println(err)
 
 					continue
 				}
-				w.messagePipe <- (&wsMessage{
+				h.messagePipe <- (&wsMessage{
 					T:    "data",
 					Data: data,
-				}).Marshal()
+				}).Bytes()
 			case "subscribe":
-				w.subscribe(query.Pair)
+				h.subscribe(msg.Pair)
 			case "unsubscribe":
-				w.unsubscribe(query.Pair)
+				h.unsubscribe(msg.Pair)
 			case "close":
-				w.sendMessage(closeMessage)
+				h.sendMessage(messageTypeMessage, closeMessage)
 				time.Sleep(3 * time.Second)
 
-				if err := w.Close("closed by client request"); err != nil {
-					w.l.Println(err)
+				if err := h.close("closed by client request"); err != nil {
+					h.l.Println(err)
 				}
 
 				return
 			case "ping":
-				w.messagePipe <- []byte("pong")
+				h.messagePipe <- (&wsMessage{T: "pong"}).Bytes()
 			default:
-				w.returnClientError(errUnknownMessageType)
+				h.sendMessage(messageTypeError, "unknown message type")
 			}
 		}
 	}
 }
 
-func (w *wsHandler) handleMessagePipe(ctx context.Context) {
-	for message := range w.messagePipe {
+func (h *handler) handleMessagePipe(ctx context.Context) {
+	for message := range h.messagePipe {
 		ctx, cancel := context.WithTimeout(ctx, writeWait)
-		if err := w.conn.Write(ctx, websocket.MessageText, message); err != nil {
-			w.l.Println(err)
+		if err := h.conn.Write(ctx, websocket.MessageText, message); err != nil {
+			h.l.Println(err)
 			cancel()
 
 			return
@@ -118,46 +117,45 @@ func (w *wsHandler) handleMessagePipe(ctx context.Context) {
 	}
 }
 
-func (w *wsHandler) subscribe(p *pair) {
+func (h *handler) subscribe(p *pair) {
 	subscription := p.buildName()
-	if w.subscriptions.IsPresent(subscription) {
-		w.sendMessage("Already subscribed")
+	if h.subscriptions.IsPresent(subscription) {
+		h.sendMessage(messageTypeMessage, "Already subscribed")
 
 		return
 	}
 
-	w.subscriptions.Add(subscription)
-	w.sendMessage(fmt.Sprintf("Successfully subscribed on %s/%s pair updates", p.From, p.To))
+	h.subscriptions.Add(subscription)
+	h.sendMessage(
+		messageTypeMessage,
+		fmt.Sprintf("Successfully subscribed on %s/%s pair updates", p.From, p.To),
+	)
 }
 
-func (w *wsHandler) unsubscribe(p *pair) {
+func (h *handler) unsubscribe(p *pair) {
 	subscription := p.buildName()
-	if !w.subscriptions.IsPresent(subscription) {
-		w.sendMessage("Not subscribed")
+	if !h.subscriptions.IsPresent(subscription) {
+		h.sendMessage(messageTypeMessage, "Not subscribed")
 
 		return
 	}
 
-	w.subscriptions.Remove(subscription)
-	w.sendMessage(fmt.Sprintf("Successfully unsubscribed from %s/%s pair updates", p.From, p.To))
+	h.subscriptions.Remove(subscription)
+	h.sendMessage(
+		messageTypeMessage,
+		fmt.Sprintf("Successfully unsubscribed from %s/%s pair updates", p.From, p.To),
+	)
 }
 
-func (w *wsHandler) sendMessage(message string) {
-	w.messagePipe <- (&wsMessage{
-		T:       "message",
+func (h *handler) sendMessage(messageType, message string) {
+	h.messagePipe <- (&wsMessage{
+		T:       messageType,
 		Message: message,
-	}).Marshal()
+	}).Bytes()
 }
 
-func (w *wsHandler) returnClientError(err error) {
-	w.messagePipe <- (&wsMessage{
-		T:       "error",
-		Message: err.Error(),
-	}).Marshal()
-}
-
-func (w *wsHandler) getLastPrice(p *pair) (*domain.Data, error) {
-	data, err := v1.LastPrice(w.rc, w.db, p.From, p.To)
+func (h *handler) getLastPrice(p *pair) (*domain.Data, error) {
+	data, err := v1.LastPrice(h.rc, h.db, p.From, p.To)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get last price: %w", err)
 	}
@@ -165,9 +163,9 @@ func (w *wsHandler) getLastPrice(p *pair) (*domain.Data, error) {
 	return data, nil
 }
 
-func (w *wsHandler) Close(reason string) error {
-	if err := w.conn.Close(websocket.StatusNormalClosure, reason); err != nil {
-		return err
+func (h *handler) close(reason string) error {
+	if err := h.conn.Close(websocket.StatusNormalClosure, reason); err != nil {
+		return fmt.Errorf("failed to close ws connection: %w", err)
 	}
 
 	return nil

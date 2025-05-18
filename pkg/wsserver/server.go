@@ -2,6 +2,7 @@ package ws
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -26,9 +27,13 @@ type Server struct {
 	dataBase   db.Database
 
 	pipe chan *domain.Data
+
+	cancel context.CancelFunc
 }
 
-func NewServer(ctx context.Context, r clients.RestClient, l *log.Logger, db db.Database) *Server {
+func NewServer(ctx context.Context, l *log.Logger, r clients.RestClient, db db.Database) *Server {
+	ctx, cancel := context.WithCancel(ctx)
+
 	server := &Server{
 		l:          l,
 		clients:    make(map[*client]struct{}),
@@ -37,6 +42,8 @@ func NewServer(ctx context.Context, r clients.RestClient, l *log.Logger, db db.D
 		dataBase:   db,
 
 		pipe: make(chan *domain.Data, 1000),
+
+		cancel: cancel,
 	}
 
 	go server.gc(ctx)
@@ -48,17 +55,16 @@ func NewServer(ctx context.Context, r clients.RestClient, l *log.Logger, db db.D
 func (s *Server) AddClient(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to accept ws handshake: %w", err)
 	}
 
-	h := &wsHandler{
+	h := &handler{
 		l:             s.l,
 		conn:          conn,
 		messagePipe:   make(chan []byte, 256),
 		rc:            s.restClient,
 		db:            s.dataBase,
 		subscriptions: cache.New(),
-		isActive:      true,
 	}
 	h.conn.SetReadLimit(maxMessageSize)
 
@@ -80,6 +86,9 @@ func (s *Server) DataPipe() chan *domain.Data {
 }
 
 func (s *Server) Close() {
+	defer close(s.pipe)
+	defer s.cancel()
+
 	s.clientsMu.RLock()
 	for c := range s.clients {
 		c.cancel()
@@ -101,7 +110,7 @@ func (s *Server) processSubscriptions() {
 		bytes := (&wsMessage{
 			T:    "data",
 			Data: data,
-		}).Marshal()
+		}).Bytes()
 
 		for _, c := range subscribers {
 			c.handler.messagePipe <- bytes
@@ -142,7 +151,7 @@ func (s *Server) gc(ctx context.Context) {
 				c.cancel()
 
 				if err := c.handler.conn.Ping(ctx); err == nil {
-					if err = c.handler.Close("inactive client"); err != nil {
+					if err = c.handler.close("inactive client"); err != nil {
 						s.l.Println("failed to close inactive client: " + err.Error())
 					}
 				}

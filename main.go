@@ -76,7 +76,7 @@ func main() {
 
 	ctx := context.Background()
 
-	wsServer := ws.NewServer(ctx, restClient, l, database)
+	wsServer := ws.NewServer(ctx, l, restClient, database)
 	defer wsServer.Close()
 
 	wsClient, err := initWsClient(ctx, database, wsServer, sessionRepo, l, appCfg)
@@ -96,7 +96,6 @@ func main() {
 	if err = srv.InitRouter(ctx); err != nil {
 		l.Fatalln(err)
 	}
-
 	if err = srv.Run(fmt.Sprintf(":%d", appCfg.Http.Port())); err != nil {
 		l.Fatalln(err)
 	}

@@ -38,7 +38,7 @@ type Raw struct {
 	LastUpdate      int64   `json:"last_update"`
 }
 
-func (d *Data) Marshal() []byte {
+func (d *Data) Bytes() []byte {
 	b, _ := json.Marshal(d)
 
 	return b

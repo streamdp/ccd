@@ -16,12 +16,12 @@ type restPuller struct {
 	tasks       Tasks
 	l           *log.Logger
 	sessionRepo SessionRepo
-	dataPipe    chan *domain.Data
+	dataPipe    []chan *domain.Data
 	client      RestClient
 	pullerMu    sync.RWMutex
 }
 
-func NewPuller(r RestClient, l *log.Logger, sessionRepo SessionRepo, dataPipe chan *domain.Data) *restPuller {
+func NewPuller(r RestClient, l *log.Logger, sessionRepo SessionRepo, dataPipe ...chan *domain.Data) *restPuller {
 	return &restPuller{
 		tasks:       Tasks{},
 		l:           l,

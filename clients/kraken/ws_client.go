@@ -20,10 +20,10 @@ const defaultPingInterval = 5 * time.Second
 
 func InitWs(
 	ctx context.Context,
-	pipe chan *domain.Data,
 	sessionRepo clients.SessionRepo,
 	l *log.Logger,
 	cfg *config.Http,
+	pipe ...chan *domain.Data,
 ) *wsclient.Ws {
 	w := wsclient.New(ctx, "wss://ws.kraken.com/v2", sessionRepo, l, cfg)
 
@@ -85,7 +85,7 @@ func InitWs(
 					continue
 				}
 
-				if err = handleWsUpdate(w, pipe, body); err != nil {
+				if err = handleWsUpdate(w, body, pipe); err != nil {
 					l.Println(err)
 				}
 			}
@@ -144,7 +144,7 @@ func handleServerResponse(body []byte) string {
 	return ""
 }
 
-func handleWsUpdate(w *wsclient.Ws, pipe chan *domain.Data, body []byte) error {
+func handleWsUpdate(w *wsclient.Ws, body []byte, pipe []chan *domain.Data) error {
 	data := &wsData{}
 	if err := json.Unmarshal(body, data); err != nil {
 		return fmt.Errorf("failed to unmarshal ws update message: %w", err)
@@ -160,7 +160,10 @@ func handleWsUpdate(w *wsclient.Ws, pipe chan *domain.Data, body []byte) error {
 			continue
 		}
 
-		pipe <- convertWsDataToDomain(from, to, &tick, time.Now().UTC().UnixMilli())
+		domainData := convertWsDataToDomain(from, to, &tick, time.Now().UTC().UnixMilli())
+		for i := range pipe {
+			pipe[i] <- domainData
+		}
 	}
 
 	return nil

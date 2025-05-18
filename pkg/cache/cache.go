@@ -48,3 +48,7 @@ func (c *Cache) IsPresent(s string) bool {
 
 	return ok
 }
+
+func (c *Cache) Len() int {
+	return len(c.c)
+}

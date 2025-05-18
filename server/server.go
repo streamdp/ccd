@@ -7,6 +7,7 @@ import (
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/db"
+	ws "github.com/streamdp/ccd/pkg/wsserver"
 	v1 "github.com/streamdp/ccd/server/api/v1"
 )
 
@@ -21,6 +22,8 @@ type Server struct {
 
 	l   *log.Logger
 	cfg *config.App
+
+	wsServer *ws.Server
 }
 
 func NewServer(
@@ -31,6 +34,7 @@ func NewServer(
 	p v1.Puller,
 	l *log.Logger,
 	cfg *config.App,
+	wsServer *ws.Server,
 ) *Server {
 	return &Server{
 		Engine: gin.Default(),
@@ -43,5 +47,7 @@ func NewServer(
 
 		l:   l,
 		cfg: cfg,
+
+		wsServer: wsServer,
 	}
 }

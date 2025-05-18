@@ -20,7 +20,7 @@ type Task struct {
 }
 type Tasks map[string]*Task
 
-func (t *Task) run(r RestClient, l *log.Logger, dataPipe chan *domain.Data) {
+func (t *Task) run(r RestClient, l *log.Logger, dataPipe []chan *domain.Data) {
 	timer := time.NewTimer(time.Duration(rand.Intn(defaultRunTaskGap)) * time.Second)
 	go func() {
 		defer close(t.done)
@@ -38,7 +38,9 @@ func (t *Task) run(r RestClient, l *log.Logger, dataPipe chan *domain.Data) {
 
 					continue
 				}
-				dataPipe <- data
+				for i := range dataPipe {
+					dataPipe[i] <- data
+				}
 			}
 		}
 	}()

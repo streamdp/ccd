@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	welcomeMessage = "Welcome to CCD WS Server! To get the latest price send request like this: " +
+	welcomeMessage = "Welcome to the CCD Server! To get the latest price send request like this: " +
 		"{\"type\": \"price\", \n\"pair\": { \"fsym\":\"CRYPTO\",\"tsym\":\"COMMON\" }}"
-	closeMessage = "Goodbye!"
+	closeMessage = "Connection will be closed at the client's request."
 )
 
 const (
@@ -90,7 +90,7 @@ func (h *handler) handleClientRequests(ctx context.Context) {
 				h.sendMessage(messageTypeMessage, closeMessage)
 				time.Sleep(3 * time.Second)
 
-				if err := h.close("closed by client request"); err != nil {
+				if err := h.close("closed at the client's request"); err != nil {
 					h.l.Println(err)
 				}
 

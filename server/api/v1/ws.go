@@ -1,4 +1,4 @@
-package ws
+package v1
 
 import (
 	"context"
@@ -15,11 +15,9 @@ type wsServer interface {
 func HandleWs(ctx context.Context, server wsServer) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if err := server.AddClient(ctx, c.Writer, c.Request); err != nil {
-			if err != nil {
-				c.AbortWithStatusJSON(http.StatusInternalServerError, err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, err)
 
-				return
-			}
+			return
 		}
 	}
 }

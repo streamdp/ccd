@@ -14,6 +14,8 @@ import (
 	"github.com/streamdp/ccd/pkg/cache"
 )
 
+const gcInterval = 30 * time.Second
+
 type Server struct {
 	l *log.Logger
 
@@ -24,11 +26,6 @@ type Server struct {
 	dataBase   db.Database
 
 	pipe chan *domain.Data
-}
-
-type client struct {
-	handler *wsHandler
-	cancel  context.CancelFunc
 }
 
 func NewServer(ctx context.Context, r clients.RestClient, l *log.Logger, db db.Database) *Server {
@@ -70,58 +67,12 @@ func (s *Server) AddClient(ctx context.Context, w http.ResponseWriter, r *http.R
 	go h.handleMessagePipe(ctx)
 	go h.handleClientRequests(ctx)
 
-	h.sendWelcomeMessage()
-
 	s.clients[&client{
 		handler: h,
 		cancel:  cancel,
 	}] = struct{}{}
 
 	return nil
-}
-
-func (s *Server) processSubscriptions() {
-	for data := range s.pipe {
-		clientData := data.Marshal()
-
-		p := &pair{
-			From: data.FromSymbol,
-			To:   data.ToSymbol,
-		}
-		subscriptionName := p.buildName()
-
-		s.clientsMu.RLock()
-		for c := range s.clients {
-			if c.handler.isActive && c.handler.subscriptions.IsPresent(subscriptionName) {
-				c.handler.messagePipe <- clientData
-			}
-		}
-		s.clientsMu.RUnlock()
-	}
-}
-
-func (s *Server) gc(ctx context.Context) {
-	t := time.NewTimer(10 * time.Second)
-	defer t.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-			if len(s.clients) == 0 {
-				continue
-			}
-
-			s.clientsMu.Lock()
-			for k := range s.clients {
-				if !k.handler.isActive {
-					delete(s.clients, k)
-				}
-			}
-			s.clientsMu.Unlock()
-		}
-	}
 }
 
 func (s *Server) DataPipe() chan *domain.Data {
@@ -134,4 +85,86 @@ func (s *Server) Close() {
 		c.cancel()
 	}
 	s.clientsMu.RUnlock()
+}
+
+func (s *Server) processSubscriptions() {
+	for data := range s.pipe {
+		subscribers := s.getSubscribers((&pair{
+			From: data.FromSymbol,
+			To:   data.ToSymbol,
+		}).buildName())
+
+		if len(subscribers) == 0 {
+			continue
+		}
+
+		bytes := (&wsMessage{
+			T:    "data",
+			Data: data,
+		}).Marshal()
+
+		for _, c := range subscribers {
+			c.handler.messagePipe <- bytes
+		}
+	}
+}
+
+func (s *Server) getSubscribers(subscription string) []*client {
+	var res []*client
+
+	s.clientsMu.RLock()
+	for c := range s.clients {
+		if c.handler.isActive && c.handler.subscriptions.IsPresent(subscription) {
+			res = append(res, c)
+		}
+	}
+	s.clientsMu.RUnlock()
+
+	return res
+}
+
+func (s *Server) gc(ctx context.Context) {
+	t := time.NewTimer(gcInterval)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			t.Reset(gcInterval)
+
+			if len(s.clients) == 0 {
+				continue
+			}
+
+			for _, c := range s.getInactiveClients() {
+				c.cancel()
+
+				if err := c.handler.conn.Ping(ctx); err == nil {
+					if err = c.handler.Close("inactive client"); err != nil {
+						s.l.Println("failed to close inactive client: " + err.Error())
+					}
+				}
+
+				s.clientsMu.Lock()
+				delete(s.clients, c)
+				s.clientsMu.Unlock()
+			}
+		}
+	}
+}
+
+func (s *Server) getInactiveClients() []*client {
+	var res []*client
+
+	s.clientsMu.RLock()
+	for c := range s.clients {
+		if !c.handler.isActive {
+			res = append(res, c)
+		}
+	}
+	s.clientsMu.RUnlock()
+
+	return res
 }

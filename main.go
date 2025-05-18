@@ -77,6 +77,7 @@ func main() {
 	ctx := context.Background()
 
 	wsServer := ws.NewServer(ctx, restClient, l, database)
+	defer wsServer.Close()
 
 	wsClient, err := initWsClient(ctx, database, wsServer, sessionRepo, l, appCfg)
 	if err != nil {

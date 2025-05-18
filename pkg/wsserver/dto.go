@@ -1,14 +1,24 @@
 package ws
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/streamdp/ccd/domain"
 )
 
 type wsMessage struct {
-	T      string `json:"type"`
-	Pair   pair   `json:"pair"`
-	Reason string `json:"reason,omitempty"`
+	T       string       `json:"type"`
+	Pair    *pair        `json:"pair,omitempty"`
+	Data    *domain.Data `json:"data,omitempty"`
+	Message string       `json:"message,omitempty"`
+}
+
+func (w *wsMessage) Marshal() []byte {
+	b, _ := json.Marshal(w)
+
+	return b
 }
 
 type pair struct {

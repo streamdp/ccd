@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	v1 "github.com/streamdp/ccd/server/api/v1"
-	"github.com/streamdp/ccd/server/api/v1/ws"
 	"github.com/streamdp/ccd/server/handlers"
 )
 
@@ -46,7 +45,7 @@ func (s *Server) InitRouter(ctx context.Context) error {
 		apiV1.GET("/price", handlers.GinHandler(v1.Price(s.r, s.d)))
 		apiV1.POST("/price", handlers.GinHandler(v1.Price(s.r, s.d)))
 
-		apiV1.GET("/ws", ws.HandleWs(ctx, s.wsServer))
+		apiV1.GET("/ws", v1.HandleWs(ctx, s.wsServer))
 		if s.w != nil {
 			apiV1.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, s.w)))
 			apiV1.POST("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, s.w)))
@@ -71,7 +70,7 @@ func (s *Server) InitRouter(ctx context.Context) error {
 		// price
 		apiV2.GET("/price", handlers.GinHandler(v1.Price(s.r, s.d)))
 		// websockets
-		apiV2.GET("/ws", ws.HandleWs(ctx, s.wsServer))
+		apiV2.GET("/ws", v1.HandleWs(ctx, s.wsServer))
 		if s.w != nil {
 			apiV2.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, s.w)))
 			apiV2.GET("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(ctx, s.w)))

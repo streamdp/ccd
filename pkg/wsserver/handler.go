@@ -2,14 +2,13 @@ package ws
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/coder/websocket/wsjson"
 	"github.com/streamdp/ccd/clients"
 	"github.com/streamdp/ccd/db"
 	"github.com/streamdp/ccd/domain"
@@ -20,7 +19,16 @@ import (
 const (
 	writeWait      = 10 * time.Second
 	maxMessageSize = 512
+
+	welcomeMessage = "Welcome to CCD WS Server! To get the latest price send request like this: " +
+		"{\"type\": \"price\", \n\"pair\": { \"fsym\":\"CRYPTO\",\"tsym\":\"COMMON\" }}"
+	closeMessage = "Goodbye!"
 )
+
+type client struct {
+	handler *wsHandler
+	cancel  context.CancelFunc
+}
 
 type wsHandler struct {
 	l           *log.Logger
@@ -35,39 +43,24 @@ type wsHandler struct {
 	isActive bool
 }
 
-var errInvalidRequest = errors.New(
-	`invalid request: request should look like {"fsym":"CRYPTO","tsym":"COMMON"}`,
-)
+var errUnknownMessageType = errors.New("unknown message type")
 
 func (w *wsHandler) handleClientRequests(ctx context.Context) {
 	defer close(w.messagePipe)
-
-	t := time.NewTimer(time.Minute)
-	defer t.Stop()
 
 	defer func() {
 		w.isActive = false
 	}()
 
+	w.sendMessage(welcomeMessage)
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-t.C:
-			if w.subscriptions.Len() != 0 {
-				continue
-			}
-			w.isActive = false
-
-			return
 		default:
-			var (
-				data  []byte
-				err   error
-				query = wsMessage{}
-			)
-
-			if _, data, err = w.conn.Read(ctx); err != nil {
+			query := &wsMessage{}
+			if err := wsjson.Read(ctx, w.conn, query); err != nil {
 				if errors.As(err, &websocket.CloseError{}) || errors.Is(err, context.DeadlineExceeded) {
 					return
 				}
@@ -75,65 +68,38 @@ func (w *wsHandler) handleClientRequests(ctx context.Context) {
 
 				return
 			}
-
-			b, err := json.Marshal(&wsMessage{
-				T: "price",
-				Pair: pair{
-					From: "BTC",
-					To:   "USDT",
-				},
-			})
-			w.l.Println(string(b))
-
-			if err = json.Unmarshal(data, &query); err != nil {
-				w.returnAnErrorToTheClient(errInvalidRequest)
-
-				continue
-			}
 			query.Pair.toUpper()
 
 			switch query.T {
 			case "price":
-				if data, err = w.getLastPrice(&query.Pair); err != nil {
+				data, err := w.getLastPrice(query.Pair)
+				if err != nil {
+					w.returnClientError(fmt.Errorf("failed to handle get price action: %w", err))
 					w.l.Println(err)
 
 					continue
 				}
-				w.messagePipe <- data
+				w.messagePipe <- (&wsMessage{
+					T:    "data",
+					Data: data,
+				}).Marshal()
 			case "subscribe":
-				subscriptionName := query.Pair.buildName()
-				if w.subscriptions.IsPresent(subscriptionName) {
-					w.messagePipe <- []byte("Already subscribed")
-
-					continue
-				}
-				w.subscriptions.Add(subscriptionName)
-				w.messagePipe <- []byte(fmt.Sprintf(
-					`Successfully subscribed on %s/%s pair updates`, query.Pair.From, query.Pair.To,
-				))
+				w.subscribe(query.Pair)
 			case "unsubscribe":
-				subscriptionName := query.Pair.buildName()
-				if !w.subscriptions.IsPresent(subscriptionName) {
-					w.messagePipe <- []byte("Not subscribed")
-
-					continue
-				}
-				w.subscriptions.Remove(subscriptionName)
-				w.messagePipe <- []byte(fmt.Sprintf(
-					`Successfully unsubscribed from %s/%s pair updates`, query.Pair.From, query.Pair.To,
-				))
+				w.unsubscribe(query.Pair)
 			case "close":
-				w.isActive = false
-				w.l.Println("Client send close message, reason: " + query.Reason)
-				w.sendCloseMessage()
-				time.Sleep(time.Second)
+				w.sendMessage(closeMessage)
+				time.Sleep(3 * time.Second)
+
+				if err := w.Close("closed by client request"); err != nil {
+					w.l.Println(err)
+				}
 
 				return
 			case "ping":
-				t.Reset(time.Minute)
 				w.messagePipe <- []byte("pong")
 			default:
-				w.messagePipe <- []byte("Unknown message type: " + query.T)
+				w.returnClientError(errUnknownMessageType)
 			}
 		}
 	}
@@ -152,37 +118,57 @@ func (w *wsHandler) handleMessagePipe(ctx context.Context) {
 	}
 }
 
-func (w *wsHandler) sendWelcomeMessage() {
-	w.messagePipe <- []byte(`Welcome to CCD WS Server!`)
-	w.messagePipe <- []byte(`To get the latest price send request like this:`)
-	w.messagePipe <- []byte(`{"type": "price", pair:{"fsym":"CRYPTO","tsym":"COMMON"}}`)
-}
-
-func (w *wsHandler) sendCloseMessage() {
-	w.messagePipe <- []byte(`Goodbye!`)
-}
-
-func (w *wsHandler) returnAnErrorToTheClient(err error) {
-	var binaryString []byte
-	r := domain.NewResult(http.StatusBadRequest, err.Error(), nil)
-	if binaryString, err = json.Marshal(&r); err != nil {
-		w.l.Println(err)
+func (w *wsHandler) subscribe(p *pair) {
+	subscription := p.buildName()
+	if w.subscriptions.IsPresent(subscription) {
+		w.sendMessage("Already subscribed")
 
 		return
 	}
-	w.messagePipe <- binaryString
+
+	w.subscriptions.Add(subscription)
+	w.sendMessage(fmt.Sprintf("Successfully subscribed on %s/%s pair updates", p.From, p.To))
 }
 
-func (w *wsHandler) getLastPrice(p *pair) ([]byte, error) {
+func (w *wsHandler) unsubscribe(p *pair) {
+	subscription := p.buildName()
+	if !w.subscriptions.IsPresent(subscription) {
+		w.sendMessage("Not subscribed")
+
+		return
+	}
+
+	w.subscriptions.Remove(subscription)
+	w.sendMessage(fmt.Sprintf("Successfully unsubscribed from %s/%s pair updates", p.From, p.To))
+}
+
+func (w *wsHandler) sendMessage(message string) {
+	w.messagePipe <- (&wsMessage{
+		T:       "message",
+		Message: message,
+	}).Marshal()
+}
+
+func (w *wsHandler) returnClientError(err error) {
+	w.messagePipe <- (&wsMessage{
+		T:       "error",
+		Message: err.Error(),
+	}).Marshal()
+}
+
+func (w *wsHandler) getLastPrice(p *pair) (*domain.Data, error) {
 	data, err := v1.LastPrice(w.rc, w.db, p.From, p.To)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get last price: %w", err)
 	}
 
-	result, errMarshal := json.Marshal(&data)
-	if errMarshal != nil {
-		return nil, fmt.Errorf("failed to unmarshal data: %w", errMarshal)
+	return data, nil
+}
+
+func (w *wsHandler) Close(reason string) error {
+	if err := w.conn.Close(websocket.StatusNormalClosure, reason); err != nil {
+		return err
 	}
 
-	return result, nil
+	return nil
 }

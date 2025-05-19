@@ -23,6 +23,7 @@ const (
 )
 
 const (
+	readWait       = time.Minute
 	writeWait      = 10 * time.Second
 	maxMessageSize = 512
 
@@ -59,7 +60,13 @@ func (h *handler) handleClientRequests(ctx context.Context) {
 			return
 		default:
 			msg := &wsMessage{}
-			if err := wsjson.Read(ctx, h.conn, msg); err != nil {
+
+			ctxRead, cancel := ctx, context.CancelFunc(func() {})
+			if h.subscriptions.Len() == 0 {
+				ctxRead, cancel = context.WithTimeout(ctx, readWait)
+			}
+			if err := wsjson.Read(ctxRead, h.conn, msg); err != nil {
+				cancel()
 				if errors.As(err, &websocket.CloseError{}) || errors.Is(err, context.DeadlineExceeded) {
 					return
 				}
@@ -67,7 +74,11 @@ func (h *handler) handleClientRequests(ctx context.Context) {
 
 				return
 			}
-			msg.Pair.toUpper()
+			cancel()
+
+			if msg.Pair != nil {
+				msg.Pair.toUpper()
+			}
 
 			switch msg.T {
 			case "price":

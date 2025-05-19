@@ -45,7 +45,12 @@ func initRestClient(cfg *config.App) (clients.RestClient, error) {
 }
 
 func initWsClient(
-	ctx context.Context, d db.Database, ws *ws.Server, sessionRepo clients.SessionRepo, l *log.Logger, cfg *config.App,
+	ctx context.Context,
+	d db.Database,
+	ws *ws.Server,
+	sessionRepo clients.SessionRepo,
+	l *log.Logger,
+	cfg *config.App,
 ) (clients.WsClient, error) {
 	var (
 		wsClient clients.WsClient

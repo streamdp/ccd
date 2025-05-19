@@ -16,38 +16,38 @@ type Server struct {
 
 	d  db.Database
 	sr v1.SymbolsRepo
-	r  clients.RestClient
-	w  clients.WsClient
+	rc clients.RestClient
+	wc clients.WsClient
 	p  v1.Puller
 
 	l   *log.Logger
 	cfg *config.App
 
-	wsServer *ws.Server
+	ws *ws.Server
 }
 
 func NewServer(
 	d db.Database,
 	sr v1.SymbolsRepo,
-	r clients.RestClient,
-	w clients.WsClient,
+	rc clients.RestClient,
+	wc clients.WsClient,
 	p v1.Puller,
 	l *log.Logger,
 	cfg *config.App,
-	wsServer *ws.Server,
+	ws *ws.Server,
 ) *Server {
 	return &Server{
 		Engine: gin.Default(),
 
 		d:  d,
 		sr: sr,
-		r:  r,
-		w:  w,
+		rc: rc,
+		wc: wc,
 		p:  p,
 
 		l:   l,
 		cfg: cfg,
 
-		wsServer: wsServer,
+		ws: ws,
 	}
 }

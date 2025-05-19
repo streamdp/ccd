@@ -2,11 +2,14 @@ package ws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/coder/websocket"
 	"github.com/streamdp/ccd/clients"
@@ -73,10 +76,12 @@ func (s *Server) AddClient(ctx context.Context, w http.ResponseWriter, r *http.R
 	go h.handleMessagePipe(ctx)
 	go h.handleClientRequests(ctx)
 
-	s.clients[&client{
+	c := &client{
 		handler: h,
 		cancel:  cancel,
-	}] = struct{}{}
+	}
+	s.clients[c] = struct{}{}
+	s.l.Println(fmt.Sprintf("added new ws client: %v", uintptr(unsafe.Pointer(c))))
 
 	return nil
 }
@@ -150,15 +155,17 @@ func (s *Server) gc(ctx context.Context) {
 			for _, c := range s.getInactiveClients() {
 				c.cancel()
 
-				if err := c.handler.conn.Ping(ctx); err == nil {
-					if err = c.handler.close("inactive client"); err != nil {
-						s.l.Println("failed to close inactive client: " + err.Error())
-					}
+				if err := c.handler.close("inactive client"); err != nil &&
+					!errors.As(err, &websocket.CloseError{}) &&
+					!errors.Is(err, net.ErrClosed) {
+					s.l.Println("failed to close inactive client: " + err.Error())
 				}
 
 				s.clientsMu.Lock()
 				delete(s.clients, c)
 				s.clientsMu.Unlock()
+
+				s.l.Println(fmt.Sprintf("removed ws client: %v", uintptr(unsafe.Pointer(c))))
 			}
 		}
 	}

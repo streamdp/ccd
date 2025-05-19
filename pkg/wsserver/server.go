@@ -75,6 +75,7 @@ func (s *Server) AddClient(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	go h.handleMessagePipe(ctx)
 	go h.handleClientRequests(ctx)
+	go h.handleHeartbeat(ctx)
 
 	c := &client{
 		handler: h,

@@ -23,12 +23,15 @@ const (
 )
 
 const (
-	readWait       = time.Minute
-	writeWait      = 10 * time.Second
-	maxMessageSize = 512
+	readWait                 = time.Minute
+	writeWait                = 10 * time.Second
+	maxMessageSize           = 512
+	defaultHeartbeatInterval = 5 * time.Second
 
-	messageTypeMessage = "message"
-	messageTypeError   = "error"
+	messageTypeMessage   = "message"
+	messageTypeError     = "error"
+	messageTypeHeartbeat = "heartbeat"
+	messageTypePong      = "pong"
 )
 
 type handler struct {
@@ -109,12 +112,31 @@ func (h *handler) handleClientRequests(ctx context.Context) {
 				return
 			case "ping":
 				h.messagePipe <- (&wsMessage{
-					T:         "pong",
+					T:         messageTypePong,
 					Timestamp: msg.Timestamp,
 				}).Bytes()
 			default:
 				h.sendMessage(messageTypeError, "unknown message type")
 			}
+		}
+	}
+}
+
+func (h *handler) handleHeartbeat(ctx context.Context) {
+	t := time.NewTimer(defaultHeartbeatInterval)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			t.Reset(defaultHeartbeatInterval)
+			if h.subscriptions.Len() == 0 {
+				continue
+			}
+
+			h.sendMessage(messageTypeHeartbeat, "")
 		}
 	}
 }
@@ -163,11 +185,15 @@ func (h *handler) unsubscribe(p *pair) {
 }
 
 func (h *handler) sendMessage(messageType, message string) {
-	h.messagePipe <- (&wsMessage{
+	msg := &wsMessage{
 		T:         messageType,
-		Message:   message,
 		Timestamp: time.Now().UTC().UnixMilli(),
-	}).Bytes()
+	}
+	if message != "" {
+		msg.Message = message
+	}
+
+	h.messagePipe <- msg.Bytes()
 }
 
 func (h *handler) getLastPrice(p *pair) (*domain.Data, error) {

@@ -132,7 +132,7 @@ func (h *handler) handleHeartbeat(ctx context.Context) {
 			return
 		case <-t.C:
 			t.Reset(defaultHeartbeatInterval)
-			if h.subscriptions.Len() == 0 {
+			if !h.isActive || h.subscriptions.Len() == 0 {
 				continue
 			}
 

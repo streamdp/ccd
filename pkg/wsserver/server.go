@@ -113,8 +113,9 @@ func (s *Server) processSubscriptions() {
 		}
 
 		bytes := (&wsMessage{
-			T:    "data",
-			Data: data,
+			T:         "data",
+			Data:      data,
+			Timestamp: time.Now().UTC().UnixMilli(),
 		}).Bytes()
 
 		for _, c := range subscribers {

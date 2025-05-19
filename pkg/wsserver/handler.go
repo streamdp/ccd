@@ -90,8 +90,9 @@ func (h *handler) handleClientRequests(ctx context.Context) {
 					continue
 				}
 				h.messagePipe <- (&wsMessage{
-					T:    "data",
-					Data: data,
+					T:         "data",
+					Data:      data,
+					Timestamp: time.Now().UTC().UnixMilli(),
 				}).Bytes()
 			case "subscribe":
 				h.subscribe(msg.Pair)
@@ -107,7 +108,10 @@ func (h *handler) handleClientRequests(ctx context.Context) {
 
 				return
 			case "ping":
-				h.messagePipe <- (&wsMessage{T: "pong"}).Bytes()
+				h.messagePipe <- (&wsMessage{
+					T:         "pong",
+					Timestamp: msg.Timestamp,
+				}).Bytes()
 			default:
 				h.sendMessage(messageTypeError, "unknown message type")
 			}
@@ -160,8 +164,9 @@ func (h *handler) unsubscribe(p *pair) {
 
 func (h *handler) sendMessage(messageType, message string) {
 	h.messagePipe <- (&wsMessage{
-		T:       messageType,
-		Message: message,
+		T:         messageType,
+		Message:   message,
+		Timestamp: time.Now().UTC().UnixMilli(),
 	}).Bytes()
 }
 

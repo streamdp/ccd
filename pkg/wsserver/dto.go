@@ -15,10 +15,11 @@ type client struct {
 }
 
 type wsMessage struct {
-	T       string       `json:"type"`
-	Pair    *pair        `json:"pair,omitempty"`
-	Data    *domain.Data `json:"data,omitempty"`
-	Message string       `json:"message,omitempty"`
+	T         string       `json:"type"`
+	Pair      *pair        `json:"pair,omitempty"`
+	Data      *domain.Data `json:"data,omitempty"`
+	Message   string       `json:"message,omitempty"`
+	Timestamp int64        `json:"timestamp,omitempty"`
 }
 
 func (w *wsMessage) Bytes() []byte {

@@ -26,7 +26,7 @@ const (
 	readWait                 = time.Minute
 	writeWait                = 10 * time.Second
 	maxMessageSize           = 512
-	defaultHeartbeatInterval = 5 * time.Second
+	defaultHeartbeatInterval = time.Second
 
 	messageTypeMessage   = "message"
 	messageTypeError     = "error"

@@ -103,6 +103,10 @@ func (s *Server) Close() {
 
 func (s *Server) processSubscriptions() {
 	for data := range s.pipe {
+		if len(s.clients) == 0 {
+			continue
+		}
+
 		subscribers := s.getSubscribers((&pair{
 			From: data.FromSymbol,
 			To:   data.ToSymbol,

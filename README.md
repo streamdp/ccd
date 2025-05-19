@@ -127,9 +127,15 @@ To **close** connection from the server side, send request like this:
 [11:47:50] YOU => {"type": "close"}
 [11:47:50] HOST => {"type":"message","message":"Connection will be closed at the client's request.","timestamp":1747644470162}
 ```
+There is no option to directly request a **heartbeat** subscription, the heartbeats will be automatically generated on 
+subscription to any pair. Heartbeat messages are sent approximately once every second in the absence of any other
+channel updates.
+```bash
+[15:56:53] HOST => {"type":"heartbeat","timestamp":1747659413044}
+```
 By default, ws server read timeout is one minute, but if there are active subscriptions, there is no read timeout.
-This means that if you want to keep the connection alive without adding a subscription, you should ping the ws server
-or request the latest price at intervals less than one minute.
+This means that if you want to keep the connection alive without adding a subscription, you should **ping** the ws 
+server or request the **latest price** at intervals less than one minute.
 ## Contributing
 Contributions are welcome! If you encounter any issues, have suggestions for new features, or want to improve **CCD**, please feel free to open an issue or submit a pull request on the project's GitHub repository.
 ## License

@@ -146,6 +146,11 @@
             <li><strong>Close</strong> connection from the server side:
                 <pre><code>{"type": "close"}</code></pre>
             </li>
+            <li><strong>Heartbeat</strong> messages will be automatically generated on subscription to any pair, and
+                there is no option to directly request a <strong>heartbeat</strong> subscription. Heartbeat messages are
+                sent approximately once every second in the absence of any other channel updates.
+                <pre><code>[15:56:53] HOST => {"type":"heartbeat","timestamp":1747659413044}</pre></code>
+            </li>
         </ul>
         <p>
             By default, ws server read timeout is one minute, but if there are active subscriptions, there is no read

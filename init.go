@@ -14,6 +14,7 @@ import (
 	"github.com/streamdp/ccd/db"
 	"github.com/streamdp/ccd/db/redis"
 	"github.com/streamdp/ccd/pkg/sessionrepo"
+	ws "github.com/streamdp/ccd/pkg/wsserver"
 )
 
 var (
@@ -44,7 +45,12 @@ func initRestClient(cfg *config.App) (clients.RestClient, error) {
 }
 
 func initWsClient(
-	ctx context.Context, d db.Database, sessionRepo clients.SessionRepo, l *log.Logger, cfg *config.App,
+	ctx context.Context,
+	d db.Database,
+	ws *ws.Server,
+	sessionRepo clients.SessionRepo,
+	l *log.Logger,
+	cfg *config.App,
 ) (clients.WsClient, error) {
 	var (
 		wsClient clients.WsClient
@@ -53,11 +59,11 @@ func initWsClient(
 
 	switch cfg.DataProvider {
 	case "huobi":
-		wsClient = huobi.InitWs(ctx, d.DataPipe(), sessionRepo, l, cfg.Http)
+		wsClient = huobi.InitWs(ctx, sessionRepo, l, cfg.Http, d.DataPipe(), ws.DataPipe())
 	case "kraken":
-		wsClient = kraken.InitWs(ctx, d.DataPipe(), sessionRepo, l, cfg.Http)
+		wsClient = kraken.InitWs(ctx, sessionRepo, l, cfg.Http, d.DataPipe(), ws.DataPipe())
 	default:
-		wsClient, err = cryptocompare.InitWs(ctx, d.DataPipe(), sessionRepo, l, cfg.Http, cfg.ApiKey)
+		wsClient, err = cryptocompare.InitWs(ctx, sessionRepo, l, cfg.Http, cfg.ApiKey, d.DataPipe(), ws.DataPipe())
 	}
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errInitWsClient, err)

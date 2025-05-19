@@ -100,13 +100,13 @@
                 <td>&diams;</td>
                 <td><strong>/v2/price</strong></td>
                 <td class="text-center">[GET]</td>
-                <td><em>get actual (or cached if dataprovider is unavailable) info for selected pair</em></td>
+                <td><em>get actual (or cached if data provider is unavailable) info for selected pair</em></td>
             </tr>
             <tr>
                 <td>&diams;</td>
                 <td><strong>/v2/ws</strong></td>
                 <td class="text-center">[GET]</td>
-                <td><em>websocket connection url, when you connected, try to send request like {"fsym":"BTC","tsym":"USD"}</em></td>
+                <td><em>websocket connection url, subscribe/unsubscribe to updates or get market data for the selected pair</em></td>
             </tr>
             <tr>
                  <td>&diams;</td>
@@ -127,8 +127,31 @@
         <pre><code>$ curl -X POST -H "Content-Type: application/json" -d '{ "fsym":"BTC", "tsym": "USDT", "interval": 60}' "http://localhost:8080/v2/collect"</code></pre>
         <p>Example of sending a GET request to remove worker:</p>
         <pre><code>$ curl -X DELETE "http://localhost:8080/v2/collect?fsym=BTC&amp;tsym=USDT&amp;interval=60"</code></pre>
-        <p>Example of sending a GET request to subscribe wss channel:</p>
+        <p>Example of sending a GET request to subscribe data provider wss channel:</p>
         <pre><code>$ curl "http://localhost:8080/v2/ws/subscribe?fsym=BTC&tsym=USDT"</code></pre>
+        <p>List of requests for working with integrated websocket server:</p>
+        <ul>
+            <li>Get the <strong>latest price</strong>:
+                <pre><code>{"type": "price", "pair":{"fsym":"BTC","tsym":"USDT"}}</code></pre>
+            </li>
+            <li><strong>Subscribe</strong> to updates for the selected currency pair that is currently being collected:
+                <pre><code>{"type": "subscribe", "pair":{"fsym":"BTC","tsym":"USDT"}}</code></pre>
+            </li>
+            <li><strong>Unsubscribe</strong> from updates for the selected currency pair:
+                <pre><code>{"type": "unsubscribe", "pair":{"fsym":"BTC","tsym":"USDT"}}</code></pre>
+            </li>
+            <li><strong>Ping</strong> server connection (this is not the same as ping on the protocol layer):
+                <pre><code>{"type": "ping", "timestamp":1747644233841}</code></pre>
+            </li>
+            <li><strong>Close</strong> connection from the server side:
+                <pre><code>{"type": "close"}</code></pre>
+            </li>
+        </ul>
+        <p>
+            By default, ws server read timeout is one minute, but if there are active subscriptions, there is no read
+            timeout. This means that if you want to keep the connection alive without adding a subscription, you should
+            ping the ws server or request the latest price at intervals less than one minute.
+        </p>
     </article>
 </main>
 <footer class="mt-6 py-4 text-center text-sm">

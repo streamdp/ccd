@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	v1 "github.com/streamdp/ccd/server/api/v1"
-	"github.com/streamdp/ccd/server/api/v1/ws"
 	"github.com/streamdp/ccd/server/handlers"
 )
 
@@ -27,7 +26,7 @@ func (s *Server) InitRouter(ctx context.Context) error {
 	// DEPRECATED: use v2 api instead
 	apiV1 := s.Group("/v1")
 	{
-		apiV1.GET("/collect/status", handlers.GinHandler(v1.PullingStatus(s.p, s.w)))
+		apiV1.GET("/collect/status", handlers.GinHandler(v1.PullingStatus(s.p, s.wc)))
 		apiV1.GET("/collect/add", handlers.GinHandler(v1.AddWorker(ctx, s.p)))
 		apiV1.POST("/collect", handlers.GinHandler(v1.AddWorker(ctx, s.p)))
 		apiV1.GET("/collect/remove", handlers.GinHandler(v1.RemoveWorker(ctx, s.p)))
@@ -43,15 +42,15 @@ func (s *Server) InitRouter(ctx context.Context) error {
 		apiV1.GET("/symbols/remove", handlers.GinHandler(v1.RemoveSymbol(s.sr)))
 		apiV1.DELETE("/symbols", handlers.GinHandler(v1.RemoveSymbol(s.sr)))
 
-		apiV1.GET("/price", handlers.GinHandler(v1.Price(s.r, s.d)))
-		apiV1.POST("/price", handlers.GinHandler(v1.Price(s.r, s.d)))
+		apiV1.GET("/price", handlers.GinHandler(v1.Price(s.rc, s.d)))
+		apiV1.POST("/price", handlers.GinHandler(v1.Price(s.rc, s.d)))
 
-		apiV1.GET("/ws", ws.HandleWs(ctx, s.r, s.l, s.d))
-		if s.w != nil {
-			apiV1.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, s.w)))
-			apiV1.POST("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, s.w)))
-			apiV1.GET("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(ctx, s.w)))
-			apiV1.POST("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(ctx, s.w)))
+		apiV1.GET("/ws", v1.HandleWs(ctx, s.ws))
+		if s.wc != nil {
+			apiV1.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, s.wc)))
+			apiV1.POST("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, s.wc)))
+			apiV1.GET("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(ctx, s.wc)))
+			apiV1.POST("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(ctx, s.wc)))
 		}
 	}
 
@@ -59,7 +58,7 @@ func (s *Server) InitRouter(ctx context.Context) error {
 	apiV2 := s.Group("/v2")
 	{
 		// collect
-		apiV2.GET("/collect", handlers.GinHandler(v1.PullingStatus(s.p, s.w)))
+		apiV2.GET("/collect", handlers.GinHandler(v1.PullingStatus(s.p, s.wc)))
 		apiV2.POST("/collect", handlers.GinHandler(v1.AddWorker(ctx, s.p)))
 		apiV2.PUT("/collect", handlers.GinHandler(v1.UpdateWorker(ctx, s.p)))
 		apiV2.DELETE("/collect", handlers.GinHandler(v1.RemoveWorker(ctx, s.p)))
@@ -69,12 +68,12 @@ func (s *Server) InitRouter(ctx context.Context) error {
 		apiV2.PUT("/symbols", handlers.GinHandler(v1.UpdateSymbol(s.sr)))
 		apiV2.DELETE("/symbols", handlers.GinHandler(v1.RemoveSymbol(s.sr)))
 		// price
-		apiV2.GET("/price", handlers.GinHandler(v1.Price(s.r, s.d)))
+		apiV2.GET("/price", handlers.GinHandler(v1.Price(s.rc, s.d)))
 		// websockets
-		apiV2.GET("/ws", ws.HandleWs(ctx, s.r, s.l, s.d))
-		if s.w != nil {
-			apiV2.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, s.w)))
-			apiV2.GET("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(ctx, s.w)))
+		apiV2.GET("/ws", v1.HandleWs(ctx, s.ws))
+		if s.wc != nil {
+			apiV2.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, s.wc)))
+			apiV2.GET("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(ctx, s.wc)))
 		}
 	}
 

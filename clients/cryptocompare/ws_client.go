@@ -18,11 +18,11 @@ import (
 
 func InitWs(
 	ctx context.Context,
-	pipe chan *domain.Data,
 	sessionRepo clients.SessionRepo,
 	l *log.Logger,
 	cfg *config.Http,
 	apiKey string,
+	pipe ...chan *domain.Data,
 ) (*wsclient.Ws, error) {
 	if apiKey == "" {
 		return nil, errApiKeyNotDefined
@@ -99,7 +99,10 @@ func InitWs(
 						l.Println(msg)
 					}
 				case "5":
-					pipe <- convertWsDataToDomain(data)
+					domainData := convertWsDataToDomain(data)
+					for i := range pipe {
+						pipe[i] <- domainData
+					}
 				}
 			}
 		}

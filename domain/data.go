@@ -1,5 +1,9 @@
 package domain
 
+import (
+	"encoding/json"
+)
+
 type Data struct {
 	Id              int64   `db:"_id"             json:"id"`
 	FromSymbol      string  `db:"fromSym"         json:"from_sym"`
@@ -32,4 +36,10 @@ type Raw struct {
 	Supply          float64 `json:"supply"`
 	MktCap          float64 `json:"mkt_cap"`
 	LastUpdate      int64   `json:"last_update"`
+}
+
+func (d *Data) Bytes() []byte {
+	b, _ := json.Marshal(d)
+
+	return b
 }

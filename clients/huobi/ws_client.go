@@ -19,10 +19,10 @@ import (
 
 func InitWs(
 	ctx context.Context,
-	pipe chan *domain.Data,
 	sessionRepo clients.SessionRepo,
 	l *log.Logger,
 	cfg *config.Http,
+	pipe ...chan *domain.Data,
 ) *wsclient.Ws {
 	w := wsclient.New(ctx, "wss://api.huobi.pro/ws", sessionRepo, l, cfg)
 
@@ -120,7 +120,7 @@ func handleServerResponse(body []byte) string {
 	return ""
 }
 
-func handleWsUpdate(w *wsclient.Ws, body []byte, pipe chan *domain.Data) error {
+func handleWsUpdate(w *wsclient.Ws, body []byte, pipe []chan *domain.Data) error {
 	data := &wsData{}
 	if err := json.Unmarshal(body, data); err != nil {
 		return fmt.Errorf("failed to unmarshal ws update message: %w", err)
@@ -135,7 +135,10 @@ func handleWsUpdate(w *wsclient.Ws, body []byte, pipe chan *domain.Data) error {
 		return nil
 	}
 
-	pipe <- convertWsDataToDomain(from, to, data)
+	domainData := convertWsDataToDomain(from, to, data)
+	for i := range pipe {
+		pipe[i] <- domainData
+	}
 
 	return nil
 }

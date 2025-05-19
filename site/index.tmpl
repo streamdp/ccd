@@ -129,13 +129,12 @@
         <pre><code>$ curl -X DELETE "http://localhost:8080/v2/collect?fsym=BTC&amp;tsym=USDT&amp;interval=60"</code></pre>
         <p>Example of sending a GET request to subscribe data provider wss channel:</p>
         <pre><code>$ curl "http://localhost:8080/v2/ws/subscribe?fsym=BTC&tsym=USDT"</code></pre>
-        <p>List of requests to working with integrated websocket server:</p>
+        <p>List of requests for working with integrated websocket server:</p>
         <ul>
             <li>Get the <strong>latest price</strong>:
                 <pre><code>{"type": "price", "pair":{"fsym":"BTC","tsym":"USDT"}}</code></pre>
             </li>
-            <li><strong>Subscribe</strong> to updates for the selected currency pair that is currently being
-                collected:
+            <li><strong>Subscribe</strong> to updates for the selected currency pair that is currently being collected:
                 <pre><code>{"type": "subscribe", "pair":{"fsym":"BTC","tsym":"USDT"}}</code></pre>
             </li>
             <li><strong>Unsubscribe</strong> from updates for the selected currency pair:
@@ -153,7 +152,6 @@
             timeout. This means that if you want to keep the connection alive without adding a subscription, you should
             ping the ws server or request the latest price at intervals less than one minute.
         </p>
-
     </article>
 </main>
 <footer class="mt-6 py-4 text-center text-sm">

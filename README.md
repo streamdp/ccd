@@ -13,7 +13,7 @@ specific currency pairs. These workers handle data pulling at defined intervals.
 * **Price Retrieval**: Fetch the most recent price data for a selected currency pair, including cached data when the 
 data provider is unavailable.
 * **WebSocket Integration**: Provides a WebSocket connection for real-time updates. Clients can receive actual market 
-info, subscribe or unsubscribe to specific currency pairs which currently collected.
+info, subscribe or unsubscribe to specific currency pairs that are currently being collected.
 
 ## Build app
 ```bash

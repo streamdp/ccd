@@ -36,14 +36,9 @@ func Test_handler_subscribe(t *testing.T) {
 			},
 		},
 		{
-			name: "subscription already present",
-			subscriptions: func() *cache.Cache {
-				c := cache.New()
-				c.Add((&pair{From: "BTC", To: "USDT"}).buildName())
-
-				return c
-			}(),
-			pairs: []*pair{{From: "BTC", To: "USDT"}},
+			name:          "subscription already present",
+			subscriptions: cacheWithSubscription(&pair{From: "BTC", To: "USDT"}),
+			pairs:         []*pair{{From: "BTC", To: "USDT"}},
 		},
 	}
 	for _, tt := range tests {
@@ -104,52 +99,25 @@ func Test_handler_unsubscribe(t *testing.T) {
 		pairs         []*pair
 	}{
 		{
-			name: "one pair unsubscribe",
-			subscriptions: func() *cache.Cache {
-				c := cache.New()
-				c.Add((&pair{From: "BTC", To: "USDT"}).buildName())
-
-				return c
-			}(),
-			pairs: []*pair{{
-				From: "BTC",
-				To:   "USDT",
-			}},
+			name:          "one pair unsubscribe",
+			subscriptions: cacheWithSubscription(&pair{From: "BTC", To: "USDT"}),
+			pairs:         []*pair{{From: "BTC", To: "USDT"}},
 		},
 		{
 			name: "several pairs unsubscribe",
-			subscriptions: func() *cache.Cache {
-				c := cache.New()
-				c.Add((&pair{From: "BTC", To: "USDT"}).buildName())
-				c.Add((&pair{From: "ETH", To: "USDT"}).buildName())
-
-				return c
-			}(),
+			subscriptions: cacheWithSubscription(
+				&pair{From: "BTC", To: "USDT"},
+				&pair{From: "ETH", To: "USDT"},
+			),
 			pairs: []*pair{
-				{
-					From: "BTC",
-					To:   "USDT",
-				},
-				{
-					From: "ETH",
-					To:   "USDT",
-				},
+				{From: "BTC", To: "USDT"},
+				{From: "ETH", To: "USDT"},
 			},
 		},
 		{
-			name: "subscription not found",
-			subscriptions: func() *cache.Cache {
-				c := cache.New()
-				c.Add((&pair{From: "BTC", To: "USDT"}).buildName())
-
-				return c
-			}(),
-			pairs: []*pair{
-				{
-					From: "ETH",
-					To:   "USDT",
-				},
-			},
+			name:          "subscription not found",
+			subscriptions: cacheWithSubscription(&pair{From: "BTC", To: "USDT"}),
+			pairs:         []*pair{{From: "ETH", To: "USDT"}},
 		},
 	}
 
@@ -219,10 +187,7 @@ func Test_handler_getLastPrice(t *testing.T) {
 			db: &mockDatabase{
 				dataPipe: make(chan *domain.Data, 1),
 			},
-			p: &pair{
-				From: "BTC",
-				To:   "USDT",
-			},
+			p: &pair{From: "BTC", To: "USDT"},
 			want: &domain.Data{
 				FromSymbol: "BTC",
 				ToSymbol:   "USDT",
@@ -241,10 +206,7 @@ func Test_handler_getLastPrice(t *testing.T) {
 				},
 				dataPipe: make(chan *domain.Data, 1),
 			},
-			p: &pair{
-				From: "BTC",
-				To:   "USDT",
-			},
+			p: &pair{From: "BTC", To: "USDT"},
 			want: &domain.Data{
 				FromSymbol: "BTC",
 				ToSymbol:   "USDT",
@@ -258,10 +220,7 @@ func Test_handler_getLastPrice(t *testing.T) {
 				dataPipe: make(chan *domain.Data, 1),
 				err:      v1.ErrGetPrice,
 			},
-			p: &pair{
-				From: "BTC",
-				To:   "USDT",
-			},
+			p:       &pair{From: "BTC", To: "USDT"},
 			want:    nil,
 			wantErr: v1.ErrGetPrice,
 		},

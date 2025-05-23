@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	welcomeMessage = "Welcome to the CCD Server! To get the latest price send request like this: " +
+	welcomeMessage = "Welcome! To get the latest price send request like this: " +
 		"{\"type\": \"price\", \n\"pair\": { \"fsym\":\"CRYPTO\",\"tsym\":\"COMMON\" }}"
 	closeMessage = "Connection will be closed at the client's request."
 )
@@ -32,6 +32,7 @@ const (
 	messageTypeError     = "error"
 	messageTypeHeartbeat = "heartbeat"
 	messageTypePong      = "pong"
+	messageTypeData      = "data"
 )
 
 type handler struct {

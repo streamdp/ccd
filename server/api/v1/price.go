@@ -26,14 +26,14 @@ func (p *PriceQuery) ToUpper() *PriceQuery {
 	return p
 }
 
-var errGetPrice = errors.New("failed to get price")
+var ErrGetPrice = errors.New("failed to get price")
 
 // LastPrice return up-to-date data for the selected currencies pair
 func LastPrice(r clients.RestClient, db db.Database, from, to string) (*domain.Data, error) {
 	data, err := r.Get(from, to)
 	if err != nil {
 		if data, err = db.GetLast(from, to); err != nil {
-			return nil, errGetPrice
+			return nil, ErrGetPrice
 		}
 
 		return data, nil

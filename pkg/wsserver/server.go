@@ -118,7 +118,7 @@ func (s *Server) processSubscriptions() {
 		}
 
 		bytes := (&wsMessage{
-			T:         "data",
+			T:         messageTypeData,
 			Data:      data,
 			Timestamp: time.Now().UTC().UnixMilli(),
 		}).Bytes()

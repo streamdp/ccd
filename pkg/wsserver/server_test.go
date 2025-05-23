@@ -13,6 +13,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func cacheWithSubscription(p ...*pair) *cache.Cache {
+	c := cache.New()
+	for i := range p {
+		c.Add(p[i].buildName())
+	}
+
+	return c
+}
+
 func TestServer_getInactiveClients(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -52,15 +61,6 @@ func TestServer_getInactiveClients(t *testing.T) {
 			}
 		})
 	}
-}
-
-func cacheWithSubscription(p ...*pair) *cache.Cache {
-	c := cache.New()
-	for i := range p {
-		c.Add(p[i].buildName())
-	}
-
-	return c
 }
 
 func TestServer_getSubscribers(t *testing.T) {

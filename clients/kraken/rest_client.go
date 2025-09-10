@@ -60,6 +60,9 @@ func (r *rest) Get(fSym string, tSym string) (*domain.Data, error) {
 	if response, err = r.client.Get(u.String()); err != nil {
 		return nil, fmt.Errorf("failed to fetch data: %w", err)
 	}
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(response.Body)
 	if body, err = io.ReadAll(response.Body); err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}

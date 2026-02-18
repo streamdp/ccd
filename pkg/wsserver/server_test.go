@@ -261,9 +261,7 @@ func TestServer_processSubscriptions(t *testing.T) {
 					continue
 				}
 
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+				wg.Go(func() {
 					defer close(c.handler.messagePipe)
 
 					for {
@@ -287,7 +285,7 @@ func TestServer_processSubscriptions(t *testing.T) {
 							return
 						}
 					}
-				}()
+				})
 			}
 
 			s.pipe <- tt.data

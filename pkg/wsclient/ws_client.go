@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"maps"
 	"net/http"
 	"strings"
 	"sync"
@@ -103,9 +104,7 @@ func (w *Ws) Subscribe(ctx context.Context, from, to string) error {
 func (w *Ws) ListSubscriptions() domain.Subscriptions {
 	s := make(domain.Subscriptions, len(w.subscriptions))
 	w.subMu.RLock()
-	for k, v := range w.subscriptions {
-		s[k] = v
-	}
+	maps.Copy(s, w.subscriptions)
 	w.subMu.RUnlock()
 
 	return s
@@ -277,7 +276,10 @@ func (w *Ws) wsUp() {
 }
 
 func (w *Ws) reconnect(ctx context.Context) error {
-	var err error
+	var (
+		err  error
+		resp *http.Response
+	)
 
 	if w.conn != nil {
 		err = w.conn.Close(websocket.StatusNormalClosure, "attempt to reconnect")
@@ -287,9 +289,11 @@ func (w *Ws) reconnect(ctx context.Context) error {
 		w.conn = nil
 	}
 
-	if w.conn, _, err = websocket.Dial(ctx, w.wsUrl, &websocket.DialOptions{HTTPClient: w.httpClient}); err != nil {
+	w.conn, resp, err = websocket.Dial(ctx, w.wsUrl, &websocket.DialOptions{HTTPClient: w.httpClient})
+	if err != nil {
 		return fmt.Errorf("failed to dial ws server: %w", err)
 	}
+	_ = resp.Body.Close()
 
 	return nil
 }

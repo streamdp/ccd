@@ -7,7 +7,7 @@ import (
 
 func TestResult_UpdateDataField(t *testing.T) {
 	type args struct {
-		data interface{}
+		data any
 	}
 	tests := []struct {
 		name string
@@ -59,7 +59,7 @@ func TestResult_UpdateAllFields(t *testing.T) {
 	type args struct {
 		code int
 		msg  string
-		data interface{}
+		data any
 	}
 	tests := []struct {
 		name string

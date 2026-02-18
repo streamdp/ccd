@@ -29,15 +29,15 @@ func InitWs(
 	w.ChannelNameBuilder = buildChannelName
 
 	w.SubscribeMessageBuilder = func(ch string, id int64) ([]byte, error) {
-		return []byte(fmt.Sprintf("{\"sub\": \"%s\", \"id\":\"%d\"}", ch, id)), nil
+		return fmt.Appendf(nil, "{\"sub\": \"%s\", \"id\":\"%d\"}", ch, id), nil
 	}
 
 	w.UnsubscribeMessageBuilder = func(ch string, id int64) ([]byte, error) {
-		return []byte(fmt.Sprintf("{\"unsub\": \"%s\", \"id\":\"%d\"}", ch, id)), nil
+		return fmt.Appendf(nil, "{\"unsub\": \"%s\", \"id\":\"%d\"}", ch, id), nil
 	}
 
 	w.PongMessageBuilder = func(ch string, id int64) ([]byte, error) {
-		return []byte(fmt.Sprintf("{\"pong\":%d}", id)), nil
+		return fmt.Appendf(nil, "{\"pong\":%d}", id), nil
 	}
 
 	w.MessageHandler = func(ctx context.Context) {
@@ -144,12 +144,15 @@ func handleWsUpdate(w *wsclient.Ws, body []byte, pipe []chan *domain.Data) error
 }
 
 func gzipDecompress(r io.Reader) ([]byte, error) {
-	r, err := gzip.NewReader(r)
+	gr, err := gzip.NewReader(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
 	}
+	defer func(gr *gzip.Reader) {
+		_ = gr.Close()
+	}(gr)
 
-	data, err := io.ReadAll(r)
+	data, err := io.ReadAll(gr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read uncompressed data: %w", err)
 	}

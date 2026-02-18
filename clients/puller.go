@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"maps"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -36,9 +37,7 @@ func (p *restPuller) ListTasks() Tasks {
 	var t = make(Tasks, len(p.tasks))
 
 	p.pullerMu.RLock()
-	for k, v := range p.tasks {
-		t[k] = v
-	}
+	maps.Copy(t, p.tasks)
 	p.pullerMu.RUnlock()
 
 	return t

@@ -160,7 +160,7 @@ func mergeTasks(tasks clients.Tasks, subscriptions domain.Subscriptions) any {
 		return nil
 	}
 
-	list := map[string]map[string]interface{}{}
+	list := map[string]map[string]any{}
 
 	if len(tasks) != 0 {
 		for _, v := range tasks {
@@ -169,7 +169,7 @@ func mergeTasks(tasks clients.Tasks, subscriptions domain.Subscriptions) any {
 
 				continue
 			}
-			list[v.From] = make(map[string]interface{})
+			list[v.From] = make(map[string]any)
 			list[v.From][v.To] = v
 		}
 	}
@@ -181,7 +181,7 @@ func mergeTasks(tasks clients.Tasks, subscriptions domain.Subscriptions) any {
 
 				continue
 			}
-			list[v.From] = make(map[string]interface{})
+			list[v.From] = make(map[string]any)
 			list[v.From][v.To] = v
 		}
 	}

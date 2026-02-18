@@ -38,11 +38,11 @@ func InitWs(
 	w.ChannelNameBuilder = buildChannelName
 
 	w.SubscribeMessageBuilder = func(ch string, id int64) ([]byte, error) {
-		return []byte(fmt.Sprintf("{\"action\":\"SubAdd\",\"subs\":[\"%s\"]}", ch)), nil
+		return fmt.Appendf(nil, "{\"action\":\"SubAdd\",\"subs\":[\"%s\"]}", ch), nil
 	}
 
 	w.UnsubscribeMessageBuilder = func(ch string, id int64) ([]byte, error) {
-		return []byte(fmt.Sprintf("{\"action\":\"SubRemove\",\"subs\":[\"%s\"]}", ch)), nil
+		return fmt.Appendf(nil, "{\"action\":\"SubRemove\",\"subs\":[\"%s\"]}", ch), nil
 	}
 
 	w.MessageHandler = func(ctx context.Context) {

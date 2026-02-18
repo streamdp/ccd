@@ -5,7 +5,7 @@ import (
 )
 
 type restData struct {
-	Error  []interface{} `json:"error"`
+	Error  []any `json:"error"`
 	Result map[string]restTickerInfo
 }
 

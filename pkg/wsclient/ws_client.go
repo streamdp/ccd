@@ -293,7 +293,9 @@ func (w *Ws) reconnect(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to dial ws server: %w", err)
 	}
-	_ = resp.Body.Close()
+	if resp.Body != nil {
+		_ = resp.Body.Close()
+	}
 
 	return nil
 }

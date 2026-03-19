@@ -63,7 +63,10 @@ func InitWs(
 				if hb.isLost() {
 					if err := w.HandleWsError(ctx, errHeartbeat); err != nil {
 						l.Println(err)
-						w.WsDown()
+
+						if err = w.WsDown(); err != nil {
+							l.Println(err)
+						}
 
 						return
 					}
@@ -81,7 +84,9 @@ func InitWs(
 						continue
 					}
 
-					w.WsDown()
+					if err = w.WsDown(); err != nil {
+						l.Println(err)
+					}
 
 					return
 				}
@@ -97,7 +102,9 @@ func InitWs(
 				case "999":
 					hb.reset()
 				case "429":
-					w.WsDown()
+					if err = w.WsDown(); err != nil {
+						l.Println(err)
+					}
 
 					fallthrough
 				case "3", "16", "17", "18", "500":

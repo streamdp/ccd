@@ -69,7 +69,9 @@ func InitWs(
 						continue
 					}
 
-					w.WsDown()
+					if err = w.WsDown(); err != nil {
+						l.Println(err)
+					}
 
 					return
 				}

@@ -76,7 +76,9 @@ func New(ctx context.Context, wsUrl string, sessionRepo clients.SessionRepo, l *
 }
 
 func (w *Ws) Subscribe(ctx context.Context, from, to string) error {
-	w.wsUp()
+	if err := w.wsUp(); err != nil {
+		return fmt.Errorf("failed to perform ws up action: %w", err)
+	}
 
 	id := time.Now().UnixMilli()
 	ch := w.ChannelNameBuilder(from, to)
@@ -138,7 +140,9 @@ func (w *Ws) Unsubscribe(ctx context.Context, from, to string) error {
 	}
 
 	if len(w.subscriptions) == 0 {
-		w.WsDown()
+		if err = w.WsDown(); err != nil {
+			w.l.Printf("failed to perform ws down action: %v", err)
+		}
 	}
 
 	return nil
@@ -266,20 +270,26 @@ func (w *Ws) RestoreLastSession(ctx context.Context) error {
 	return nil
 }
 
-func (w *Ws) WsDown() {
+func (w *Ws) WsDown() error {
 	select {
 	case w.down <- struct{}{}:
 		<-w.down
 	default:
+		return fmt.Errorf("ws down action is already sent, try again later")
 	}
+
+	return nil
 }
 
-func (w *Ws) wsUp() {
+func (w *Ws) wsUp() error {
 	select {
 	case w.up <- struct{}{}:
 		<-w.up
 	default:
+		return fmt.Errorf("ws up action is already sent, try again later")
 	}
+
+	return nil
 }
 
 func (w *Ws) reconnect(ctx context.Context) error {

@@ -69,6 +69,7 @@ func Test_pair_toUpper(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.p.toUpper()
+
 			if !reflect.DeepEqual(tt.p, tt.want) {
 				t.Errorf("toUpper() gotU = %v, want %v", tt.p, tt.want)
 			}

@@ -8,6 +8,7 @@ func Test_getDataSource(t *testing.T) {
 	type args struct {
 		dataBaseUrl string
 	}
+
 	tests := []struct {
 		name                 string
 		args                 args
@@ -35,9 +36,11 @@ func Test_getDataSource(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotDriverName, gotConnectionString := getDataSource(tt.args.dataBaseUrl)
+
 			if gotDriverName != tt.wantDriverName {
 				t.Errorf("getDataSource() got = %v, want %v", gotDriverName, tt.wantDriverName)
 			}
+
 			if gotConnectionString != tt.wantConnectionString {
 				t.Errorf("getDataSource() got1 = %v, want %v", gotConnectionString, tt.wantConnectionString)
 			}

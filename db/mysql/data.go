@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -11,11 +12,12 @@ import (
 var errEmptyData = errors.New("empty data")
 
 // GetLast row with the most recent data for the selected currencies pair
-func (d *Db) GetLast(from string, to string) (*domain.Data, error) {
+func (d *Db) GetLast(ctx context.Context, from string, to string) (*domain.Data, error) {
 	result := &domain.Data{
 		FromSymbol: from,
 		ToSymbol:   to,
 	}
+
 	query := `
 		select
 		    _id,
@@ -35,7 +37,7 @@ func (d *Db) GetLast(from string, to string) (*domain.Data, error) {
 		  and toSym=(select _id from symbols where symbol=?) 
 		ORDER BY lastupdate DESC limit 1;
 `
-	if err := d.QueryRow(query, from, to).Scan(
+	if err := d.QueryRowContext(ctx, query, from, to).Scan(
 		&result.Id,
 		&result.Change24Hour,
 		&result.ChangePct24Hour,
@@ -56,10 +58,11 @@ func (d *Db) GetLast(from string, to string) (*domain.Data, error) {
 }
 
 // Insert clients.Data from the clients.DataPipe to the Db
-func (d *Db) Insert(data *domain.Data) (sql.Result, error) {
+func (d *Db) Insert(ctx context.Context, data *domain.Data) (sql.Result, error) {
 	if data == nil {
 		return nil, errEmptyData
 	}
+
 	query := `insert into data (
 		                  fromSym,
 		                  toSym,
@@ -81,7 +84,9 @@ func (d *Db) Insert(data *domain.Data) (sql.Result, error) {
 		        ?,?,?,?,?,?,?,?,?,?,?
 		)
 `
-	result, err := d.Exec(
+
+	result, err := d.ExecContext(
+		ctx,
 		query,
 		&data.FromSymbol,
 		&data.ToSymbol,

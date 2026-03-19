@@ -12,6 +12,7 @@ func Test_buildChannelName(t *testing.T) {
 		from string
 		to   string
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -49,6 +50,7 @@ func Test_convertWsDataToDomain(t *testing.T) {
 		to   string
 		d    *wsData
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -110,7 +112,8 @@ func Test_convertWsDataToDomain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := convertWsDataToDomain(tt.args.from, tt.args.to, tt.args.d); !reflect.DeepEqual(got, tt.want) {
+			got, _ := convertWsDataToDomain(tt.args.from, tt.args.to, tt.args.d)
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("convertWsDataToDomain() = %v, want %v", got, tt.want)
 			}
 		})

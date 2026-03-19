@@ -67,6 +67,7 @@ func (d *Db) Symbols() ([]*domain.Symbol, error) {
 	}(rows)
 
 	var symbols []*domain.Symbol
+
 	for rows.Next() {
 		var (
 			s string
@@ -75,6 +76,7 @@ func (d *Db) Symbols() ([]*domain.Symbol, error) {
 		if err := rows.Scan(&s, &u); err != nil {
 			return nil, fmt.Errorf("%w: %w", errCopyResult, err)
 		}
+
 		r, _ := utf8.DecodeRune(u)
 		symbols = append(symbols, &domain.Symbol{
 			Symbol:  s,

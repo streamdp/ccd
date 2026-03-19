@@ -31,6 +31,7 @@ func (r *symbolRepo) Update(s, u string) error {
 	if _, err := r.s.UpdateSymbol(s, u); err != nil {
 		return fmt.Errorf("failed to update symbol: %w", err)
 	}
+
 	r.c.Add(s)
 
 	return nil
@@ -41,6 +42,7 @@ func (r *symbolRepo) Load() error {
 	if err != nil {
 		return fmt.Errorf("failed to load symbols: %w", err)
 	}
+
 	for i := range s {
 		r.c.Add(s[i].Symbol)
 	}
@@ -56,9 +58,11 @@ func (r *symbolRepo) Add(s, u string) error {
 	if r.IsPresent(s) {
 		return nil
 	}
+
 	if _, err := r.s.AddSymbol(s, u); err != nil {
 		return fmt.Errorf("failed to add symbol: %w", err)
 	}
+
 	r.c.Add(s)
 
 	return nil
@@ -68,9 +72,11 @@ func (r *symbolRepo) Remove(s string) error {
 	if !r.IsPresent(s) {
 		return nil
 	}
+
 	if _, err := r.s.RemoveSymbol(s); err != nil {
 		return fmt.Errorf("failed to remove symbol: %w", err)
 	}
+
 	r.c.Remove(s)
 
 	return nil

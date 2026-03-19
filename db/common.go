@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -14,8 +15,8 @@ import (
 
 // Database interface makes it possible to expand the list of data storages
 type Database interface {
-	Insert(data *domain.Data) (result sql.Result, err error)
-	GetLast(from string, to string) (result *domain.Data, err error)
+	Insert(ctx context.Context, data *domain.Data) (result sql.Result, err error)
+	GetLast(ctx context.Context, from, to string) (result *domain.Data, err error)
 	DataPipe() chan *domain.Data
 
 	Close() error
@@ -36,6 +37,7 @@ func Connect(cfg *config.App) (any, error) {
 	default:
 		database, err = mysql.Connect(connectionString)
 	}
+
 	if err != nil {
 		return nil, fmt.Errorf("database connection error: %w", err)
 	}
@@ -43,9 +45,9 @@ func Connect(cfg *config.App) (any, error) {
 	return database, nil
 }
 
-func Serve(d Database, l *log.Logger) {
+func Serve(ctx context.Context, d Database, l *log.Logger) {
 	for data := range d.DataPipe() {
-		if _, err := d.Insert(data); err != nil {
+		if _, err := d.Insert(ctx, data); err != nil {
 			l.Println(err)
 		}
 	}

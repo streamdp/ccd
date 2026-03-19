@@ -12,6 +12,7 @@ func Test_buildChannelName(t *testing.T) {
 		from string
 		to   string
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -50,6 +51,7 @@ func Test_convertWsDataToDomain(t *testing.T) {
 		ticker     *wsTickerInfo
 		lastUpdate int64
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -113,7 +115,7 @@ func Test_convertWsDataToDomain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := convertWsDataToDomain(tt.args.from, tt.args.to, tt.args.ticker, tt.args.lastUpdate)
+			got, _ := convertWsDataToDomain(tt.args.from, tt.args.to, tt.args.ticker, tt.args.lastUpdate)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("convertHuobiWsDataToDomain() = %v, want %v", got, tt.want)
 			}

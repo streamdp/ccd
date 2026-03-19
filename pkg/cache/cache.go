@@ -22,6 +22,7 @@ func (c *Cache) GetAll() []string {
 
 	c.m.RLock()
 	defer c.m.RUnlock()
+
 	for k := range c.c {
 		ret = append(ret, k)
 	}
@@ -32,23 +33,29 @@ func (c *Cache) GetAll() []string {
 func (c *Cache) Add(s string) {
 	c.m.Lock()
 	defer c.m.Unlock()
+
 	c.c[strings.ToUpper(s)] = struct{}{}
 }
 
 func (c *Cache) Remove(s string) {
 	c.m.Lock()
 	defer c.m.Unlock()
+
 	delete(c.c, strings.ToUpper(s))
 }
 
 func (c *Cache) IsPresent(s string) bool {
 	c.m.RLock()
 	defer c.m.RUnlock()
+
 	_, ok := c.c[strings.ToUpper(s)]
 
 	return ok
 }
 
 func (c *Cache) Len() int {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
 	return len(c.c)
 }

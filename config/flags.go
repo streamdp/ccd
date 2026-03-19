@@ -17,6 +17,7 @@ func LoadConfig() (*App, error) {
 		showVersion bool
 		appCfg      = NewAppConfig()
 	)
+
 	flag.BoolVar(&showHelp, "h", false, "display help")
 	flag.BoolVar(&showVersion, "v", false, "display version")
 	flag.BoolVar(&appCfg.debug, "debug", false, "run the program in debug mode")
@@ -35,6 +36,7 @@ func LoadConfig() (*App, error) {
 		flag.Usage()
 		os.Exit(1)
 	}
+
 	if showVersion {
 		fmt.Println("ccd version: " + version)
 		os.Exit(1)

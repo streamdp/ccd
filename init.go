@@ -37,6 +37,7 @@ func initRestClient(cfg *config.App) (clients.RestClient, error) {
 	default:
 		restClient, err = cryptocompare.Init(cfg)
 	}
+
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errInitRestClient, err)
 	}
@@ -65,6 +66,7 @@ func initWsClient(
 	default:
 		wsClient, err = cryptocompare.InitWs(ctx, sessionRepo, l, cfg.Http, cfg.ApiKey, d.DataPipe(), ws.DataPipe())
 	}
+
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errInitWsClient, err)
 	}
@@ -84,6 +86,7 @@ func newSessionRepo(s sessionrepo.SessionStore, cfg *config.App) (clients.Sessio
 	default:
 		sessionRepo, err = sessionrepo.New(s)
 	}
+
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errInitSessionStore, err)
 	}

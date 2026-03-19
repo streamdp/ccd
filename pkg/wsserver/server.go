@@ -96,9 +96,11 @@ func (s *Server) Close() {
 	defer s.cancel()
 
 	s.clientsMu.RLock()
+
 	for c := range s.clients {
 		c.cancel()
 	}
+
 	s.clientsMu.RUnlock()
 }
 
@@ -133,11 +135,13 @@ func (s *Server) getSubscribers(subscription string) []*client {
 	var res []*client
 
 	s.clientsMu.RLock()
+
 	for c := range s.clients {
 		if c.handler.isActive && c.handler.subscriptions.IsPresent(subscription) {
 			res = append(res, c)
 		}
 	}
+
 	s.clientsMu.RUnlock()
 
 	return res
@@ -181,11 +185,13 @@ func (s *Server) getInactiveClients() []*client {
 	var res []*client
 
 	s.clientsMu.RLock()
+
 	for c := range s.clients {
 		if !c.handler.isActive {
 			res = append(res, c)
 		}
 	}
+
 	s.clientsMu.RUnlock()
 
 	return res

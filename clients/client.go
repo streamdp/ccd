@@ -8,6 +8,7 @@ import (
 
 type RestClient interface {
 	Get(from string, to string) (*domain.Data, error)
+	Close() error
 }
 
 type WsClient interface {

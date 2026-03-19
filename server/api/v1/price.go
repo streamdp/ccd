@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -29,10 +30,10 @@ func (p *PriceQuery) ToUpper() *PriceQuery {
 var ErrGetPrice = errors.New("failed to get price")
 
 // LastPrice return up-to-date data for the selected currencies pair
-func LastPrice(r clients.RestClient, db db.Database, from, to string) (*domain.Data, error) {
+func LastPrice(ctx context.Context, r clients.RestClient, db db.Database, from, to string) (*domain.Data, error) {
 	data, err := r.Get(from, to)
 	if err != nil {
-		if data, err = db.GetLast(from, to); err != nil {
+		if data, err = db.GetLast(ctx, from, to); err != nil {
 			return nil, ErrGetPrice
 		}
 
@@ -48,12 +49,14 @@ func LastPrice(r clients.RestClient, db db.Database, from, to string) (*domain.D
 func Price(rc clients.RestClient, db db.Database) handlers.HandlerFuncResError {
 	return func(c *gin.Context) (*domain.Result, error) {
 		q := PriceQuery{}
+
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+
 		q.ToUpper()
 
-		p, err := LastPrice(rc, db, q.From, q.To)
+		p, err := LastPrice(c, rc, db, q.From, q.To)
 		if err != nil {
 			return &domain.Result{}, fmt.Errorf("failed to get price: %w", err)
 		}

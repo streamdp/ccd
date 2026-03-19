@@ -55,6 +55,7 @@ func (d *Db) RemoveTask(ctx context.Context, n string) (sql.Result, error) {
 }
 
 func (d *Db) GetSession(ctx context.Context) (map[string]int64, error) {
+	//nolint:sqlclosecheck
 	rows, err := d.QueryContext(ctx, `select task_name,"interval" from session`)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errExecuteQuery, err)
@@ -64,6 +65,7 @@ func (d *Db) GetSession(ctx context.Context) (map[string]int64, error) {
 	}(rows)
 
 	tasks := make(map[string]int64)
+
 	for rows.Next() {
 		var (
 			n string
@@ -72,6 +74,7 @@ func (d *Db) GetSession(ctx context.Context) (map[string]int64, error) {
 		if err = rows.Scan(&n, &i); err != nil {
 			return nil, fmt.Errorf("%w: %w", errCopyResult, err)
 		}
+
 		tasks[n] = i
 	}
 

@@ -37,6 +37,7 @@ func TestCache_Remove(t *testing.T) {
 	type fields struct {
 		c map[string]struct{}
 	}
+
 	tests := []struct {
 		name   string
 		fields fields

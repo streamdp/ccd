@@ -34,7 +34,10 @@ type rest struct {
 	limiter *time.Timer
 }
 
-var errWrongStatusCode = errors.New("wrong response status code")
+var (
+	errWrongStatusCode = errors.New("wrong response status code")
+	errEmptyData       = errors.New("empty data")
+)
 
 func Init(cfg *config.App) (*rest, error) {
 	return &rest{
@@ -52,6 +55,7 @@ func (r *rest) Get(fSym string, tSym string) (*domain.Data, error) {
 		response *http.Response
 		body     []byte
 	)
+
 	u, err := r.buildURL(fSym, tSym)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build url: %w", err)
@@ -60,24 +64,39 @@ func (r *rest) Get(fSym string, tSym string) (*domain.Data, error) {
 	if response, err = r.client.Get(u.String()); err != nil {
 		return nil, fmt.Errorf("failed to fetch data: %w", err)
 	}
+
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
 	}(response.Body)
+
 	if body, err = io.ReadAll(response.Body); err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
+
 	if response.StatusCode != http.StatusOK {
 		return nil, errWrongStatusCode
 	}
+
 	rawData := &restData{}
+
+	//nolint:musttag
 	if err = json.Unmarshal(body, rawData); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
+
 	if len(rawData.Error) != 0 {
 		return nil, fmt.Errorf("server error: %v", rawData.Error)
 	}
 
-	return convertRestDataToDomain(fSym, tSym, rawData, time.Now().UTC().UnixMilli()), nil
+	return convertRestDataToDomain(fSym, tSym, rawData, time.Now().UTC().UnixMilli())
+}
+
+func (r *rest) Close() error {
+	if r.limiter != nil {
+		r.limiter.Stop()
+	}
+
+	return nil
 }
 
 func (r *rest) limitRate() {
@@ -90,6 +109,7 @@ func (r *rest) buildURL(fSym string, tSym string) (*url.URL, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse url: %w", err)
 	}
+
 	query := u.Query()
 	query.Set("pair", strings.ToLower(fSym+tSym))
 	u.RawQuery = query.Encode()
@@ -97,9 +117,9 @@ func (r *rest) buildURL(fSym string, tSym string) (*url.URL, error) {
 	return u, nil
 }
 
-func convertRestDataToDomain(from, to string, d *restData, lastUpdate int64) *domain.Data {
+func convertRestDataToDomain(from, to string, d *restData, lastUpdate int64) (*domain.Data, error) {
 	if d == nil || len(d.Result) == 0 {
-		return nil
+		return nil, errEmptyData
 	}
 
 	var tick restTickerInfo
@@ -113,7 +133,7 @@ func convertRestDataToDomain(from, to string, d *restData, lastUpdate int64) *do
 	high24Hour, _ := strconv.ParseFloat(tick.H[1], 64)
 	price, _ := strconv.ParseFloat(tick.P[0], 64)
 
-	b, _ := json.Marshal(&domain.Raw{
+	b, err := json.Marshal(&domain.Raw{
 		FromSymbol:   from,
 		ToSymbol:     to,
 		Open24Hour:   open24Hour,
@@ -124,6 +144,9 @@ func convertRestDataToDomain(from, to string, d *restData, lastUpdate int64) *do
 		Supply:       float64(tick.T[1]),
 		LastUpdate:   lastUpdate,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal raw data: %w", err)
+	}
 
 	return &domain.Data{
 		FromSymbol:     from,
@@ -136,5 +159,5 @@ func convertRestDataToDomain(from, to string, d *restData, lastUpdate int64) *do
 		Supply:         float64(tick.T[1]),
 		LastUpdate:     lastUpdate,
 		DisplayDataRaw: string(b),
-	}
+	}, nil
 }

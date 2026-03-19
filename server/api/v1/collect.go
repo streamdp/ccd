@@ -40,6 +40,7 @@ func AddWorker(ctx context.Context, p Puller) handlers.HandlerFuncResError {
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+
 		q.toUpper()
 
 		if t := p.Task(q.From, q.To); t != nil {
@@ -63,6 +64,7 @@ func RemoveWorker(ctx context.Context, p Puller) handlers.HandlerFuncResError {
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+
 		q.toUpper()
 
 		if p.Task(q.From, q.To) == nil {
@@ -70,6 +72,7 @@ func RemoveWorker(ctx context.Context, p Puller) handlers.HandlerFuncResError {
 				http.StatusOK, "No data is collected for this pair", nil,
 			), nil
 		}
+
 		p.RemoveTask(ctx, q.From, q.To)
 
 		return domain.NewResult(http.StatusOK, "Task stopped successfully", nil), nil
@@ -86,6 +89,7 @@ func PullingStatus(p Puller, w clients.WsClient) handlers.HandlerFuncResError {
 		if p != nil {
 			tasks = p.ListTasks()
 		}
+
 		if w != nil {
 			subscriptions = w.ListSubscriptions()
 		}
@@ -103,12 +107,15 @@ func UpdateWorker(ctx context.Context, p Puller) handlers.HandlerFuncResError {
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+
 		q.toUpper()
 
 		var t *clients.Task
+
 		if t = p.Task(q.From, q.To); t == nil {
 			return domain.NewResult(http.StatusOK, "No data is collected for this pair", t), nil
 		}
+
 		p.UpdateTask(ctx, t, q.Interval)
 
 		return domain.NewResult(http.StatusOK, "Task updated successfully", t), nil
@@ -121,6 +128,7 @@ func Subscribe(ctx context.Context, w clients.WsClient) handlers.HandlerFuncResE
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+
 		q.toUpper()
 
 		if err := w.Subscribe(ctx, q.From, q.To); err != nil {
@@ -141,6 +149,7 @@ func Unsubscribe(ctx context.Context, w clients.WsClient) handlers.HandlerFuncRe
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+
 		q.toUpper()
 
 		if err := w.Unsubscribe(ctx, q.From, q.To); err != nil {
@@ -169,6 +178,7 @@ func mergeTasks(tasks clients.Tasks, subscriptions domain.Subscriptions) any {
 
 				continue
 			}
+
 			list[v.From] = make(map[string]any)
 			list[v.From][v.To] = v
 		}
@@ -181,6 +191,7 @@ func mergeTasks(tasks clients.Tasks, subscriptions domain.Subscriptions) any {
 
 				continue
 			}
+
 			list[v.From] = make(map[string]any)
 			list[v.From][v.To] = v
 		}

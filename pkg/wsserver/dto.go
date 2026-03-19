@@ -23,7 +23,10 @@ type wsMessage struct {
 }
 
 func (w *wsMessage) Bytes() []byte {
-	b, _ := json.Marshal(w)
+	b, err := json.Marshal(w)
+	if err != nil {
+		return []byte{}
+	}
 
 	return b
 }

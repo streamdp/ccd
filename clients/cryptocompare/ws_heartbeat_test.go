@@ -24,6 +24,7 @@ func Test_heartbeat_reset(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.hb.reset()
+
 			if tt.hb.c != tt.want {
 				t.Fatalf("reset(): got = %d, want = %d", tt.hb.c, tt.want)
 			}
@@ -51,6 +52,7 @@ func Test_heartbeat_decrease(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.hb.decrease()
+
 			if tt.hb.c != tt.want {
 				t.Fatalf("decrease(): got = %d, want = %d", tt.hb.c, tt.want)
 			}

@@ -54,6 +54,7 @@ func (h *handler) handleClientRequests(ctx context.Context) {
 	h.sendMessage(messageTypeMessage, welcomeMessage)
 
 	h.isActive = true
+
 	defer func() {
 		h.isActive = false
 	}()
@@ -69,15 +70,19 @@ func (h *handler) handleClientRequests(ctx context.Context) {
 			if h.subscriptions.Len() == 0 {
 				ctxRead, cancel = context.WithTimeout(ctx, readWait)
 			}
+
 			if err := wsjson.Read(ctxRead, h.conn, msg); err != nil {
 				cancel()
+
 				if errors.As(err, &websocket.CloseError{}) || errors.Is(err, context.DeadlineExceeded) {
 					return
 				}
+
 				h.l.Println(err)
 
 				return
 			}
+
 			cancel()
 
 			if msg.Pair != nil {
@@ -86,13 +91,14 @@ func (h *handler) handleClientRequests(ctx context.Context) {
 
 			switch msg.T {
 			case "price":
-				data, err := h.getLastPrice(msg.Pair)
+				data, err := h.getLastPrice(ctx, msg.Pair)
 				if err != nil {
 					h.sendMessage(messageTypeError, "failed to handle get price action: "+err.Error())
 					h.l.Println(err)
 
 					continue
 				}
+
 				h.messagePipe <- (&wsMessage{
 					T:         "data",
 					Data:      data,
@@ -133,6 +139,7 @@ func (h *handler) handleHeartbeat(ctx context.Context) {
 			return
 		case <-t.C:
 			t.Reset(defaultHeartbeatInterval)
+
 			if !h.isActive || h.subscriptions.Len() == 0 {
 				continue
 			}
@@ -151,6 +158,7 @@ func (h *handler) handleMessagePipe(ctx context.Context) {
 
 			return
 		}
+
 		cancel()
 	}
 }
@@ -197,8 +205,8 @@ func (h *handler) sendMessage(messageType, message string) {
 	h.messagePipe <- msg.Bytes()
 }
 
-func (h *handler) getLastPrice(p *pair) (*domain.Data, error) {
-	data, err := v1.LastPrice(h.rc, h.db, p.From, p.To)
+func (h *handler) getLastPrice(ctx context.Context, p *pair) (*domain.Data, error) {
+	data, err := v1.LastPrice(ctx, h.rc, h.db, p.From, p.To)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get last price: %w", err)
 	}

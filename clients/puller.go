@@ -87,10 +87,12 @@ func (p *restPuller) RestoreLastSession(ctx context.Context) error {
 	if p.sessionRepo == nil {
 		return nil
 	}
+
 	ses, err := p.sessionRepo.GetSession(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
 	}
+
 	for k, v := range ses {
 		if pair := strings.Split(k, ":"); len(pair) == 2 {
 			from, to := pair[0], pair[1]
@@ -103,6 +105,7 @@ func (p *restPuller) RestoreLastSession(ctx context.Context) error {
 
 func (p *restPuller) UpdateTask(ctx context.Context, t *Task, interval int64) *Task {
 	atomic.StoreInt64(&t.Interval, interval)
+
 	if err := p.sessionRepo.UpdateTask(ctx, buildTaskName(t.From, t.To), interval); err != nil {
 		p.l.Println(err)
 	}
@@ -120,7 +123,7 @@ func (p *restPuller) newTask(from string, to string, interval int64) *Task {
 	}
 
 	return &Task{
-		done:     make(chan struct{}),
+		done:     make(chan struct{}, 1),
 		From:     from,
 		To:       to,
 		Interval: interval,

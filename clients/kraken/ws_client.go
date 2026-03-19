@@ -38,12 +38,10 @@ func InitWs(
 	}
 
 	w.PingMessageBuilder = func(ch string, id int64) ([]byte, error) {
-		msg, _ := json.Marshal(wsMessage{
+		return json.Marshal(wsMessage{
 			Method: "ping",
 			ReqId:  id,
 		})
-
-		return msg, nil
 	}
 
 	w.MessageHandler = func(ctx context.Context) {
@@ -58,6 +56,7 @@ func InitWs(
 				if err := w.Ping(ctx, "", time.Now().UTC().UnixMilli()); err != nil {
 					l.Println(err)
 				}
+
 				t.Reset(defaultPingInterval)
 			default:
 				body, err := w.Read(ctx)
@@ -65,9 +64,11 @@ func InitWs(
 					if !errors.Is(err, context.Canceled) {
 						l.Println(err)
 					}
+
 					if errors.Is(err, context.Canceled) || errors.Is(err, wsclient.ErrClientReconnected) {
 						continue
 					}
+
 					w.WsDown()
 
 					return
@@ -125,6 +126,7 @@ func handleServerResponse(body []byte) string {
 		if msg.Error != "" {
 			return "failed to subscribe: " + msg.Error
 		}
+
 		if msg.Success {
 			return fmt.Sprintf(
 				"%s channel: successfully subscribed on the %s pair", msg.Result.Channel, msg.Result.Symbol)
@@ -133,6 +135,7 @@ func handleServerResponse(body []byte) string {
 		if msg.Error != "" {
 			return "failed to unsubscribe: " + msg.Error
 		}
+
 		if msg.Success {
 			return fmt.Sprintf(
 				"%s channel: successfully unsubscribed from the %s pair", msg.Result.Channel, msg.Result.Symbol)
@@ -146,6 +149,8 @@ func handleServerResponse(body []byte) string {
 
 func handleWsUpdate(w *wsclient.Ws, body []byte, pipe []chan *domain.Data) error {
 	data := &wsData{}
+
+	//nolint:musttag
 	if err := json.Unmarshal(body, data); err != nil {
 		return fmt.Errorf("failed to unmarshal ws update message: %w", err)
 	}
@@ -160,7 +165,11 @@ func handleWsUpdate(w *wsclient.Ws, body []byte, pipe []chan *domain.Data) error
 			continue
 		}
 
-		domainData := convertWsDataToDomain(from, to, &tick, time.Now().UTC().UnixMilli())
+		domainData, err := convertWsDataToDomain(from, to, &tick, time.Now().UTC().UnixMilli())
+		if err != nil {
+			return fmt.Errorf("failed to convert ws update message: %w", err)
+		}
+
 		for i := range pipe {
 			pipe[i] <- domainData
 		}
@@ -169,12 +178,12 @@ func handleWsUpdate(w *wsclient.Ws, body []byte, pipe []chan *domain.Data) error
 	return nil
 }
 
-func convertWsDataToDomain(from, to string, tick *wsTickerInfo, lastUpdate int64) *domain.Data {
+func convertWsDataToDomain(from, to string, tick *wsTickerInfo, lastUpdate int64) (*domain.Data, error) {
 	if tick == nil {
-		return nil
+		return nil, errEmptyData
 	}
 
-	b, _ := json.Marshal(&domain.Raw{
+	b, err := json.Marshal(&domain.Raw{
 		FromSymbol:      from,
 		ToSymbol:        to,
 		Change24Hour:    tick.Change,
@@ -185,6 +194,9 @@ func convertWsDataToDomain(from, to string, tick *wsTickerInfo, lastUpdate int64
 		Price:           tick.Vwap,
 		LastUpdate:      lastUpdate,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal json: %w", err)
+	}
 
 	return &domain.Data{
 		FromSymbol:      from,
@@ -197,5 +209,5 @@ func convertWsDataToDomain(from, to string, tick *wsTickerInfo, lastUpdate int64
 		Price:           tick.Vwap,
 		LastUpdate:      lastUpdate,
 		DisplayDataRaw:  string(b),
-	}
+	}, nil
 }

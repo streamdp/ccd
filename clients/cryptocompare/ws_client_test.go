@@ -31,11 +31,13 @@ func Test_ws_buildURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotU, err := buildURL(tt.url, tt.apiKey)
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildURL() error = %v, wantErr %v", err, tt.wantErr)
 
 				return
 			}
+
 			if !reflect.DeepEqual(gotU, tt.wantU) {
 				t.Errorf("buildURL() gotU = %v, want %v", gotU, tt.wantU)
 			}
@@ -48,6 +50,7 @@ func Test_buildChannelName(t *testing.T) {
 		from string
 		to   string
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -134,7 +137,7 @@ func Test_convertWsDataToDomain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := convertWsDataToDomain(tt.d); !reflect.DeepEqual(got, tt.want) {
+			if got, _ := convertWsDataToDomain(tt.d); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("convertWsDataToDomain() = %v, want %v", got, tt.want)
 			}
 		})

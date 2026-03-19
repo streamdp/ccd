@@ -64,8 +64,8 @@ func New(ctx context.Context, wsUrl string, sessionRepo clients.SessionRepo, l *
 
 		subscriptions: domain.Subscriptions{},
 
-		up:   make(chan struct{}),
-		down: make(chan struct{}),
+		up:   make(chan struct{}, 1),
+		down: make(chan struct{}, 1),
 
 		sessionRepo: sessionRepo,
 	}
@@ -162,6 +162,7 @@ func (w *Ws) HandleWsError(ctx context.Context, err error) error {
 
 				continue
 			}
+
 			if err = w.resubscribe(ctx); err != nil {
 				w.l.Println("ws resubscribe error:", err)
 
@@ -266,13 +267,19 @@ func (w *Ws) RestoreLastSession(ctx context.Context) error {
 }
 
 func (w *Ws) WsDown() {
-	w.down <- struct{}{}
-	<-w.down
+	select {
+	case w.down <- struct{}{}:
+		<-w.down
+	default:
+	}
 }
 
 func (w *Ws) wsUp() {
-	w.up <- struct{}{}
-	<-w.up
+	select {
+	case w.up <- struct{}{}:
+		<-w.up
+	default:
+	}
 }
 
 func (w *Ws) reconnect(ctx context.Context) error {
@@ -286,6 +293,7 @@ func (w *Ws) reconnect(ctx context.Context) error {
 		if err != nil && !errors.As(err, &websocket.CloseError{}) && !errors.Is(err, context.Canceled) {
 			w.l.Println(err)
 		}
+
 		w.conn = nil
 	}
 
@@ -293,6 +301,7 @@ func (w *Ws) reconnect(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to dial ws server: %w", err)
 	}
+
 	if resp.Body != nil {
 		_ = resp.Body.Close()
 	}
@@ -309,6 +318,7 @@ func (w *Ws) resubscribe(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to build subscribe message: %w", err)
 		}
+
 		if err = w.sendMessage(ctx, msg); err != nil {
 			return fmt.Errorf("failed to resubscribe: %w", err)
 		}
@@ -357,17 +367,21 @@ func (w *Ws) serveWsConnection(ctx context.Context) {
 					cancel()
 
 					w.l.Printf("failed to open websocket connection")
+
 					isConnected = false
 
 					w.up <- struct{}{}
 
 					continue
 				}
+
 				go w.MessageHandler(ctxUp)
 
 				w.l.Printf("websocket connection open")
+
 				isConnected = true
 			}
+
 			w.up <- struct{}{}
 		case <-w.down:
 			if isConnected || w.isConnectionBroken(ctx) {
@@ -376,16 +390,20 @@ func (w *Ws) serveWsConnection(ctx context.Context) {
 				if err := w.conn.Close(websocket.StatusNormalClosure, "no active subscriptions"); err != nil {
 					w.l.Printf("failed to close websocket connection: %v", err)
 				}
+
 				w.conn = nil
 
 				msg := "websocket connection closed"
+
 				if len(w.subscriptions) == 0 {
 					msg += " (no active subscriptions were found)"
 				}
+
 				w.l.Println(msg)
 
 				isConnected = false
 			}
+
 			w.down <- struct{}{}
 		}
 	}

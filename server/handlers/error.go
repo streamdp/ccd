@@ -18,18 +18,22 @@ var ErrBindQuery = errors.New("failed to bind query")
 func GinHandler(h HandlerFuncResError) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		res, err := h(c)
+
 		if res == nil {
 			res = &domain.Result{}
 		}
+
 		if res.Code == 0 {
 			res.Code = getHttpStatus(err)
 		}
+
 		if err != nil {
 			res.Message = err.Error()
 			c.AbortWithStatusJSON(res.Code, res)
 
 			return
 		}
+
 		c.JSON(res.Code, res)
 	}
 }
@@ -38,6 +42,7 @@ func getHttpStatus(err error) int {
 	if err == nil {
 		return http.StatusOK
 	}
+
 	if errors.Is(err, ErrBindQuery) ||
 		errors.Is(err, wsclient.ErrNotSubscribed) {
 		return http.StatusBadRequest

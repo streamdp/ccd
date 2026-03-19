@@ -40,12 +40,15 @@ func (s *keysStore) GetSession(ctx context.Context) (map[string]int64, error) {
 	if s == nil {
 		return nil, errKeyStoreNotInitialized
 	}
+
 	session := make(map[string]int64)
+
 	for k, v := range s.c.WithContext(ctx).HGetAll(sessionName).Val() {
 		i, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get session: %w", err)
 		}
+
 		session[k] = i
 	}
 

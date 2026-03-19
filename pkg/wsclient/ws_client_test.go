@@ -41,10 +41,12 @@ func Test_huobiWs_pairFromChannelName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := &Ws{subscriptions: tt.subscriptions}
+
 			gotFrom, gotTo := h.PairFromChannelName(tt.ch)
 			if gotFrom != tt.wantFrom {
 				t.Errorf("pairFromChannelName() gotFrom = %v, want %v", gotFrom, tt.wantFrom)
 			}
+
 			if gotTo != tt.wantTo {
 				t.Errorf("pairFromChannelName() gotTo = %v, want %v", gotTo, tt.wantTo)
 			}
@@ -95,6 +97,7 @@ func Test_buildWsSessionName(t *testing.T) {
 		from string
 		to   string
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -130,6 +133,7 @@ func Test_errUnwrapCloseError(t *testing.T) {
 	type args struct {
 		err error
 	}
+
 	tests := []struct {
 		name string
 		args args

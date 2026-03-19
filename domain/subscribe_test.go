@@ -10,6 +10,7 @@ func TestSubscription_Id(t *testing.T) {
 		To   string
 		id   int64
 	}
+
 	tests := []struct {
 		name   string
 		fields fields

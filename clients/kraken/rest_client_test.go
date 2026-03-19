@@ -15,6 +15,7 @@ func Test_convertRestDataToDomain(t *testing.T) {
 		d          *restData
 		lastUpdate int64
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -84,7 +85,7 @@ func Test_convertRestDataToDomain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := convertRestDataToDomain(tt.args.from, tt.args.to, tt.args.d, tt.args.lastUpdate)
+			got, _ := convertRestDataToDomain(tt.args.from, tt.args.to, tt.args.d, tt.args.lastUpdate)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("convertRestDataToDomain() = %v, want %v", got, tt.want)
 			}
@@ -97,6 +98,7 @@ func Test_rest_buildURL(t *testing.T) {
 		fSym string
 		tSym string
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -133,12 +135,15 @@ func Test_rest_buildURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := &rest{}
+
 			gotU, err := h.buildURL(tt.args.fSym, tt.args.tSym)
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildURL() error = %v, wantErr %v", err, tt.wantErr)
 
 				return
 			}
+
 			if !reflect.DeepEqual(gotU, tt.wantU) {
 				t.Errorf("buildURL() gotU = %v, want %v", gotU, tt.wantU)
 			}

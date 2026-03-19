@@ -30,6 +30,7 @@ type rest struct {
 var (
 	errApiKeyNotDefined = errors.New("you should specify \"CCDC_APIKEY\" in you OS environment")
 	errWrongStatusCode  = errors.New("wrong status code")
+	errEmptyData        = errors.New("empty data")
 )
 
 // Init apiKey, apiUrl, wsURL variables with environment values and return CryptoCompareData structure
@@ -52,30 +53,41 @@ func (r *rest) Get(fSym string, tSym string) (*domain.Data, error) {
 		response *http.Response
 		body     []byte
 	)
+
 	u, err := r.buildURL(fSym, tSym)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build url: %w", err)
 	}
+
 	response, err = r.client.Get(u.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch data: %w", err)
 	}
+
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
 	}(response.Body)
+
 	body, err = io.ReadAll(response.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
+
 	if response.StatusCode != http.StatusOK {
 		return nil, errWrongStatusCode
 	}
+
 	rawData := &restData{}
+
 	if err = json.Unmarshal(body, rawData); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	return convertToDomain(fSym, tSym, rawData), nil
+	return convertToDomain(fSym, tSym, rawData)
+}
+
+func (r *rest) Close() error {
+	return nil
 }
 
 func (r *rest) buildURL(fSym string, tSym string) (*url.URL, error) {
@@ -83,6 +95,7 @@ func (r *rest) buildURL(fSym string, tSym string) (*url.URL, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to build url: %w", err)
 	}
+
 	query := u.Query()
 	query.Set("fsyms", fSym)
 	query.Set("tsyms", tSym)
@@ -92,12 +105,14 @@ func (r *rest) buildURL(fSym string, tSym string) (*url.URL, error) {
 	return u, nil
 }
 
-func convertToDomain(from, to string, d *restData) *domain.Data {
-	if d == nil || d.Raw == nil || d.Raw[from] == nil {
-		return nil
+func convertToDomain(from, to string, d *restData) (*domain.Data, error) {
+	if d == nil || d.Raw == nil || d.Raw[from] == nil || d.Raw[from][to] == nil {
+		return nil, errEmptyData
 	}
+
 	r := d.Raw[from][to]
-	b, _ := json.Marshal(&domain.Raw{
+
+	b, err := json.Marshal(&domain.Raw{
 		FromSymbol:     from,
 		ToSymbol:       to,
 		Open24Hour:     r.Open24Hour,
@@ -109,6 +124,9 @@ func convertToDomain(from, to string, d *restData) *domain.Data {
 		Supply:         r.Supply,
 		MktCap:         r.MktCap,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal json: %w", err)
+	}
 
 	return &domain.Data{
 		FromSymbol:      from,
@@ -124,5 +142,5 @@ func convertToDomain(from, to string, d *restData) *domain.Data {
 		MktCap:          r.MktCap,
 		LastUpdate:      r.LastUpdate,
 		DisplayDataRaw:  string(b),
-	}
+	}, nil
 }

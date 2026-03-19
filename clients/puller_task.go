@@ -22,8 +22,10 @@ type Tasks map[string]*Task
 
 func (t *Task) run(r RestClient, l *log.Logger, dataPipe []chan *domain.Data) {
 	timer := time.NewTimer(time.Duration(rand.Intn(defaultRunTaskGap)) * time.Second)
+
 	go func() {
 		defer close(t.done)
+
 		for {
 			select {
 			case <-t.done:
@@ -32,12 +34,14 @@ func (t *Task) run(r RestClient, l *log.Logger, dataPipe []chan *domain.Data) {
 				return
 			case <-timer.C:
 				timer.Reset(time.Duration(atomic.LoadInt64(&t.Interval)) * time.Second)
+
 				data, err := r.Get(t.From, t.To)
 				if err != nil {
 					l.Println(err)
 
 					continue
 				}
+
 				for i := range dataPipe {
 					dataPipe[i] <- data
 				}

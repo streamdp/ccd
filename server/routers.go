@@ -46,6 +46,7 @@ func (s *Server) InitRouter(ctx context.Context) error {
 		apiV1.POST("/price", handlers.GinHandler(v1.Price(s.rc, s.d)))
 
 		apiV1.GET("/ws", v1.HandleWs(ctx, s.ws))
+
 		if s.wc != nil {
 			apiV1.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, s.wc)))
 			apiV1.POST("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, s.wc)))
@@ -71,6 +72,7 @@ func (s *Server) InitRouter(ctx context.Context) error {
 		apiV2.GET("/price", handlers.GinHandler(v1.Price(s.rc, s.d)))
 		// websockets
 		apiV2.GET("/ws", v1.HandleWs(ctx, s.ws))
+
 		if s.wc != nil {
 			apiV2.GET("/ws/subscribe", handlers.GinHandler(v1.Subscribe(ctx, s.wc)))
 			apiV2.GET("/ws/unsubscribe", handlers.GinHandler(v1.Unsubscribe(ctx, s.wc)))

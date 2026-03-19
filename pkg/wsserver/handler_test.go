@@ -47,6 +47,7 @@ func Test_handler_subscribe(t *testing.T) {
 				messagePipe:   make(chan []byte, 10),
 				subscriptions: tt.subscriptions,
 			}
+
 			t.Cleanup(func() { close(h.messagePipe) })
 
 			for i := range tt.pairs {
@@ -65,6 +66,7 @@ func Test_handler_subscribe(t *testing.T) {
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
 			t.Cleanup(func() { cancel() })
 
 			go func() {
@@ -127,6 +129,7 @@ func Test_handler_unsubscribe(t *testing.T) {
 				messagePipe:   make(chan []byte, 10),
 				subscriptions: tt.subscriptions,
 			}
+
 			t.Cleanup(func() { close(h.messagePipe) })
 
 			for i := range tt.pairs {
@@ -141,6 +144,7 @@ func Test_handler_unsubscribe(t *testing.T) {
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
 			t.Cleanup(func() { cancel() })
 
 			go func() {
@@ -230,16 +234,19 @@ func Test_handler_getLastPrice(t *testing.T) {
 			t.Cleanup(func() {
 				close(tt.db.DataPipe())
 			})
+
 			h := &handler{
 				rc: tt.rc,
 				db: tt.db,
 			}
-			got, err := h.getLastPrice(tt.p)
+
+			got, err := h.getLastPrice(context.Background(), tt.p)
 			if err != nil && !errors.Is(errors.Unwrap(err), tt.wantErr) {
 				t.Errorf("getLastPrice() error = %v, wantErr %v", err, tt.wantErr)
 
 				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getLastPrice() got = %v, want %v", got, tt.want)
 			}
@@ -260,17 +267,21 @@ func (m *mockRestClient) Get(_ string, _ string) (*domain.Data, error) {
 	return m.data, nil
 }
 
+func (m *mockRestClient) Close() error {
+	return nil
+}
+
 type mockDatabase struct {
 	data     *domain.Data
 	dataPipe chan *domain.Data
 	err      error
 }
 
-func (m *mockDatabase) Insert(_ *domain.Data) (sql.Result, error) {
+func (m *mockDatabase) Insert(_ context.Context, _ *domain.Data) (sql.Result, error) {
 	return nil, m.err
 }
 
-func (m *mockDatabase) GetLast(_ string, _ string) (*domain.Data, error) {
+func (m *mockDatabase) GetLast(_ context.Context, _ string, _ string) (*domain.Data, error) {
 	if m.err != nil {
 		return nil, m.err
 	}

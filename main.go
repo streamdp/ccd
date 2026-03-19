@@ -22,6 +22,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+
 	gin.SetMode(appCfg.RunMode())
 
 	l.Printf("Run mode:\n")
@@ -31,29 +32,36 @@ func main() {
 	l.Printf("\tSession store=%v\n", appCfg.SessionStore)
 	l.Printf("\tPort=%v\n", appCfg.Http.Port())
 
+	ctx := context.Background()
+
 	d, err := db.Connect(appCfg)
 	if err != nil {
 		l.Fatalln(err)
 	}
+
 	database, ok := d.(db.Database)
 	if !ok {
 		l.Fatalln("database type assertion error")
 	}
+
 	defer func() {
 		if errClose := database.Close(); errClose != nil {
 			l.Printf("failed to close database connection: %v", errClose)
 		}
 	}()
-	go db.Serve(database, l)
+
+	go db.Serve(ctx, database, l)
 
 	sessionStore, ok := d.(sessionrepo.SessionStore)
 	if !ok {
 		l.Fatalln("task repo type assertion error")
 	}
+
 	sessionRepo, err := newSessionRepo(sessionStore, appCfg)
 	if err != nil {
 		l.Fatal(err)
 	}
+
 	defer func() {
 		if errClose := sessionRepo.Close(); errClose != nil {
 			l.Printf("failed to close session store: %v", errClose)
@@ -64,6 +72,7 @@ func main() {
 	if !ok {
 		l.Fatalln("symbol repo type assertion error")
 	}
+
 	symbolRepo := symbolsrepo.New(symbolsStore)
 	if err = symbolRepo.Load(); err != nil {
 		l.Fatalln(err)
@@ -74,8 +83,6 @@ func main() {
 		l.Fatalln(err)
 	}
 
-	ctx := context.Background()
-
 	wsServer := ws.NewServer(ctx, l, restClient, database)
 	defer wsServer.Close()
 
@@ -83,6 +90,7 @@ func main() {
 	if err != nil {
 		l.Fatalln(err)
 	}
+
 	if err = wsClient.RestoreLastSession(ctx); err != nil {
 		l.Printf("error restoring last ws session: %v", err)
 	}
@@ -96,6 +104,7 @@ func main() {
 	if err = srv.InitRouter(ctx); err != nil {
 		l.Fatalln(err)
 	}
+
 	if err = srv.Run(fmt.Sprintf(":%d", appCfg.Http.Port())); err != nil {
 		l.Fatalln(err)
 	}

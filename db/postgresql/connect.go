@@ -13,6 +13,7 @@ const Postgres = "postgres"
 // Db needed to add new methods for an instance *sql.Db
 type Db struct {
 	*sql.DB
+
 	pipe chan *domain.Data
 }
 

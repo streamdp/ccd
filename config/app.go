@@ -49,9 +49,11 @@ func (a *App) Validate() error {
 	if err := a.Http.Validate(); err != nil {
 		return err
 	}
+
 	if err := a.Redis.Validate(); err != nil {
 		return err
 	}
+
 	if a.DatabaseUrl == "" {
 		return errEmptyDatabaseUrl
 	}
@@ -85,6 +87,7 @@ func (a *App) loadEnvs() error {
 	if strings.ToLower(os.Getenv("CCDC_DEBUG")) == "true" {
 		a.debug = true
 	}
+
 	if a.debug {
 		a.runMode = gin.DebugMode
 	}

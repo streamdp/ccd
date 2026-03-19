@@ -48,6 +48,7 @@ func AddSymbol(sr SymbolsRepo) handlers.HandlerFuncResError {
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+
 		q.toUpper()
 
 		if err := sr.Add(q.Symbol, q.Unicode); err != nil {
@@ -69,6 +70,7 @@ func UpdateSymbol(sr SymbolsRepo) handlers.HandlerFuncResError {
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+
 		q.toUpper()
 
 		if err := sr.Update(q.Symbol, q.Unicode); err != nil {
@@ -90,6 +92,7 @@ func RemoveSymbol(sr SymbolsRepo) handlers.HandlerFuncResError {
 		if err := c.Bind(&q); err != nil {
 			return &domain.Result{}, fmt.Errorf("%w: %w", handlers.ErrBindQuery, err)
 		}
+
 		q.toUpper()
 
 		if err := sr.Remove(q.Symbol); err != nil {

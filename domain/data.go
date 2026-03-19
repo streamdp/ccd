@@ -39,7 +39,10 @@ type Raw struct {
 }
 
 func (d *Data) Bytes() []byte {
-	b, _ := json.Marshal(d)
+	b, err := json.Marshal(d)
+	if err != nil {
+		return []byte{}
+	}
 
 	return b
 }

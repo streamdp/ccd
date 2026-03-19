@@ -55,9 +55,11 @@ func InitWs(
 					if !errors.Is(err, context.Canceled) {
 						l.Println(err)
 					}
+
 					if errors.Is(err, context.Canceled) || errors.Is(err, wsclient.ErrClientReconnected) {
 						continue
 					}
+
 					w.WsDown()
 
 					return
@@ -68,6 +70,7 @@ func InitWs(
 
 					continue
 				}
+
 				if bytes.Contains(body, []byte("ping")) {
 					if err = w.Pong(ctx, "", (&wsPing{}).Unmarshal(body).Ts); err != nil {
 						l.Println(err)
@@ -75,6 +78,7 @@ func InitWs(
 
 					continue
 				}
+
 				if bytes.Contains(body, []byte("subbed")) {
 					if msg := handleServerResponse(body); msg != "" {
 						l.Println(msg)
@@ -82,6 +86,7 @@ func InitWs(
 
 					continue
 				}
+
 				if err = handleWsUpdate(w, body, pipe); err != nil {
 					l.Println(err)
 				}
@@ -110,6 +115,7 @@ func handleServerResponse(body []byte) string {
 		if msg.Subbed != "" {
 			return "ticker channel: successfully subscribed on the " + msg.Subbed
 		}
+
 		if msg.Unsubbed != "" {
 			return "ticker channel: successfully unsubscribed from the " + msg.Unsubbed
 		}
@@ -135,7 +141,11 @@ func handleWsUpdate(w *wsclient.Ws, body []byte, pipe []chan *domain.Data) error
 		return nil
 	}
 
-	domainData := convertWsDataToDomain(from, to, data)
+	domainData, err := convertWsDataToDomain(from, to, data)
+	if err != nil {
+		return fmt.Errorf("failed to convert ws update message: %w", err)
+	}
+
 	for i := range pipe {
 		pipe[i] <- domainData
 	}
@@ -160,11 +170,12 @@ func gzipDecompress(r io.Reader) ([]byte, error) {
 	return data, nil
 }
 
-func convertWsDataToDomain(from, to string, d *wsData) *domain.Data {
+func convertWsDataToDomain(from, to string, d *wsData) (*domain.Data, error) {
 	if d == nil {
-		return nil
+		return nil, errEmptyData
 	}
-	b, _ := json.Marshal(&domain.Raw{
+
+	b, err := json.Marshal(&domain.Raw{
 		FromSymbol:     from,
 		ToSymbol:       to,
 		Open24Hour:     d.Tick.Open,
@@ -175,6 +186,9 @@ func convertWsDataToDomain(from, to string, d *wsData) *domain.Data {
 		LastUpdate:     d.Ts,
 		Supply:         float64(d.Tick.Count),
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal json: %w", err)
+	}
 
 	return &domain.Data{
 		FromSymbol:     from,
@@ -187,5 +201,5 @@ func convertWsDataToDomain(from, to string, d *wsData) *domain.Data {
 		Supply:         float64(d.Tick.Count),
 		LastUpdate:     d.Ts,
 		DisplayDataRaw: string(b),
-	}
+	}, nil
 }

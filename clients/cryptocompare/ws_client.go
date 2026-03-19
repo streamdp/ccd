@@ -50,6 +50,7 @@ func InitWs(
 			hb      = newHeartbeat()
 			hbTimer = time.NewTimer(heartbeatCheckInterval)
 		)
+
 		defer hbTimer.Stop()
 
 		for {
@@ -58,6 +59,7 @@ func InitWs(
 				return
 			case <-hbTimer.C:
 				hbTimer.Reset(heartbeatCheckInterval)
+
 				if hb.isLost() {
 					if err := w.HandleWsError(ctx, errHeartbeat); err != nil {
 						l.Println(err)
@@ -66,6 +68,7 @@ func InitWs(
 						return
 					}
 				}
+
 				hb.decrease()
 			default:
 				body, err := w.Read(ctx)
@@ -73,9 +76,11 @@ func InitWs(
 					if !errors.Is(err, context.Canceled) {
 						l.Println(err)
 					}
+
 					if errors.Is(err, context.Canceled) || errors.Is(err, wsclient.ErrClientReconnected) {
 						continue
 					}
+
 					w.WsDown()
 
 					return
@@ -87,6 +92,7 @@ func InitWs(
 
 					continue
 				}
+
 				switch data.Type {
 				case "999":
 					hb.reset()
@@ -99,7 +105,13 @@ func InitWs(
 						l.Println(msg)
 					}
 				case "5":
-					domainData := convertWsDataToDomain(data)
+					domainData, err := convertWsDataToDomain(data)
+					if err != nil {
+						l.Printf("failed to convert ws data to domain: %v", err)
+
+						continue
+					}
+
 					for i := range pipe {
 						pipe[i] <- domainData
 					}
@@ -116,6 +128,7 @@ func buildURL(wssUrl string, apiKey string) (*url.URL, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse url: %w", err)
 	}
+
 	q := u.Query()
 	q.Set("api_key", apiKey)
 	u.RawQuery = q.Encode()
@@ -146,11 +159,12 @@ func handleServerResponse(data *wsData) string {
 	return ""
 }
 
-func convertWsDataToDomain(d *wsData) *domain.Data {
+func convertWsDataToDomain(d *wsData) (*domain.Data, error) {
 	if d == nil {
-		return nil
+		return nil, errEmptyData
 	}
-	b, _ := json.Marshal(&domain.Raw{
+
+	b, err := json.Marshal(&domain.Raw{
 		FromSymbol:     d.FromSymbol,
 		ToSymbol:       d.ToSymbol,
 		Open24Hour:     d.Open24Hour,
@@ -162,6 +176,9 @@ func convertWsDataToDomain(d *wsData) *domain.Data {
 		Supply:         d.CurrentSupply,
 		MktCap:         d.CurrentSupplyMktCap,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal json: %w", err)
+	}
 
 	return &domain.Data{
 		FromSymbol:     d.FromSymbol,
@@ -175,5 +192,5 @@ func convertWsDataToDomain(d *wsData) *domain.Data {
 		MktCap:         d.CurrentSupplyMktCap,
 		LastUpdate:     d.LastUpdate,
 		DisplayDataRaw: string(b),
-	}
+	}, nil
 }

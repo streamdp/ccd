@@ -15,6 +15,7 @@ func Test_convertToDomain(t *testing.T) {
 		to   string
 		d    *restData
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -97,7 +98,8 @@ func Test_convertToDomain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := convertToDomain(tt.args.from, tt.args.to, tt.args.d); !reflect.DeepEqual(got, tt.want) {
+			got, _ := convertToDomain(tt.args.from, tt.args.to, tt.args.d)
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("convertToDomain() = %v, want %v", got, tt.want)
 			}
 		})
@@ -109,10 +111,12 @@ func Test_cryptoCompareRest_buildURL(t *testing.T) {
 		apiKey string
 		client *http.Client
 	}
+
 	type args struct {
 		fSym string
 		tSym string
 	}
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -147,12 +151,15 @@ func Test_cryptoCompareRest_buildURL(t *testing.T) {
 				apiKey: tt.fields.apiKey,
 				client: tt.fields.client,
 			}
+
 			gotU, err := cc.buildURL(tt.args.fSym, tt.args.tSym)
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildURL() error = %v, wantErr %v", err, tt.wantErr)
 
 				return
 			}
+
 			if !reflect.DeepEqual(gotU, tt.wantU) {
 				t.Errorf("buildURL() gotU = %v, want %v", gotU, tt.wantU)
 			}

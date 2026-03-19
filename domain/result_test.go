@@ -9,6 +9,7 @@ func TestResult_UpdateDataField(t *testing.T) {
 	type args struct {
 		data any
 	}
+
 	tests := []struct {
 		name string
 		res  *Result
@@ -61,6 +62,7 @@ func TestResult_UpdateAllFields(t *testing.T) {
 		msg  string
 		data any
 	}
+
 	tests := []struct {
 		name string
 		res  *Result

@@ -248,14 +248,17 @@ func TestServer_processSubscriptions(t *testing.T) {
 				clientsMu: new(sync.RWMutex),
 				pipe:      make(chan *domain.Data, 10),
 			}
+
 			t.Cleanup(func() { close(s.pipe) })
 
 			go s.processSubscriptions()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
 			t.Cleanup(func() { cancel() })
 
 			wg := sync.WaitGroup{}
+
 			for _, c := range s.getSubscribers((&pair{From: tt.data.FromSymbol, To: tt.data.ToSymbol}).buildName()) {
 				if !c.handler.isActive {
 					continue
@@ -275,9 +278,11 @@ func TestServer_processSubscriptions(t *testing.T) {
 							if err := json.Unmarshal(msg, &wsMsg); err != nil {
 								t.Errorf("failed to unmarshal message: %v", err)
 							}
+
 							if wsMsg.T != messageTypeData {
 								t.Errorf("wrong message type: got = %v, want = %v", wsMsg.T, messageTypeData)
 							}
+
 							if !reflect.DeepEqual(wsMsg.Data, tt.data) {
 								t.Errorf("wrong message data: got = %v, want = %v", wsMsg.Data, tt.data)
 							}
@@ -289,6 +294,7 @@ func TestServer_processSubscriptions(t *testing.T) {
 			}
 
 			s.pipe <- tt.data
+
 			wg.Wait()
 		})
 	}

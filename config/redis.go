@@ -51,6 +51,7 @@ func (r *Redis) Options() (*redis.Options, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid REDIS_PORT: %w", errWrongNetworkPort)
 		}
+
 		r.Port = n
 	}
 
@@ -63,6 +64,7 @@ func (r *Redis) Options() (*redis.Options, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid REDIS_DB: %w", errRedisDb)
 		}
+
 		r.Db = n
 	}
 
@@ -77,9 +79,11 @@ func (r *Redis) Validate() error {
 	if r.Host == "" {
 		return errRedisHost
 	}
+
 	if r.Port < 0 || r.Port > 65535 {
 		return fmt.Errorf("redis: %w", errWrongNetworkPort)
 	}
+
 	if r.Db < 0 || r.Db > 15 {
 		return fmt.Errorf("redis: %w", errRedisDb)
 	}

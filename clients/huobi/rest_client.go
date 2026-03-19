@@ -116,7 +116,7 @@ func (r *rest) buildURL(fSym string, tSym string) (*url.URL, error) {
 }
 
 func convertRestDataToDomain(from, to string, d *restData) (*domain.Data, error) {
-	if d == nil || d.Status == "error" {
+	if d == nil {
 		return nil, errEmptyData
 	}
 

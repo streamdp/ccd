@@ -11,7 +11,7 @@ import (
 )
 
 // InitRouter basic work on setting up the application, declare endpoints, register our custom validation functions
-func (s *Server) InitRouter(ctx context.Context) error {
+func (s *server) InitRouter(ctx context.Context) error {
 	// health checks
 	s.GET("/healthz", SendOK)
 	s.HEAD("/healthz", SendOK)

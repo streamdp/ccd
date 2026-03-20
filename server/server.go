@@ -2,6 +2,8 @@ package server
 
 import (
 	"log"
+	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/streamdp/ccd/clients"
@@ -11,7 +13,7 @@ import (
 	v1 "github.com/streamdp/ccd/server/api/v1"
 )
 
-type Server struct {
+type server struct {
 	*gin.Engine
 
 	d  db.Database
@@ -35,8 +37,8 @@ func NewServer(
 	l *log.Logger,
 	cfg *config.App,
 	ws *ws.Server,
-) *Server {
-	return &Server{
+) *server {
+	return &server{
 		Engine: gin.Default(),
 
 		d:  d,
@@ -50,4 +52,17 @@ func NewServer(
 
 		ws: ws,
 	}
+}
+
+func (s *server) Run(addr string, serverTimeout time.Duration) {
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           s,
+		IdleTimeout:       serverTimeout,
+		ReadTimeout:       serverTimeout,
+		ReadHeaderTimeout: serverTimeout,
+		WriteTimeout:      serverTimeout,
+	}
+
+	log.Fatalln(srv.ListenAndServe())
 }

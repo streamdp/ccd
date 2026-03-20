@@ -69,12 +69,12 @@ func (r *rest) Get(fSym string, tSym string) (*domain.Data, error) {
 		_ = Body.Close()
 	}(response.Body)
 
-	if body, err = io.ReadAll(response.Body); err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	if response.StatusCode != http.StatusOK {
 		return nil, errWrongStatusCode
+	}
+
+	if body, err = io.ReadAll(response.Body); err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	rawData := &restData{}

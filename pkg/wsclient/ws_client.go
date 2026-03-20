@@ -136,7 +136,7 @@ func (w *Ws) Unsubscribe(ctx context.Context, from, to string) error {
 	w.subMu.Unlock()
 
 	if err = w.sessionRepo.RemoveTask(ctx, buildWsSessionName(from, to)); err != nil {
-		w.l.Println("failed to add subscription to the session repo: " + err.Error())
+		w.l.Println("failed to remove subscription from the session repo: " + err.Error())
 	}
 
 	if len(w.subscriptions) == 0 {
@@ -155,9 +155,11 @@ func (w *Ws) HandleWsError(ctx context.Context, err error) error {
 		return fmt.Errorf("ws connection closed: %w", err)
 	}
 
+	deadline := time.After(time.Minute)
+
 	for {
 		select {
-		case <-time.After(time.Minute):
+		case <-deadline:
 			return ErrReconnect
 		default:
 			if err = w.reconnect(ctx); err != nil {

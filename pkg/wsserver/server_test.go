@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -31,21 +32,21 @@ func TestServer_getInactiveClients(t *testing.T) {
 		{
 			name: "get inactive clients",
 			clients: map[*client]struct{}{
-				&client{handler: &handler{isActive: false}}: {},
-				&client{handler: &handler{isActive: true}}:  {},
-				&client{handler: &handler{isActive: false}}: {},
-				&client{handler: &handler{isActive: true}}:  {},
+				&client{handler: &handler{isActive: atomic.Bool{}}}: {},
+				&client{handler: &handler{isActive: *atomicTrue()}}: {},
+				&client{handler: &handler{isActive: atomic.Bool{}}}: {},
+				&client{handler: &handler{isActive: *atomicTrue()}}: {},
 			},
 			want: []*client{
-				{handler: &handler{isActive: false}},
-				{handler: &handler{isActive: false}},
+				{handler: &handler{isActive: atomic.Bool{}}},
+				{handler: &handler{isActive: atomic.Bool{}}},
 			},
 		},
 		{
 			name: "no inactive clients found",
 			clients: map[*client]struct{}{
-				&client{handler: &handler{isActive: true}}: {},
-				&client{handler: &handler{isActive: true}}: {},
+				&client{handler: &handler{isActive: *atomicTrue()}}: {},
+				&client{handler: &handler{isActive: *atomicTrue()}}: {},
 			},
 			want: nil,
 		},
@@ -78,10 +79,10 @@ func TestServer_getSubscribers(t *testing.T) {
 						subscriptions: cacheWithSubscription(
 							&pair{From: "BTC", To: "USDT"},
 						),
-						isActive: true,
+						isActive: *atomicTrue(),
 					},
 				}: {},
-				&client{handler: &handler{isActive: false}}: {},
+				&client{handler: &handler{isActive: atomic.Bool{}}}: {},
 			},
 			subscription: (&pair{From: "BTC", To: "USDT"}).buildName(),
 			want: []*client{{
@@ -89,7 +90,7 @@ func TestServer_getSubscribers(t *testing.T) {
 					subscriptions: cacheWithSubscription(
 						&pair{From: "BTC", To: "USDT"},
 					),
-					isActive: true,
+					isActive: *atomicTrue(),
 				},
 			}},
 		},
@@ -102,7 +103,7 @@ func TestServer_getSubscribers(t *testing.T) {
 							&pair{From: "BTC", To: "USDT"},
 							&pair{From: "ETH", To: "USDT"},
 						),
-						isActive: true,
+						isActive: *atomicTrue(),
 					},
 				}: {},
 				&client{
@@ -111,10 +112,10 @@ func TestServer_getSubscribers(t *testing.T) {
 							&pair{From: "LTC", To: "USDT"},
 							&pair{From: "ETH", To: "USDT"},
 						),
-						isActive: true,
+						isActive: *atomicTrue(),
 					},
 				}: {},
-				&client{handler: &handler{isActive: false}}: {},
+				&client{handler: &handler{isActive: atomic.Bool{}}}: {},
 			},
 			subscription: (&pair{From: "ETH", To: "USDT"}).buildName(),
 			want: []*client{
@@ -124,7 +125,7 @@ func TestServer_getSubscribers(t *testing.T) {
 							&pair{From: "BTC", To: "USDT"},
 							&pair{From: "ETH", To: "USDT"},
 						),
-						isActive: true,
+						isActive: *atomicTrue(),
 					},
 				},
 				{
@@ -133,7 +134,7 @@ func TestServer_getSubscribers(t *testing.T) {
 							&pair{From: "LTC", To: "USDT"},
 							&pair{From: "ETH", To: "USDT"},
 						),
-						isActive: true,
+						isActive: *atomicTrue(),
 					},
 				},
 			},
@@ -147,7 +148,7 @@ func TestServer_getSubscribers(t *testing.T) {
 							&pair{From: "BTC", To: "USDT"},
 							&pair{From: "ETH", To: "USDT"},
 						),
-						isActive: true,
+						isActive: *atomicTrue(),
 					},
 				}: {},
 				&client{
@@ -156,10 +157,10 @@ func TestServer_getSubscribers(t *testing.T) {
 							&pair{From: "LTC", To: "USDT"},
 							&pair{From: "ETH", To: "USDT"},
 						),
-						isActive: true,
+						isActive: *atomicTrue(),
 					},
 				}: {},
-				&client{handler: &handler{isActive: false}}: {},
+				&client{handler: &handler{isActive: atomic.Bool{}}}: {},
 			},
 			subscription: (&pair{From: "XRP", To: "USDT"}).buildName(),
 			want:         nil,
@@ -192,10 +193,10 @@ func TestServer_processSubscriptions(t *testing.T) {
 							&pair{From: "BTC", To: "USDT"},
 						),
 						messagePipe: make(chan []byte, 10),
-						isActive:    true,
+						isActive:    *atomicTrue(),
 					},
 				}: {},
-				&client{handler: &handler{isActive: false}}: {},
+				&client{handler: &handler{isActive: atomic.Bool{}}}: {},
 			},
 			data: &domain.Data{
 				FromSymbol: "BTC",
@@ -211,7 +212,7 @@ func TestServer_processSubscriptions(t *testing.T) {
 							&pair{From: "BTC", To: "USDT"},
 						),
 						messagePipe: make(chan []byte, 10),
-						isActive:    true,
+						isActive:    *atomicTrue(),
 					},
 				}: {},
 				&client{
@@ -220,7 +221,7 @@ func TestServer_processSubscriptions(t *testing.T) {
 							&pair{From: "ETH", To: "USDT"},
 						),
 						messagePipe: make(chan []byte, 10),
-						isActive:    true,
+						isActive:    *atomicTrue(),
 					},
 				}: {},
 				&client{
@@ -230,10 +231,10 @@ func TestServer_processSubscriptions(t *testing.T) {
 							&pair{From: "BTC", To: "USDT"},
 						),
 						messagePipe: make(chan []byte, 10),
-						isActive:    true,
+						isActive:    *atomicTrue(),
 					},
 				}: {},
-				&client{handler: &handler{isActive: false}}: {},
+				&client{handler: &handler{isActive: atomic.Bool{}}}: {},
 			},
 			data: &domain.Data{
 				FromSymbol: "BTC",
@@ -260,7 +261,7 @@ func TestServer_processSubscriptions(t *testing.T) {
 			wg := sync.WaitGroup{}
 
 			for _, c := range s.getSubscribers((&pair{From: tt.data.FromSymbol, To: tt.data.ToSymbol}).buildName()) {
-				if !c.handler.isActive {
+				if !c.handler.isActive.Load() {
 					continue
 				}
 
@@ -298,4 +299,11 @@ func TestServer_processSubscriptions(t *testing.T) {
 			wg.Wait()
 		})
 	}
+}
+
+func atomicTrue() *atomic.Bool {
+	var v atomic.Bool
+	v.Store(true)
+
+	return &v
 }

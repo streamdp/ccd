@@ -3,6 +3,7 @@ package clients
 import (
 	"log"
 	"math/rand"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -13,19 +14,18 @@ const defaultRunTaskGap = 30
 
 // Task does all the data mining run
 type Task struct {
-	From     string `json:"from"`
-	To       string `json:"to"`
-	Interval int64  `json:"interval"`
-	done     chan struct{}
+	From      string `json:"from"`
+	To        string `json:"to"`
+	Interval  int64  `json:"interval"`
+	done      chan struct{}
+	closeOnce sync.Once
 }
 type Tasks map[string]*Task
 
 func (t *Task) run(r RestClient, l *log.Logger, dataPipe []chan *domain.Data) {
-	timer := time.NewTimer(time.Duration(rand.Intn(defaultRunTaskGap)) * time.Second)
+	timer := time.NewTimer(time.Duration(rand.Intn(defaultRunTaskGap)+1) * time.Second)
 
 	go func() {
-		defer close(t.done)
-
 		for {
 			select {
 			case <-t.done:
@@ -51,5 +51,5 @@ func (t *Task) run(r RestClient, l *log.Logger, dataPipe []chan *domain.Data) {
 }
 
 func (t *Task) close() {
-	t.done <- struct{}{}
+	t.closeOnce.Do(func() { close(t.done) })
 }

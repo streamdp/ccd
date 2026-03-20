@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync/atomic"
 	"time"
 
 	"github.com/coder/websocket"
@@ -17,8 +18,8 @@ import (
 )
 
 const (
-	welcomeMessage = "Welcome! To get the latest price send request like this: " +
-		"{\"type\": \"price\", \n\"pair\": { \"fsym\":\"CRYPTO\",\"tsym\":\"COMMON\" }}"
+	welcomeMessage = `Welcome! To get the latest price send request like this: 
+{"type":"price","pair":{"fsym":"CRYPTO","tsym":"COMMON"}}`
 	closeMessage = "Connection will be closed at the client's request."
 )
 
@@ -45,7 +46,7 @@ type handler struct {
 
 	subscriptions *cache.Cache
 
-	isActive bool
+	isActive atomic.Bool
 }
 
 func (h *handler) handleClientRequests(ctx context.Context) {
@@ -53,10 +54,10 @@ func (h *handler) handleClientRequests(ctx context.Context) {
 
 	h.sendMessage(messageTypeMessage, welcomeMessage)
 
-	h.isActive = true
+	h.isActive.Store(true)
 
 	defer func() {
-		h.isActive = false
+		h.isActive.Store(false)
 	}()
 
 	for {
@@ -140,7 +141,7 @@ func (h *handler) handleHeartbeat(ctx context.Context) {
 		case <-t.C:
 			t.Reset(defaultHeartbeatInterval)
 
-			if !h.isActive || h.subscriptions.Len() == 0 {
+			if !h.isActive.Load() || h.subscriptions.Len() == 0 {
 				continue
 			}
 
@@ -206,6 +207,10 @@ func (h *handler) sendMessage(messageType, message string) {
 }
 
 func (h *handler) getLastPrice(ctx context.Context, p *pair) (*domain.Data, error) {
+	if p == nil {
+		return nil, errors.New("pair is required")
+	}
+
 	data, err := v1.LastPrice(ctx, h.rc, h.db, p.From, p.To)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get last price: %w", err)

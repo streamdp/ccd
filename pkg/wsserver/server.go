@@ -81,7 +81,11 @@ func (s *Server) AddClient(ctx context.Context, w http.ResponseWriter, r *http.R
 		handler: h,
 		cancel:  cancel,
 	}
+
+	s.clientsMu.Lock()
 	s.clients[c] = struct{}{}
+	s.clientsMu.Unlock()
+
 	s.l.Println(fmt.Sprintf("added new ws client: %v", uintptr(unsafe.Pointer(c))))
 
 	return nil
@@ -126,7 +130,13 @@ func (s *Server) processSubscriptions() {
 		}).Bytes()
 
 		for _, c := range subscribers {
-			c.handler.messagePipe <- bytes
+			select {
+			case c.handler.messagePipe <- bytes:
+			default:
+				s.l.Printf("ws client message pipe full, dropping message")
+
+				time.Sleep(time.Second)
+			}
 		}
 	}
 }
@@ -137,7 +147,7 @@ func (s *Server) getSubscribers(subscription string) []*client {
 	s.clientsMu.RLock()
 
 	for c := range s.clients {
-		if c.handler.isActive && c.handler.subscriptions.IsPresent(subscription) {
+		if c.handler.isActive.Load() && c.handler.subscriptions.IsPresent(subscription) {
 			res = append(res, c)
 		}
 	}
@@ -187,7 +197,7 @@ func (s *Server) getInactiveClients() []*client {
 	s.clientsMu.RLock()
 
 	for c := range s.clients {
-		if !c.handler.isActive {
+		if !c.handler.isActive.Load() {
 			res = append(res, c)
 		}
 	}

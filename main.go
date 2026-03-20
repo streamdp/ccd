@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"net"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/streamdp/ccd/clients"
@@ -105,9 +106,10 @@ func main() {
 		l.Fatalln(err)
 	}
 
-	if err = srv.Run(fmt.Sprintf(":%d", appCfg.Http.Port())); err != nil {
-		l.Fatalln(err)
-	}
+	srv.Run(
+		net.JoinHostPort("", strconv.Itoa(appCfg.Http.Port())),
+		appCfg.Http.ServerTimeout(),
+	)
 
 	<-ctx.Done()
 }

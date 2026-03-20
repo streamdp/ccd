@@ -16,10 +16,15 @@ var errWrongNetworkPort = errors.New("port must be between 0 and 65535")
 type Http struct {
 	port          int
 	clientTimeout int
+	serverTimeout int
 }
 
 func (h *Http) ClientTimeout() time.Duration {
 	return time.Duration(h.clientTimeout) * time.Millisecond
+}
+
+func (h *Http) ServerTimeout() time.Duration {
+	return time.Duration(h.serverTimeout) * time.Millisecond
 }
 
 func (h *Http) Port() int {

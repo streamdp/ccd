@@ -76,7 +76,7 @@ func Test_convertRestDataToDomain(t *testing.T) {
 				LastUpdate:   1719731197640,
 				DisplayDataRaw: "{\"from_symbol\":\"BTC\",\"to_symbol\":\"USDT\",\"change_24_hour\":0," +
 					"\"changepct_24_hour\":0,\"open_24_hour\":60867.47,\"volume_24_hour\":666.1991214442407," +
-					"\"volume_24_hour_to\":40641405.87766658,\"low_24_hour\":0,\"high_24_hour\":61403.89," +
+					"\"volume_24_hour_to\":40641405.87766658,\"low_24_hour\":60867.47,\"high_24_hour\":61403.89," +
 					"\"price\":61391.27,\"supply\":30701,\"mkt_cap\":0,\"last_update\":1719731197640}",
 			},
 		},

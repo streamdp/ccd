@@ -24,8 +24,8 @@ func LoadConfig() (*App, error) {
 	flag.IntVar(&appCfg.Http.port, "port", httpServerDefaultPort, "set specify port")
 	flag.StringVar(&appCfg.SessionStore, "session", defaultSessionStore,
 		"set session store \"db\" or \"redis\"")
-	flag.IntVar(&appCfg.Http.clientTimeout, "timeout", httpDefaultTimeout, "how long to wait for a "+
-		"response from the api server before sending data from the cache")
+	flag.IntVar(&appCfg.Http.clientTimeout, "timeout", httpDefaultTimeout, "HTTP client timeout")
+	flag.IntVar(&appCfg.Http.serverTimeout, "server-timeout", httpDefaultTimeout, "HTTP server timeout")
 	flag.StringVar(&appCfg.DataProvider, "dataprovider", defaultDataProvider, "use selected data provider"+
 		" (\"cryptocompare\", \"huobi\", \"kraken\")")
 	flag.Parse()

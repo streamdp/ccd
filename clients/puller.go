@@ -71,6 +71,10 @@ func (p *restPuller) RemoveTask(ctx context.Context, from string, to string) {
 	name := buildTaskName(from, to)
 
 	t := p.task(name)
+	if t == nil {
+		return
+	}
+
 	t.close()
 
 	p.pullerMu.Lock()

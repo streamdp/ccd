@@ -9,7 +9,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/domain"
 )
 
@@ -45,21 +44,21 @@ func (p *restPuller) ListTasks() Tasks {
 
 // Task return task with selected currencies pair, if possible
 func (p *restPuller) Task(from, to string) *Task {
-	return p.task(buildTaskName(from, to))
+	return p.task(buildTaskMapKey(from, to))
 }
 
 // AddTask to collect data for the selected currency pair to the puller
 func (p *restPuller) AddTask(ctx context.Context, from string, to string, interval int64) *Task {
-	name := buildTaskName(from, to)
+	key := buildTaskMapKey(from, to)
 
-	t := p.newTask(from, to, interval)
+	t := newTask(from, to, interval)
 	t.run(p.client, p.l, p.dataPipe)
 
 	p.pullerMu.Lock()
-	p.tasks[name] = t
+	p.tasks[key] = t
 	p.pullerMu.Unlock()
 
-	if err := p.sessionRepo.AddTask(ctx, name, interval); err != nil {
+	if err := p.sessionRepo.AddTask(ctx, key, interval); err != nil {
 		p.l.Println(err)
 	}
 
@@ -68,20 +67,20 @@ func (p *restPuller) AddTask(ctx context.Context, from string, to string, interv
 
 // RemoveTask from the puller by the selected currency pair
 func (p *restPuller) RemoveTask(ctx context.Context, from string, to string) {
-	name := buildTaskName(from, to)
+	key := buildTaskMapKey(from, to)
 
-	t := p.task(name)
+	t := p.task(key)
 	if t == nil {
 		return
 	}
 
-	t.close()
+	t.stop()
 
 	p.pullerMu.Lock()
-	delete(p.tasks, name)
+	delete(p.tasks, key)
 	p.pullerMu.Unlock()
 
-	if err := p.sessionRepo.RemoveTask(ctx, name); err != nil {
+	if err := p.sessionRepo.RemoveTask(ctx, key); err != nil {
 		p.l.Print(err)
 	}
 }
@@ -110,28 +109,15 @@ func (p *restPuller) RestoreLastSession(ctx context.Context) error {
 func (p *restPuller) UpdateTask(ctx context.Context, t *Task, interval int64) *Task {
 	atomic.StoreInt64(&t.Interval, interval)
 
-	if err := p.sessionRepo.UpdateTask(ctx, buildTaskName(t.From, t.To), interval); err != nil {
+	if err := p.sessionRepo.UpdateTask(ctx, buildTaskMapKey(t.From, t.To), interval); err != nil {
 		p.l.Println(err)
 	}
 
 	return t
 }
 
-func buildTaskName(from, to string) string {
+func buildTaskMapKey(from, to string) string {
 	return strings.ToUpper(fmt.Sprintf("%s:%s", from, to))
-}
-
-func (p *restPuller) newTask(from string, to string, interval int64) *Task {
-	if interval <= 0 {
-		interval = config.DefaultPullingInterval
-	}
-
-	return &Task{
-		done:     make(chan struct{}, 1),
-		From:     from,
-		To:       to,
-		Interval: interval,
-	}
 }
 
 func (p *restPuller) task(name string) *Task {

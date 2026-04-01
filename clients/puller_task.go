@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/streamdp/ccd/config"
 	"github.com/streamdp/ccd/domain"
 )
 
@@ -21,6 +22,19 @@ type Task struct {
 	closeOnce sync.Once
 }
 type Tasks map[string]*Task
+
+func newTask(from string, to string, interval int64) *Task {
+	if interval <= 0 {
+		interval = config.DefaultPullingInterval
+	}
+
+	return &Task{
+		done:     make(chan struct{}, 1),
+		From:     from,
+		To:       to,
+		Interval: interval,
+	}
+}
 
 func (t *Task) run(r RestClient, l *log.Logger, dataPipe []chan *domain.Data) {
 	timer := time.NewTimer(time.Duration(rand.Intn(defaultRunTaskGap)+1) * time.Second)
@@ -50,6 +64,6 @@ func (t *Task) run(r RestClient, l *log.Logger, dataPipe []chan *domain.Data) {
 	}()
 }
 
-func (t *Task) close() {
+func (t *Task) stop() {
 	t.closeOnce.Do(func() { close(t.done) })
 }
